@@ -15,17 +15,22 @@ const endpoints = [
     description: "Validate a license key from your software client. This is the primary endpoint your app calls on startup.",
     request: `{
   "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
-  "hwid": "machine-hardware-id"
+  "hwid": "machine-hardware-id",
+  "device_name": "DESKTOP-ABC123"
 }`,
     response: `{
   "valid": true,
   "expires": "2026-04-08T00:00:00Z",
+  "expires_readable": "Apr 8, 2026 (31 days left)",
   "hwid": "abc123def456",
-  "app": "MyApp"
+  "app": "MyApp",
+  "country": "United States",
+  "device_name": "DESKTOP-ABC123"
 }`,
     fields: [
       { name: "license_key", type: "string", required: true, desc: "The license key to validate (max 50 chars)" },
       { name: "hwid", type: "string", required: false, desc: "Hardware ID for binding (max 100 chars). If omitted, no HWID binding occurs." },
+      { name: "device_name", type: "string", required: false, desc: "Device hostname (max 100 chars). Logged for tracking and shown in Discord alerts." },
     ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
