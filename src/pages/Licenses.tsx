@@ -222,8 +222,12 @@ export default function Licenses() {
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
-                      {lic.license_key}
-                      <Copy className="h-3 w-3 text-muted-foreground" />
+                      <span className="truncate max-w-[180px]">{lic.license_key}</span>
+                      {copiedKey === lic.license_key ? (
+                        <span className="text-xs text-emerald-400 font-sans font-medium shrink-0">Copied!</span>
+                      ) : (
+                        <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-foreground">{lic.applications?.name || "Unknown"}</td>
