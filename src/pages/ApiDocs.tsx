@@ -232,6 +232,33 @@ export default function ApiDocs() {
               </div>
             )}
 
+            {/* Headers */}
+            {"headers" in ep && ep.headers && (
+              <div className="border-t border-border p-4">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Request Headers (for signed requests)</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b border-border">
+                        <th className="pb-2 pr-4 font-medium">Header</th>
+                        <th className="pb-2 pr-4 font-medium">Required</th>
+                        <th className="pb-2 font-medium">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ep.headers.map((h: any) => (
+                        <tr key={h.name} className="border-b border-border/50">
+                          <td className="py-2 pr-4 font-mono text-foreground">{h.name}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">{h.required}</td>
+                          <td className="py-2 text-muted-foreground">{h.desc}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Errors */}
             {"errors" in ep && ep.errors && (
               <div className="border-t border-border p-4">
