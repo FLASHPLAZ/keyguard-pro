@@ -28,7 +28,7 @@ export default function Licenses() {
   const fetchData = async () => {
     if (!user) return;
     const [licRes, appRes] = await Promise.all([
-      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }),
+      supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false }),
       supabase.from("applications").select("*").eq("suspended", false),
     ]);
     setLicenses(licRes.data || []);
