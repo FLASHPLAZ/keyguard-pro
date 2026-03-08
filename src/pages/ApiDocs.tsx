@@ -15,17 +15,22 @@ const endpoints = [
     description: "Validate a license key from your software client. This is the primary endpoint your app calls on startup.",
     request: `{
   "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
-  "hwid": "machine-hardware-id"
+  "hwid": "machine-hardware-id",
+  "device_name": "DESKTOP-ABC123"
 }`,
     response: `{
   "valid": true,
   "expires": "2026-04-08T00:00:00Z",
+  "expires_readable": "Apr 8, 2026 (31 days left)",
   "hwid": "abc123def456",
-  "app": "MyApp"
+  "app": "MyApp",
+  "country": "United States",
+  "device_name": "DESKTOP-ABC123"
 }`,
     fields: [
       { name: "license_key", type: "string", required: true, desc: "The license key to validate (max 50 chars)" },
       { name: "hwid", type: "string", required: false, desc: "Hardware ID for binding (max 100 chars). If omitted, no HWID binding occurs." },
+      { name: "device_name", type: "string", required: false, desc: "Device hostname (max 100 chars). Logged for tracking and shown in Discord alerts." },
     ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
@@ -328,8 +333,9 @@ export default function ApiDocs() {
           <li>Generate <strong className="text-foreground">License Keys</strong> for that application.</li>
           <li>Copy the code example above into your project.</li>
           <li>Replace the API URL if needed (it's embedded in the snippet).</li>
-          <li>Call <code className="text-foreground bg-secondary/50 px-1 rounded">/validate</code> on startup with the user's key + HWID.</li>
+          <li>Call <code className="text-foreground bg-secondary/50 px-1 rounded">/validate</code> on startup with the user's key + HWID + device_name.</li>
           <li>If <code className="text-foreground bg-secondary/50 px-1 rounded">valid: true</code> → run your app. Otherwise → show the error and exit.</li>
+          <li>The code snippets include a <strong className="text-foreground">"Save license key"</strong> prompt — users can type <code className="text-foreground bg-secondary/50 px-1 rounded">y</code> to save their key locally so they don't need to re-enter it.</li>
           <li>Build your project as an executable and distribute with license keys.</li>
           <li>(Optional) Set up <strong className="text-foreground">Discord webhooks</strong> and <strong className="text-foreground">anti-sharing</strong> in Settings.</li>
           <li>(Optional) Create <strong className="text-foreground">Resellers</strong> to let others distribute keys on your behalf.</li>
