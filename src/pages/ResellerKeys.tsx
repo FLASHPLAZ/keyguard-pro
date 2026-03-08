@@ -166,6 +166,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
     fetchData();
   };
