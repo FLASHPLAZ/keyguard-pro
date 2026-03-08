@@ -122,6 +122,7 @@ export default function Licenses() {
       });
     }
     toast.success("License extended by 30 days");
+    notifyDiscord("License extended", { Key: licenseKey, "Added": "+30 days" });
     fetchData();
   };
 
