@@ -139,6 +139,18 @@ export default function ResellerKeys() {
     fetchData();
   };
 
+  const deleteKey = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Reseller deleted license", license_key: licenseKey,
+      });
+    }
+    toast.success("License deleted");
+    fetchData();
+  };
+
   return (
     <ResellerLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
