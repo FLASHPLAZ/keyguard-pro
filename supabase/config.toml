@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-reseller]
 verify_jwt = false
+
+[functions.reset-hwid]
+verify_jwt = false
