@@ -300,6 +300,11 @@ export default function ResellerKeys() {
                       {lic.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
+                      {lic.hwid ? "Yes" : "No"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{lic.hwid || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
