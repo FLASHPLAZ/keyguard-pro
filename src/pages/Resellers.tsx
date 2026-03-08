@@ -212,6 +212,7 @@ export default function Resellers() {
     await supabase.from("resellers").delete().eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller "${username}" deleted` });
     toast.success("Reseller deleted");
+    notifyDiscord("Reseller deleted", { Username: username });
     fetchData();
   };
 
