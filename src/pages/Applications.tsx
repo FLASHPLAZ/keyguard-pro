@@ -1,57 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { mockApps } from "@/lib/mock-data";
-import { Application } from "@/lib/license";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Applications() {
-  const [apps, setApps] = useState<Application[]>(mockApps);
+  const { user } = useAuth();
+  const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [newAppName, setNewAppName] = useState("");
   const [newAppDesc, setNewAppDesc] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const filtered = apps.filter((a) =>
-    a.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const fetchApps = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    setApps(data || []);
+  };
 
-  const createApp = () => {
-    if (!newAppName.trim()) return;
-    const app: Application = {
-      id: Date.now().toString(),
+  useEffect(() => { fetchApps(); }, [user]);
+
+  const filtered = apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
+
+  const createApp = async () => {
+    if (!newAppName.trim() || !user) return;
+    const { error } = await supabase.from("applications").insert({
       name: newAppName.trim(),
       description: newAppDesc.trim(),
-      suspended: false,
-      kill_switch: false,
-      created_at: new Date().toISOString(),
-      total_licenses: 0,
-      active_licenses: 0,
-    };
-    setApps([app, ...apps]);
+      user_id: user.id,
+    });
+    if (error) { toast.error(error.message); return; }
     setNewAppName("");
     setNewAppDesc("");
     setDialogOpen(false);
-    toast.success(`Application "${app.name}" created`);
+    toast.success(`Application "${newAppName}" created`);
+    fetchApps();
   };
 
-  const toggleSuspend = (id: string) => {
-    setApps(apps.map((a) => (a.id === id ? { ...a, suspended: !a.suspended } : a)));
+  const toggleSuspend = async (id: string, current: boolean) => {
+    await supabase.from("applications").update({ suspended: !current }).eq("id", id);
     toast.success("Application status updated");
+    fetchApps();
   };
 
-  const toggleKillSwitch = (id: string) => {
-    setApps(apps.map((a) => (a.id === id ? { ...a, kill_switch: !a.kill_switch } : a)));
+  const toggleKillSwitch = async (id: string, current: boolean) => {
+    await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
     toast.success("Kill switch toggled");
+    fetchApps();
   };
 
-  const deleteApp = (id: string) => {
-    setApps(apps.filter((a) => a.id !== id));
+  const deleteApp = async (id: string) => {
+    await supabase.from("applications").delete().eq("id", id);
     toast.success("Application deleted");
+    fetchApps();
   };
 
   return (
@@ -63,27 +69,13 @@ export default function Applications() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Create App
-            </Button>
+            <Button><Plus className="mr-2 h-4 w-4" /> Create App</Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Create Application</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
-              <Input
-                placeholder="Application name"
-                value={newAppName}
-                onChange={(e) => setNewAppName(e.target.value)}
-                className="bg-secondary border-border"
-              />
-              <Input
-                placeholder="Description"
-                value={newAppDesc}
-                onChange={(e) => setNewAppDesc(e.target.value)}
-                className="bg-secondary border-border"
-              />
+              <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
+              <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
               <Button onClick={createApp} className="w-full">Create</Button>
             </div>
           </DialogContent>
@@ -93,12 +85,7 @@ export default function Applications() {
       <div className="mb-4">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search applications..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-secondary border-border pl-10"
-          />
+          <Input placeholder="Search applications..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
         </div>
       </div>
 
@@ -108,8 +95,6 @@ export default function Applications() {
             <tr className="border-b border-border bg-secondary/50">
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Licenses</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Active</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
@@ -132,15 +117,13 @@ export default function Applications() {
                     <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-foreground">{app.total_licenses}</td>
-                <td className="px-4 py-3 text-foreground">{app.active_licenses}</td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id)} title={app.suspended ? "Resume" : "Suspend"}>
+                    <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended)} title={app.suspended ? "Resume" : "Suspend"}>
                       {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id)} title="Kill Switch">
+                    <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch)} title="Kill Switch">
                       <Power className="h-4 w-4 text-destructive" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id)} title="Delete">

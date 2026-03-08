@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { mockLicenses, mockApps } from "@/lib/mock-data";
-import { License, generateLicenseKey, getLicenseStatusColor, formatDate } from "@/lib/license";
+import { generateLicenseKey, getLicenseStatusColor, formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Ban, RotateCcw, Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Licenses() {
-  const [licenses, setLicenses] = useState<License[]>(mockLicenses);
+  const { user } = useAuth();
+  const [licenses, setLicenses] = useState<any[]>([]);
+  const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -18,59 +21,58 @@ export default function Licenses() {
   const [keyCount, setKeyCount] = useState(1);
   const [duration, setDuration] = useState(30);
 
+  const fetchData = async () => {
+    if (!user) return;
+    const [licRes, appRes] = await Promise.all([
+      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }),
+      supabase.from("applications").select("*").eq("suspended", false),
+    ]);
+    setLicenses(licRes.data || []);
+    setApps(appRes.data || []);
+  };
+
+  useEffect(() => { fetchData(); }, [user]);
+
   const filtered = licenses.filter((l) => {
-    const matchSearch =
-      l.license_key.toLowerCase().includes(search.toLowerCase()) ||
-      l.application_name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = l.license_key.toLowerCase().includes(search.toLowerCase()) ||
+      (l.applications?.name || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const generateKeys = () => {
-    if (!selectedApp) return;
-    const app = mockApps.find((a) => a.id === selectedApp);
-    if (!app) return;
-
-    const newLicenses: License[] = [];
-    for (let i = 0; i < keyCount; i++) {
-      newLicenses.push({
-        id: Date.now().toString() + i,
-        license_key: generateLicenseKey(),
-        application_id: selectedApp,
-        application_name: app.name,
-        hwid: null,
-        ip: null,
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + duration * 86400000).toISOString(),
-        banned: false,
-        status: "unused",
-        last_used: null,
-      });
-    }
-    setLicenses([...newLicenses, ...licenses]);
+  const generateKeys = async () => {
+    if (!selectedApp || !user) return;
+    const inserts = Array.from({ length: keyCount }, () => ({
+      license_key: generateLicenseKey(),
+      application_id: selectedApp,
+      user_id: user.id,
+      expires_at: new Date(Date.now() + duration * 86400000).toISOString(),
+      status: "unused",
+    }));
+    const { error } = await supabase.from("licenses").insert(inserts);
+    if (error) { toast.error(error.message); return; }
     setDialogOpen(false);
     toast.success(`Generated ${keyCount} license key(s)`);
+    fetchData();
   };
 
-  const banKey = (id: string) => {
-    setLicenses(licenses.map((l) => (l.id === id ? { ...l, banned: true, status: "banned" as const } : l)));
+  const banKey = async (id: string) => {
+    await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", id);
     toast.success("License banned");
+    fetchData();
   };
 
-  const resetHwid = (id: string) => {
-    setLicenses(licenses.map((l) => (l.id === id ? { ...l, hwid: null } : l)));
+  const resetHwid = async (id: string) => {
+    await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     toast.success("HWID reset");
+    fetchData();
   };
 
-  const extendKey = (id: string) => {
-    setLicenses(
-      licenses.map((l) => {
-        if (l.id !== id) return l;
-        const newExpiry = new Date(new Date(l.expires_at).getTime() + 30 * 86400000).toISOString();
-        return { ...l, expires_at: newExpiry, status: "active" as const };
-      })
-    );
+  const extendKey = async (id: string, currentExpiry: string) => {
+    const newExpiry = new Date(new Date(currentExpiry).getTime() + 30 * 86400000).toISOString();
+    await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
     toast.success("License extended by 30 days");
+    fetchData();
   };
 
   const copyKey = (key: string) => {
@@ -90,16 +92,12 @@ export default function Licenses() {
             <Button><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border">
-            <DialogHeader>
-              <DialogTitle>Generate License Keys</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Generate License Keys</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
               <Select value={selectedApp} onValueChange={setSelectedApp}>
-                <SelectTrigger className="bg-secondary border-border">
-                  <SelectValue placeholder="Select application" />
-                </SelectTrigger>
+                <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select application" /></SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  {mockApps.filter((a) => !a.suspended).map((app) => (
+                  {apps.map((app) => (
                     <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -126,9 +124,7 @@ export default function Licenses() {
           <Input placeholder="Search keys or apps..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-secondary border-border">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-popover border-border">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -160,7 +156,7 @@ export default function Licenses() {
                     <Copy className="h-3 w-3 text-muted-foreground" />
                   </button>
                 </td>
-                <td className="px-4 py-3 text-foreground">{lic.application_name}</td>
+                <td className="px-4 py-3 text-foreground">{lic.applications?.name || "Unknown"}</td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                     {lic.status}
@@ -170,7 +166,7 @@ export default function Licenses() {
                 <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => extendKey(lic.id)} title="Extend 30 days">
+                    <Button variant="ghost" size="icon" onClick={() => extendKey(lic.id, lic.expires_at)} title="Extend 30 days">
                       <Clock className="h-4 w-4 text-primary" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id)} title="Reset HWID">

@@ -9,9 +9,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -25,7 +28,14 @@ const navItems = [
 
 export function DashboardSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <aside
@@ -34,19 +44,15 @@ export function DashboardSidebar() {
         collapsed ? "w-16" : "w-60"
       )}
     >
-      {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-border px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary">
           <Key className="h-4 w-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-foreground">
-            KeyVault
-          </span>
+          <span className="text-lg font-bold tracking-tight text-foreground">KeyVault</span>
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navItems.map((item) => {
           const isActive =
@@ -70,7 +76,22 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      {/* Collapse toggle */}
+      {/* User info + logout */}
+      <div className="border-t border-border p-2">
+        {!collapsed && user && (
+          <div className="mb-2 px-3 py-1">
+            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          </div>
+        )}
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
+      </div>
+
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="flex h-12 items-center justify-center border-t border-border text-muted-foreground hover:text-foreground transition-colors"
