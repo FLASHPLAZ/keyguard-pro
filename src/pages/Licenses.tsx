@@ -68,6 +68,7 @@ export default function Licenses() {
 
     setDialogOpen(false);
     toast.success(`Generated ${keyCount} license key(s)`);
+    notifyDiscord("License keys generated", { App: appName, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
     fetchData();
   };
 
