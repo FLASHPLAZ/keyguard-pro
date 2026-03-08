@@ -113,6 +113,7 @@ export default function SettingsPage() {
     try {
       await Promise.all(Object.entries(settings).map(([key, value]) => saveSetting(key, value)));
       toast.success("Settings saved successfully");
+      notifyDiscord("Settings updated", { "Rate Limit": settings.rate_limit_max, "Window": settings.rate_limit_window + "m", "IP Threshold": settings.ip_change_threshold, "Auto-Ban": settings.auto_ban_enabled });
     } catch { toast.error("Failed to save settings"); }
     finally { setSaving(false); }
   }
