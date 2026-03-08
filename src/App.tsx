@@ -15,6 +15,7 @@ import ApiDocs from "./pages/ApiDocs";
 import SettingsPage from "./pages/Settings";
 import ResellerDashboard from "./pages/ResellerDashboard";
 import ResellerKeys from "./pages/ResellerKeys";
+import ResellerLogs from "./pages/ResellerLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
