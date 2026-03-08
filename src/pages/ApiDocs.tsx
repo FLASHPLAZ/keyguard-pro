@@ -40,7 +40,7 @@ export default function ApiDocs() {
     <DashboardLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
-        <p className="text-sm text-muted-foreground">Integrate KeyVault into your software applications</p>
+        <p className="text-sm text-muted-foreground">Integrate Galactic Boosts into your software applications</p>
       </div>
 
       {/* Base URL */}

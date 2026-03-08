@@ -42,7 +42,7 @@ export function ResellerSidebar() {
         </div>
         {!collapsed && (
           <div>
-            <span className="text-lg font-bold tracking-tight text-foreground">KeyVault</span>
+            <span className="text-lg font-bold tracking-tight text-foreground">Galactic Boosts</span>
             <p className="text-[10px] text-muted-foreground -mt-0.5">Reseller Panel</p>
           </div>
         )}
