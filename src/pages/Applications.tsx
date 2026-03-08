@@ -57,6 +57,7 @@ export default function Applications() {
     await supabase.from("applications").update({ suspended: !current }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" ${!current ? "suspended" : "resumed"}` });
     toast.success("Application status updated");
+    notifyDiscord(!current ? "Application suspended" : "Application resumed", { App: name });
     fetchApps();
   };
 
