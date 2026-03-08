@@ -110,6 +110,7 @@ export default function Licenses() {
       });
     }
     toast.success("HWID reset");
+    notifyDiscord("HWID reset", { Key: licenseKey });
     fetchData();
   };
 
