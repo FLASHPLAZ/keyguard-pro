@@ -82,6 +82,7 @@ export default function Licenses() {
       });
     }
     toast.success("License banned");
+    notifyDiscord("License banned", { Key: licenseKey });
     fetchData();
   };
 
