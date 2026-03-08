@@ -10,6 +10,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function ResellerKeys() {
   const { user } = useAuth();
@@ -113,6 +114,7 @@ export default function ResellerKeys() {
         }),
       ]);
 
+      notifyDiscord("Reseller generated keys", { Reseller: reseller.username, Application: appData.name, Quantity: keyCount, Duration: getDurationLabel(days) });
       setDialogOpen(false);
       toast.success(`Generated ${keyCount} key(s)! Credits remaining for this app: ${availableCredits - keyCount}`);
       fetchData();
@@ -138,6 +140,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller banned license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller banned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License banned");
     fetchData();
   };
@@ -150,6 +153,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
     fetchData();
   };
@@ -162,6 +166,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
     fetchData();
   };
@@ -174,6 +179,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller deleted license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller deleted license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License deleted");
     fetchData();
   };

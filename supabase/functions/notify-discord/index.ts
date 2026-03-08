@@ -86,6 +86,12 @@ Deno.serve(async (req) => {
       "IP/HWID blacklisted": 0xff0000,
       "Blacklist entry removed": 0xffaa00,
       "Settings updated": 0x00aaff,
+      // Reseller actions
+      "Reseller generated keys": 0x00cc88,
+      "Reseller banned license": 0xff0000,
+      "Reseller unbanned license": 0x00ff00,
+      "Reseller HWID reset": 0xffaa00,
+      "Reseller deleted license": 0xff4444,
     };
 
     const embed = {
