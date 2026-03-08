@@ -80,6 +80,19 @@ export default function Licenses() {
     fetchData();
   };
 
+  const unbanKey = async (id: string, licenseKey: string) => {
+    await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "License unbanned",
+        license_key: licenseKey,
+      });
+    }
+    toast.success("License unbanned");
+    fetchData();
+  };
+
   const resetHwid = async (id: string, licenseKey: string) => {
     await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     if (user) {
