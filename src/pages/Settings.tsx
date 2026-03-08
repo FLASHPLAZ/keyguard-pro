@@ -53,6 +53,7 @@ export default function SettingsPage() {
   // Reseller keys state
   const [resellerKeys, setResellerKeys] = useState<any[]>([]);
   const [rkSearch, setRkSearch] = useState("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [rkPage, setRkPage] = useState(1);
   const RK_PAGE_SIZE = 15;
 
