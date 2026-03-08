@@ -94,6 +94,7 @@ export default function Applications() {
     await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Signing secret regenerated for app ${id}` });
     toast.success("Signing secret regenerated");
+    notifyDiscord("Signing secret regenerated", { "App ID": id });
     setRegenerateAppId(null);
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });
