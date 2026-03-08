@@ -318,7 +318,7 @@ export default function ResellerKeys() {
                             <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10">
                             <ShieldCheck className="h-4 w-4 text-emerald-400" />
                           </Button>
                         )
