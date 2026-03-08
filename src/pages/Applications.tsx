@@ -65,6 +65,7 @@ export default function Applications() {
     await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Kill switch ${!current ? "enabled" : "disabled"} for "${name}"` });
     toast.success("Kill switch toggled");
+    notifyDiscord(!current ? "Kill switch enabled" : "Kill switch disabled", { App: name });
     fetchApps();
   };
 
