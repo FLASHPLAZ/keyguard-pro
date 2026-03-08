@@ -17,12 +17,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes] = await Promise.all([
+      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes] = await Promise.all([
         supabase.from("applications").select("id", { count: "exact", head: true }),
         supabase.from("licenses").select("id, status", { count: "exact" }),
         supabase.from("resellers").select("id", { count: "exact", head: true }),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
         supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("resellers").select("*").order("created_at", { ascending: false }),
       ]);
 
       const licenses = licensesRes.data || [];
