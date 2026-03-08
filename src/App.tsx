@@ -12,6 +12,7 @@ import Licenses from "./pages/Licenses";
 import Resellers from "./pages/Resellers";
 import Logs from "./pages/Logs";
 import ApiDocs from "./pages/ApiDocs";
+import BotGuide from "./pages/BotGuide";
 import SettingsPage from "./pages/Settings";
 import ResellerDashboard from "./pages/ResellerDashboard";
 import ResellerKeys from "./pages/ResellerKeys";
