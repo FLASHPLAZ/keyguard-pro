@@ -28,7 +28,7 @@ export default function Licenses() {
   const fetchData = async () => {
     if (!user) return;
     const [licRes, appRes] = await Promise.all([
-      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }),
+      supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false }),
       supabase.from("applications").select("*").eq("suspended", false),
     ]);
     setLicenses(licRes.data || []);
@@ -86,8 +86,9 @@ export default function Licenses() {
     fetchData();
   };
 
-  const unbanKey = async (id: string, licenseKey: string) => {
-    await supabase.from("licenses").update({ banned: false, status: "active", banned_by_admin: false }).eq("id", id);
+  const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
+    const restoredStatus = hwid ? "active" : "unused";
+    await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
@@ -219,7 +220,9 @@ export default function Licenses() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -243,7 +246,13 @@ export default function Licenses() {
                       {lic.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
+                      {lic.hwid ? "Yes" : "No"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{lic.hwid || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{lic.resellers?.username || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
@@ -257,7 +266,7 @@ export default function Licenses() {
                         <RotateCcw className="h-4 w-4 text-warning" />
                       </Button>
                       {lic.banned ? (
-                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10">
                           <ShieldCheck className="h-4 w-4 text-emerald-400" />
                         </Button>
                       ) : (

@@ -145,8 +145,9 @@ export default function ResellerKeys() {
     fetchData();
   };
 
-  const unbanKey = async (id: string, licenseKey: string) => {
-    const { error } = await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+  const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
+    const restoredStatus = hwid ? "active" : "unused";
+    const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
       await supabase.from("activity_logs").insert({
@@ -274,6 +275,7 @@ export default function ResellerKeys() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -298,6 +300,11 @@ export default function ResellerKeys() {
                       {lic.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
+                      {lic.hwid ? "Yes" : "No"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{lic.hwid || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
@@ -311,7 +318,7 @@ export default function ResellerKeys() {
                             <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         ) : (
-                          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10">
                             <ShieldCheck className="h-4 w-4 text-emerald-400" />
                           </Button>
                         )
