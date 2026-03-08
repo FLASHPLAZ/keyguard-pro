@@ -80,6 +80,7 @@ export default function Applications() {
   const toggleSignatureRequired = async (id: string, current: boolean) => {
     await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
+    notifyDiscord(!current ? "Request signing enabled" : "Request signing disabled", { "App ID": id });
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
   };
