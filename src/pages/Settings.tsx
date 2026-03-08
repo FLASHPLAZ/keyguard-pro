@@ -137,6 +137,7 @@ export default function SettingsPage() {
       return;
     }
     toast.success(`${blType.toUpperCase()} blacklisted`);
+    notifyDiscord("IP/HWID blacklisted", { Type: blType.toUpperCase(), Value: blValue.trim(), Key: blLicenseKey.trim() || null, Reason: blReason.trim() || null });
     setBlValue(""); setBlLicenseKey(""); setBlReason("");
     setBlDialogOpen(false);
     loadBlacklist();
