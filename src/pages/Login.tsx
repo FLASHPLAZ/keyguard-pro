@@ -1,41 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Key, LogIn, UserPlus, ArrowRight } from "lucide-react";
+import { Key, LogIn, Shield, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const { user, role } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user && role) {
+      navigate(role === "admin" ? "/" : "/reseller", { replace: true });
+    }
+  }, [user, role, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Welcome back!");
-        navigate("/");
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { username: username || email.split("@")[0] },
-            emailRedirectTo: window.location.origin,
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! Check your email to confirm.");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Welcome back!");
     } catch (err: any) {
       toast.error(err.message || "Authentication failed");
     } finally {
@@ -45,14 +37,12 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      {/* Background effects */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-primary/3 blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-md px-4">
-        {/* Logo */}
         <div className="mb-8 flex flex-col items-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary glow-primary">
             <Key className="h-7 w-7 text-primary-foreground" />
@@ -61,29 +51,32 @@ export default function Login() {
           <p className="mt-1 text-sm text-muted-foreground">License Management System</p>
         </div>
 
-        {/* Card */}
         <div className="rounded-xl border border-border bg-card p-8 shadow-2xl">
-          <h2 className="mb-6 text-center text-lg font-semibold text-foreground">
-            {isLogin ? "Sign in to your account" : "Create your account"}
+          <h2 className="mb-2 text-center text-lg font-semibold text-foreground">
+            Sign in to your account
           </h2>
+          <p className="mb-6 text-center text-xs text-muted-foreground">
+            Admin & Reseller access
+          </p>
+
+          <div className="mb-6 flex items-center justify-center gap-6">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="h-3.5 w-3.5 text-primary" />
+              <span>Admin</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Users className="h-3.5 w-3.5 text-primary" />
+              <span>Reseller</span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Username</label>
-                <Input
-                  placeholder="admin"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="bg-secondary border-border"
-                />
-              </div>
-            )}
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</label>
               <Input
                 type="email"
-                placeholder="admin@keyvault.io"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -106,31 +99,17 @@ export default function Login() {
             <Button type="submit" disabled={loading} className="w-full gap-2">
               {loading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-              ) : isLogin ? (
-                <>
-                  <LogIn className="h-4 w-4" /> Sign In
-                </>
               ) : (
                 <>
-                  <UserPlus className="h-4 w-4" /> Create Account
+                  <LogIn className="h-4 w-4" /> Sign In
                 </>
               )}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Secure license management for your software
+          Contact your administrator for account access
         </p>
       </div>
     </div>

@@ -4,7 +4,8 @@ import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, CreditCard, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Search, CreditCard, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,7 +18,11 @@ export default function Resellers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [newCredits, setNewCredits] = useState(10);
+  const [selectedApps, setSelectedApps] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -36,21 +41,45 @@ export default function Resellers() {
     r.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const toggleApp = (appId: string) => {
+    setSelectedApps((prev) =>
+      prev.includes(appId) ? prev.filter((a) => a !== appId) : [...prev, appId]
+    );
+  };
+
   const createReseller = async () => {
-    if (!newUsername.trim() || !newEmail.trim() || !user) return;
-    const { error } = await supabase.from("resellers").insert({
-      username: newUsername.trim(),
-      email: newEmail.trim(),
-      credits: newCredits,
-      admin_id: user.id,
-    });
-    if (error) { toast.error(error.message); return; }
-    setNewUsername("");
-    setNewEmail("");
-    setNewCredits(10);
-    setDialogOpen(false);
-    toast.success(`Reseller "${newUsername}" created`);
-    fetchData();
+    if (!newUsername.trim() || !newEmail.trim() || !newPassword.trim() || !user) return;
+    if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (selectedApps.length === 0) { toast.error("Select at least one app"); return; }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-reseller", {
+        body: {
+          username: newUsername.trim(),
+          email: newEmail.trim(),
+          password: newPassword,
+          credits: newCredits,
+          allowed_apps: selectedApps,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+
+      setNewUsername("");
+      setNewEmail("");
+      setNewPassword("");
+      setNewCredits(10);
+      setSelectedApps([]);
+      setDialogOpen(false);
+      toast.success(`Reseller "${newUsername}" created successfully!`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create reseller");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const addCredits = async (id: string, current: number) => {
@@ -65,27 +94,88 @@ export default function Resellers() {
     fetchData();
   };
 
+  const getAppNames = (allowedApps: string[] | null) => {
+    if (!allowedApps || allowedApps.length === 0) return "None";
+    return allowedApps
+      .map((id) => apps.find((a) => a.id === id)?.name || "Unknown")
+      .join(", ");
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Resellers</h1>
-          <p className="text-sm text-muted-foreground">Manage reseller accounts and credits</p>
+          <p className="text-sm text-muted-foreground">Manage reseller accounts, credits, and app access</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Add Reseller</Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border">
-            <DialogHeader><DialogTitle>Create Reseller</DialogTitle></DialogHeader>
+          <DialogContent className="bg-card border-border max-w-lg">
+            <DialogHeader><DialogTitle>Create Reseller Account</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
-              <Input placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className="bg-secondary border-border" />
-              <Input placeholder="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-secondary border-border" />
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Initial Credits</label>
-                <Input type="number" min={1} value={newCredits} onChange={(e) => setNewCredits(Number(e.target.value))} className="bg-secondary border-border" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Username</label>
+                  <Input placeholder="reseller1" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className="bg-secondary border-border" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Email</label>
+                  <Input placeholder="reseller@mail.com" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-secondary border-border" />
+                </div>
               </div>
-              <Button onClick={createReseller} className="w-full">Create</Button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="bg-secondary border-border pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Initial Credits</label>
+                  <Input type="number" min={1} value={newCredits} onChange={(e) => setNewCredits(Number(e.target.value))} className="bg-secondary border-border" />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">Allowed Applications</label>
+                {apps.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No apps available. Create an application first.</p>
+                )}
+                <div className="space-y-2 max-h-40 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
+                  {apps.map((app) => (
+                    <label key={app.id} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
+                      <Checkbox
+                        checked={selectedApps.includes(app.id)}
+                        onCheckedChange={() => toggleApp(app.id)}
+                      />
+                      <span className="text-sm text-foreground">{app.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <Button onClick={createReseller} className="w-full" disabled={creating}>
+                {creating ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                ) : (
+                  "Create Reseller"
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -106,6 +196,7 @@ export default function Resellers() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Credits</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Allowed Apps</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
             </tr>
@@ -117,6 +208,7 @@ export default function Resellers() {
                 <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
                 <td className="px-4 py-3"><span className="font-mono text-primary font-semibold">{r.credits}</span></td>
                 <td className="px-4 py-3 text-foreground">{r.total_generated}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">{getAppNames(r.allowed_apps)}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
