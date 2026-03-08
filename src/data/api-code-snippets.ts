@@ -3,12 +3,16 @@ const API_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.c
 export const pythonSnippet = `import requests
 import subprocess
 import hashlib
+import hmac
 import socket
 import os
 import sys
+import time
+import json
 
 API_URL = "${API_BASE}/validate"
 LICENSE_FILE = "license.dat"
+SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
 
 def get_hwid():
     """Get a unique hardware ID (Windows)"""
@@ -30,14 +34,33 @@ def save_key(key):
     with open(LICENSE_FILE, "w") as f:
         f.write(key)
 
+def sign_request(body_str: str, secret: str) -> tuple:
+    """Generate HMAC-SHA256 signature and timestamp for request signing."""
+    timestamp = str(int(time.time()))
+    signing_payload = f"{timestamp}.{body_str}"
+    signature = hmac.new(
+        secret.encode(), signing_payload.encode(), hashlib.sha256
+    ).hexdigest()
+    return signature, timestamp
+
 def validate_license(key: str) -> bool:
     try:
-        response = requests.post(API_URL, json={
+        payload = {
             "license_key": key,
             "hwid": get_hwid(),
             "device_name": get_device_name()
-        }, timeout=10)
+        }
+        body_str = json.dumps(payload, separators=(',', ':'))
         
+        headers = {"Content-Type": "application/json"}
+        
+        # Add HMAC signature if signing secret is configured
+        if SIGNING_SECRET:
+            signature, timestamp = sign_request(body_str, SIGNING_SECRET)
+            headers["X-Signature"] = signature
+            headers["X-Timestamp"] = timestamp
+        
+        response = requests.post(API_URL, data=body_str, headers=headers, timeout=10)
         data = response.json()
         
         if data.get("valid"):
@@ -89,6 +112,7 @@ class LicenseValidator
     private static readonly string API_URL = "${API_BASE}/validate";
     private static readonly HttpClient client = new HttpClient();
     private static readonly string LICENSE_FILE = "license.dat";
+    private static readonly string SIGNING_SECRET = ""; // Set your app's signing secret here
 
     static string GetHWID()
     {
@@ -114,6 +138,16 @@ class LicenseValidator
 
     static void SaveKey(string key) => File.WriteAllText(LICENSE_FILE, key);
 
+    static (string signature, string timestamp) SignRequest(string body, string secret)
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var signingPayload = $"{timestamp}.{body}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signingPayload));
+        var signature = BitConverter.ToString(hash).Replace("-", "").ToLower();
+        return (signature, timestamp);
+    }
+
     public static async Task<bool> ValidateLicense(string licenseKey)
     {
         try
@@ -125,8 +159,18 @@ class LicenseValidator
                 device_name = GetDeviceName()
             });
 
-            var content = new StringContent(payload, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync(API_URL, content);
+            var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
+            request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            // Add HMAC signature if signing secret is configured
+            if (!string.IsNullOrEmpty(SIGNING_SECRET))
+            {
+                var (signature, timestamp) = SignRequest(payload, SIGNING_SECRET);
+                request.Headers.Add("X-Signature", signature);
+                request.Headers.Add("X-Timestamp", timestamp);
+            }
+
+            var response = await client.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
             var result = JsonDocument.Parse(json).RootElement;
 
@@ -194,6 +238,7 @@ const os = require('os');
 
 const API_URL = "${API_BASE}/validate";
 const LICENSE_FILE = "license.dat";
+const SIGNING_SECRET = ""; // Set your app's signing secret here
 
 function getHWID() {
   try {
@@ -221,16 +266,36 @@ function saveKey(key) {
   fs.writeFileSync(LICENSE_FILE, key);
 }
 
+function signRequest(bodyStr, secret) {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signingPayload = \`\${timestamp}.\${bodyStr}\`;
+  const signature = crypto.createHmac('sha256', secret)
+    .update(signingPayload).digest('hex');
+  return { signature, timestamp };
+}
+
 async function validateLicense(licenseKey) {
   try {
+    const payload = {
+      license_key: licenseKey,
+      hwid: getHWID(),
+      device_name: getDeviceName()
+    };
+    const bodyStr = JSON.stringify(payload);
+    
+    const headers = { 'Content-Type': 'application/json' };
+    
+    // Add HMAC signature if signing secret is configured
+    if (SIGNING_SECRET) {
+      const { signature, timestamp } = signRequest(bodyStr, SIGNING_SECRET);
+      headers['X-Signature'] = signature;
+      headers['X-Timestamp'] = timestamp;
+    }
+
     const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        license_key: licenseKey,
-        hwid: getHWID(),
-        device_name: getDeviceName()
-      })
+      headers,
+      body: bodyStr
     });
 
     const data = await res.json();
@@ -280,19 +345,22 @@ const ask = (q) => new Promise(r => rl.question(q, r));
   // Your app code here
 })();`;
 
-export const cppSnippet = `// Requires: libcurl, nlohmann/json
-// Compile: g++ -o app main.cpp -lcurl
+export const cppSnippet = `// Requires: libcurl, nlohmann/json, OpenSSL
+// Compile: g++ -o app main.cpp -lcurl -lssl -lcrypto
 
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <ctime>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <openssl/hmac.h>
 
 using json = nlohmann::json;
 
 const std::string API_URL = "${API_BASE}/validate";
 const std::string LICENSE_FILE = "license.dat";
+const std::string SIGNING_SECRET = ""; // Set your app's signing secret here
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
     s->append((char*)contents, size * nmemb);
@@ -343,6 +411,18 @@ void saveKey(const std::string& key) {
     f << key;
 }
 
+std::string hmacSha256(const std::string& secret, const std::string& data) {
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int hashLen;
+    HMAC(EVP_sha256(), secret.c_str(), secret.size(),
+         (unsigned char*)data.c_str(), data.size(), hash, &hashLen);
+    char hex[65];
+    for (unsigned int i = 0; i < hashLen; i++)
+        sprintf(hex + i * 2, "%02x", hash[i]);
+    hex[hashLen * 2] = 0;
+    return std::string(hex);
+}
+
 bool validateLicense(const std::string& licenseKey) {
     CURL* curl = curl_easy_init();
     if (!curl) return false;
@@ -357,6 +437,15 @@ bool validateLicense(const std::string& licenseKey) {
 
     struct curl_slist* headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    // Add HMAC signature if signing secret is configured
+    if (!SIGNING_SECRET.empty()) {
+        std::string timestamp = std::to_string(std::time(nullptr));
+        std::string signingPayload = timestamp + "." + postData;
+        std::string signature = hmacSha256(SIGNING_SECRET, signingPayload);
+        headers = curl_slist_append(headers, ("X-Signature: " + signature).c_str());
+        headers = curl_slist_append(headers, ("X-Timestamp: " + timestamp).c_str());
+    }
 
     curl_easy_setopt(curl, CURLOPT_URL, API_URL.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
@@ -422,18 +511,23 @@ export const goSnippet = `package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const apiURL = "${API_BASE}/validate"
 const licenseFile = "license.dat"
+const signingSecret = "" // Set your app's signing secret here
 
 func getHWID() string {
 	out, err := exec.Command("wmic", "csproduct", "get", "uuid").Output()
@@ -469,6 +563,15 @@ func saveKey(key string) {
 	os.WriteFile(licenseFile, []byte(key), 0644)
 }
 
+func signRequest(bodyStr string, secret string) (string, string) {
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	signingPayload := timestamp + "." + bodyStr
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(signingPayload))
+	signature := hex.EncodeToString(mac.Sum(nil))
+	return signature, timestamp
+}
+
 type ValidateRequest struct {
 	LicenseKey string \`json:"license_key"\`
 	HWID       string \`json:"hwid"\`
@@ -491,9 +594,24 @@ func validateLicense(key string) bool {
 		HWID:       getHWID(),
 		DeviceName: getDeviceName(),
 	})
+	bodyStr := string(payload)
+
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(bodyStr))
+	if err != nil {
+		fmt.Printf("⚠️ Request error: %v\\n", err)
+		return false
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Add HMAC signature if signing secret is configured
+	if signingSecret != "" {
+		signature, timestamp := signRequest(bodyStr, signingSecret)
+		req.Header.Set("X-Signature", signature)
+		req.Header.Set("X-Timestamp", timestamp)
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Post(apiURL, "application/json", bytes.NewBuffer(payload))
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("⚠️ Connection error: %v\\n", err)
 		return false
@@ -559,11 +677,14 @@ import java.net.http.*;
 import java.io.*;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import com.google.gson.*;
 
 public class LicenseValidator {
     private static final String API_URL = "${API_BASE}/validate";
     private static final String LICENSE_FILE = "license.dat";
+    private static final String SIGNING_SECRET = ""; // Set your app's signing secret here
 
     static String getHWID() {
         try {
@@ -596,24 +717,42 @@ public class LicenseValidator {
         catch (Exception e) { /* ignore */ }
     }
 
+    static String[] signRequest(String body, String secret) throws Exception {
+        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
+        String signingPayload = timestamp + "." + body;
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(secret.getBytes(), "HmacSHA256"));
+        byte[] hash = mac.doFinal(signingPayload.getBytes());
+        StringBuilder sb = new StringBuilder();
+        for (byte b : hash) sb.append(String.format("%02x", b));
+        return new String[]{ sb.toString(), timestamp };
+    }
+
     public static boolean validateLicense(String licenseKey) {
         try {
             JsonObject payload = new JsonObject();
             payload.addProperty("license_key", licenseKey);
             payload.addProperty("hwid", getHWID());
             payload.addProperty("device_name", getDeviceName());
+            String bodyStr = payload.toString();
+
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(bodyStr));
+
+            // Add HMAC signature if signing secret is configured
+            if (!SIGNING_SECRET.isEmpty()) {
+                String[] sig = signRequest(bodyStr, SIGNING_SECRET);
+                requestBuilder.header("X-Signature", sig[0]);
+                requestBuilder.header("X-Timestamp", sig[1]);
+            }
 
             HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(java.time.Duration.ofSeconds(10))
                 .build();
 
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(payload.toString()))
-                .build();
-
-            HttpResponse<String> response = client.send(request,
+            HttpResponse<String> response = client.send(requestBuilder.build(),
                 HttpResponse.BodyHandlers.ofString());
 
             JsonObject result = JsonParser.parseString(response.body())
@@ -674,14 +813,23 @@ export const rustSnippet = `// Cargo.toml dependencies:
 // serde = { version = "1", features = ["derive"] }
 // serde_json = "1"
 // md5 = "0.7"
+// hmac = "0.12"
+// sha2 = "0.10"
+// hex = "0.4"
 
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+type HmacSha256 = Hmac<Sha256>;
 
 const API_URL: &str = "${API_BASE}/validate";
 const LICENSE_FILE: &str = "license.dat";
+const SIGNING_SECRET: &str = ""; // Set your app's signing secret here
 
 fn get_hwid() -> String {
     let output = Command::new("wmic")
@@ -714,6 +862,19 @@ fn save_key(key: &str) {
     let _ = fs::write(LICENSE_FILE, key);
 }
 
+fn sign_request(body: &str, secret: &str) -> (String, String) {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string();
+    let signing_payload = format!("{}.{}", timestamp, body);
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
+    mac.update(signing_payload.as_bytes());
+    let signature = hex::encode(mac.finalize().into_bytes());
+    (signature, timestamp)
+}
+
 #[derive(Serialize)]
 struct ValidateRequest {
     license_key: String,
@@ -731,18 +892,30 @@ struct ValidateResponse {
 }
 
 fn validate_license(key: &str) -> bool {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .unwrap();
-
     let payload = ValidateRequest {
         license_key: key.to_string(),
         hwid: get_hwid(),
         device_name: get_device_name(),
     };
+    let body_str = serde_json::to_string(&payload).unwrap();
 
-    match client.post(API_URL).json(&payload).send() {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap();
+
+    let mut request = client.post(API_URL)
+        .header("Content-Type", "application/json");
+
+    // Add HMAC signature if signing secret is configured
+    if !SIGNING_SECRET.is_empty() {
+        let (signature, timestamp) = sign_request(&body_str, SIGNING_SECRET);
+        request = request
+            .header("X-Signature", signature)
+            .header("X-Timestamp", timestamp);
+    }
+
+    match request.body(body_str).send() {
         Ok(resp) => {
             match resp.json::<ValidateResponse>() {
                 Ok(data) => {
