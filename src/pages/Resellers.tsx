@@ -144,6 +144,7 @@ export default function Resellers() {
         action: `Updated reseller "${editingReseller.username}" — ${editSelectedApps.length} apps configured`,
       });
 
+      notifyDiscord("Reseller updated", { Username: editingReseller.username, "Apps configured": editSelectedApps.length, "Total credits": editSelectedApps.reduce((sum: number, id: string) => sum + (editAppCredits[id] || 0), 0) });
       setEditDialogOpen(false);
       toast.success(`Reseller "${editingReseller.username}" updated`);
       fetchData();
