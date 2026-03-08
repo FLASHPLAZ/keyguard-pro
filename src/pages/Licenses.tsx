@@ -120,6 +120,18 @@ export default function Licenses() {
     fetchData();
   };
 
+  const deleteKey = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "License deleted", license_key: licenseKey,
+      });
+    }
+    toast.success("License deleted");
+    fetchData();
+  };
+
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
     toast.success("Copied to clipboard");
