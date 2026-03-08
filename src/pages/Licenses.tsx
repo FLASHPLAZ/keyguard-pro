@@ -24,6 +24,7 @@ export default function Licenses() {
   const [duration, setDuration] = useState("30");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -57,7 +58,6 @@ export default function Licenses() {
     const { error } = await supabase.from("licenses").insert(inserts);
     if (error) { toast.error(error.message); return; }
 
-    // Log the action
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
     await supabase.from("activity_logs").insert({
       user_id: user.id,
@@ -75,11 +75,7 @@ export default function Licenses() {
   const banKey = async (id: string, licenseKey: string) => {
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id,
-        action: "License banned",
-        license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey });
     }
     toast.success("License banned");
     notifyDiscord("License banned", { Key: licenseKey });
@@ -90,11 +86,7 @@ export default function Licenses() {
     const restoredStatus = hwid ? "active" : "unused";
     await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id,
-        action: "License unbanned",
-        license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey });
     }
     toast.success("License unbanned");
     notifyDiscord("License unbanned", { Key: licenseKey });
@@ -104,11 +96,7 @@ export default function Licenses() {
   const resetHwid = async (id: string, licenseKey: string) => {
     await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id,
-        action: "HWID reset",
-        license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey });
     }
     toast.success("HWID reset");
     notifyDiscord("HWID reset", { Key: licenseKey });
@@ -119,11 +107,7 @@ export default function Licenses() {
     const newExpiry = new Date(new Date(currentExpiry).getTime() + 30 * 86400000).toISOString();
     await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id,
-        action: "License extended +30 days",
-        license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended +30 days", license_key: licenseKey });
     }
     toast.success("License extended by 30 days");
     notifyDiscord("License extended", { Key: licenseKey, "Added": "+30 days" });
@@ -134,16 +118,12 @@ export default function Licenses() {
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "License deleted", license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey });
     }
     toast.success("License deleted");
     notifyDiscord("License deleted", { Key: licenseKey });
     fetchData();
   };
-
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -151,6 +131,34 @@ export default function Licenses() {
     toast.success("Copied to clipboard");
     setTimeout(() => setCopiedKey(null), 1500);
   };
+
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const ActionButtons = ({ lic }: { lic: any }) => (
+    <div className="flex items-center gap-1 flex-wrap">
+      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10 h-8 w-8">
+        <Copy className="h-4 w-4 text-primary" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => extendKey(lic.id, lic.expires_at, lic.license_key)} title="Extend 30 days" className="hover:bg-primary/10 h-8 w-8">
+        <Clock className="h-4 w-4 text-primary" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10 h-8 w-8">
+        <RotateCcw className="h-4 w-4 text-warning" />
+      </Button>
+      {lic.banned ? (
+        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10 h-8 w-8">
+          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+        </Button>
+      ) : (
+        <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10 h-8 w-8">
+          <Ban className="h-4 w-4 text-destructive" />
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -212,8 +220,62 @@ export default function Licenses() {
         </Select>
       </div>
 
-      <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[700px]">
+      {/* Mobile card view */}
+      <div className="space-y-3 md:hidden">
+        {paged.map((lic, i) => (
+          <div key={lic.id} className="rounded-lg border border-border bg-card p-4 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity text-left min-w-0">
+                <span className="truncate text-sm">{lic.license_key}</span>
+                {copiedKey === lic.license_key ? (
+                  <span className="text-xs text-emerald-400 font-sans font-medium shrink-0">Copied!</span>
+                ) : (
+                  <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+                )}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div>
+                <span className="text-muted-foreground">App: </span>
+                <span className="text-foreground">{lic.applications?.name || "Unknown"}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Status: </span>
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${getLicenseStatusColor(lic.status)}`}>
+                  {lic.status}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Used: </span>
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
+                  {lic.hwid ? "Yes" : "No"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Reseller: </span>
+                <span className="text-foreground">{lic.resellers?.username || "—"}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">HWID: </span>
+                <span className="font-mono text-muted-foreground">{lic.hwid || "—"}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Expires: </span>
+                <span className="text-muted-foreground">{formatDate(lic.expires_at)}</span>
+              </div>
+            </div>
+            <ActionButtons lic={lic} />
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">No licenses found</div>
+        )}
+        <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block">
+        <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
@@ -228,7 +290,7 @@ export default function Licenses() {
               </tr>
             </thead>
             <tbody>
-              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((lic, i) => (
+              {paged.map((lic, i) => (
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -256,27 +318,7 @@ export default function Licenses() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10">
-                        <Copy className="h-4 w-4 text-primary" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => extendKey(lic.id, lic.expires_at, lic.license_key)} title="Extend 30 days" className="hover:bg-primary/10">
-                        <Clock className="h-4 w-4 text-primary" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10">
-                        <RotateCcw className="h-4 w-4 text-warning" />
-                      </Button>
-                      {lic.banned ? (
-                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10">
-                          <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10">
-                          <Ban className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <ActionButtons lic={lic} />
                     </div>
                   </td>
                 </tr>
