@@ -2,9 +2,16 @@
 
 const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
 
+export const DURATION_OPTIONS = [
+  { label: '1 Day', value: 1 },
+  { label: '1 Week', value: 7 },
+  { label: '1 Month', value: 30 },
+  { label: 'Lifetime', value: 36500 }, // ~100 years
+] as const;
+
 export function generateLicenseKey(): string {
-  const segments: string[] = [];
-  for (let s = 0; s < 5; s++) {
+  const segments: string[] = ['GALACTIC'];
+  for (let s = 0; s < 4; s++) {
     let segment = '';
     for (let i = 0; i < 5; i++) {
       const randomIndex = Math.floor(Math.random() * CHARSET.length);
@@ -96,4 +103,12 @@ export function formatDate(date: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+export function getDurationLabel(days: number): string {
+  if (days >= 36000) return 'Lifetime';
+  if (days === 1) return '1 Day';
+  if (days === 7) return '1 Week';
+  if (days === 30) return '1 Month';
+  return `${days} Days`;
 }

@@ -57,12 +57,12 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
+      <div className="mb-8 animate-fade-in">
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground">Overview of your license management system</p>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard title="Total Apps" value={stats.totalApps} icon={AppWindow} />
         <StatCard title="Total Licenses" value={stats.totalLicenses} icon={Key} />
         <StatCard title="Active" value={stats.activeLicenses} icon={CheckCircle} />
@@ -72,7 +72,7 @@ export default function Dashboard() {
       </div>
 
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">License Validations (7 days)</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={barData}>
@@ -85,7 +85,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "200ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">License Distribution</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -97,7 +97,7 @@ export default function Dashboard() {
               <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 12%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "6px", color: "hsl(210, 20%, 92%)" }} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="mt-4 flex justify-center gap-6">
+          <div className="mt-4 flex flex-wrap justify-center gap-4 sm:gap-6">
             {pieData.map((entry) => (
               <div key={entry.name} className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -109,13 +109,13 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">Recent Activity</h3>
           <div className="space-y-3">
             {recentLogs.length === 0 && <p className="text-sm text-muted-foreground">No activity yet</p>}
             {recentLogs.map((log: any) => (
-              <div key={log.id} className="flex items-start gap-3 rounded-md bg-secondary/30 px-3 py-2.5">
-                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary animate-pulse" />
+              <div key={log.id} className="flex items-start gap-3 rounded-md bg-secondary/30 px-3 py-2.5 transition-all duration-200 hover:bg-secondary/50">
+                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary animate-glow-pulse" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-foreground">{log.action}</p>
                   <p className="font-mono text-xs text-muted-foreground truncate">{log.license_key}</p>
@@ -126,17 +126,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-6">
+        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">Latest Licenses</h3>
           <div className="space-y-3">
             {recentLicenses.length === 0 && <p className="text-sm text-muted-foreground">No licenses yet</p>}
             {recentLicenses.map((lic: any) => (
-              <div key={lic.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2.5">
+              <div key={lic.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2.5 transition-all duration-200 hover:bg-secondary/50">
                 <div className="min-w-0">
                   <p className="license-key truncate">{lic.license_key}</p>
                   <p className="text-xs text-muted-foreground">{lic.applications?.name || "Unknown"}</p>
                 </div>
-                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
+                <span className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                   {lic.status}
                 </span>
               </div>
