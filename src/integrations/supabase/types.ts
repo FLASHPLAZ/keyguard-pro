@@ -234,6 +234,51 @@ export type Database = {
         }
         Relationships: []
       }
+      reseller_app_credits: {
+        Row: {
+          application_id: string
+          created_at: string
+          credits: number
+          id: string
+          reseller_id: string
+          total_generated: number
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          credits?: number
+          id?: string
+          reseller_id: string
+          total_generated?: number
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          credits?: number
+          id?: string
+          reseller_id?: string
+          total_generated?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reseller_app_credits_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reseller_app_credits_reseller_id_fkey"
+            columns: ["reseller_id"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resellers: {
         Row: {
           admin_id: string

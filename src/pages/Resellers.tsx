@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, CreditCard, Trash2, Eye, EyeOff, Pencil, Minus } from "lucide-react";
+import { Plus, Search, Trash2, Eye, EyeOff, Pencil, Minus } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,18 +15,18 @@ export default function Resellers() {
   const { user } = useAuth();
   const [resellers, setResellers] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
+  const [appCreditsMap, setAppCreditsMap] = useState<Record<string, any[]>>({});
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingReseller, setEditingReseller] = useState<any>(null);
-  const [editCredits, setEditCredits] = useState(0);
+  const [editAppCredits, setEditAppCredits] = useState<Record<string, number>>({});
   const [editSelectedApps, setEditSelectedApps] = useState<string[]>([]);
-  const [creditAdjust, setCreditAdjust] = useState(0);
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [newCredits, setNewCredits] = useState(10);
+  const [newAppCredits, setNewAppCredits] = useState<Record<string, number>>({});
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -35,12 +35,21 @@ export default function Resellers() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [resRes, appRes] = await Promise.all([
+    const [resRes, appRes, creditsRes] = await Promise.all([
       supabase.from("resellers").select("*").order("created_at", { ascending: false }),
       supabase.from("applications").select("id, name"),
+      supabase.from("reseller_app_credits").select("*"),
     ]);
     setResellers(resRes.data || []);
     setApps(appRes.data || []);
+
+    // Group credits by reseller_id
+    const creditsGrouped: Record<string, any[]> = {};
+    (creditsRes.data || []).forEach((c: any) => {
+      if (!creditsGrouped[c.reseller_id]) creditsGrouped[c.reseller_id] = [];
+      creditsGrouped[c.reseller_id].push(c);
+    });
+    setAppCreditsMap(creditsGrouped);
   };
 
   useEffect(() => { fetchData(); }, [user]);
@@ -51,22 +60,46 @@ export default function Resellers() {
   );
 
   const toggleApp = (appId: string) => {
-    setSelectedApps((prev) =>
-      prev.includes(appId) ? prev.filter((a) => a !== appId) : [...prev, appId]
-    );
+    setSelectedApps((prev) => {
+      if (prev.includes(appId)) {
+        const updated = { ...newAppCredits };
+        delete updated[appId];
+        setNewAppCredits(updated);
+        return prev.filter((a) => a !== appId);
+      } else {
+        setNewAppCredits({ ...newAppCredits, [appId]: 10 });
+        return [...prev, appId];
+      }
+    });
   };
 
   const toggleEditApp = (appId: string) => {
-    setEditSelectedApps((prev) =>
-      prev.includes(appId) ? prev.filter((a) => a !== appId) : [...prev, appId]
-    );
+    setEditSelectedApps((prev) => {
+      if (prev.includes(appId)) {
+        const updated = { ...editAppCredits };
+        delete updated[appId];
+        setEditAppCredits(updated);
+        return prev.filter((a) => a !== appId);
+      } else {
+        setEditAppCredits({ ...editAppCredits, [appId]: 0 });
+        return [...prev, appId];
+      }
+    });
   };
 
   const openEditDialog = (reseller: any) => {
     setEditingReseller(reseller);
-    setEditCredits(reseller.credits);
-    setEditSelectedApps(reseller.allowed_apps || []);
-    setCreditAdjust(0);
+    const currentApps = reseller.allowed_apps || [];
+    setEditSelectedApps(currentApps);
+    
+    // Load per-app credits
+    const credits: Record<string, number> = {};
+    const resellerCredits = appCreditsMap[reseller.id] || [];
+    currentApps.forEach((appId: string) => {
+      const found = resellerCredits.find((c: any) => c.application_id === appId);
+      credits[appId] = found?.credits || 0;
+    });
+    setEditAppCredits(credits);
     setEditDialogOpen(true);
   };
 
@@ -74,19 +107,40 @@ export default function Resellers() {
     if (!editingReseller || !user) return;
     setSaving(true);
     try {
-      const newCredits = editCredits + creditAdjust;
-      if (newCredits < 0) { toast.error("Credits cannot be negative"); return; }
-
+      // Update allowed_apps on reseller
       const { error } = await supabase.from("resellers").update({
-        credits: newCredits,
         allowed_apps: editSelectedApps,
       }).eq("id", editingReseller.id);
-
       if (error) throw error;
+
+      // Upsert per-app credits
+      for (const appId of editSelectedApps) {
+        const credits = editAppCredits[appId] || 0;
+        await supabase.from("reseller_app_credits").upsert({
+          reseller_id: editingReseller.id,
+          application_id: appId,
+          credits,
+        }, { onConflict: "reseller_id,application_id" });
+      }
+
+      // Delete credits for removed apps
+      const removedApps = (editingReseller.allowed_apps || []).filter(
+        (id: string) => !editSelectedApps.includes(id)
+      );
+      if (removedApps.length > 0) {
+        await supabase.from("reseller_app_credits")
+          .delete()
+          .eq("reseller_id", editingReseller.id)
+          .in("application_id", removedApps);
+      }
+
+      // Calculate total credits for backward compat
+      const totalCredits = editSelectedApps.reduce((sum, id) => sum + (editAppCredits[id] || 0), 0);
+      await supabase.from("resellers").update({ credits: totalCredits }).eq("id", editingReseller.id);
 
       await supabase.from("activity_logs").insert({
         user_id: user.id,
-        action: `Updated reseller "${editingReseller.username}" — credits: ${newCredits}, apps: ${editSelectedApps.length}`,
+        action: `Updated reseller "${editingReseller.username}" — ${editSelectedApps.length} apps configured`,
       });
 
       setEditDialogOpen(false);
@@ -104,6 +158,8 @@ export default function Resellers() {
     if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     if (selectedApps.length === 0) { toast.error("Select at least one app"); return; }
 
+    const totalCredits = selectedApps.reduce((sum, id) => sum + (newAppCredits[id] || 0), 0);
+
     setCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-reseller", {
@@ -111,7 +167,7 @@ export default function Resellers() {
           username: newUsername.trim(),
           email: newEmail.trim(),
           password: newPassword,
-          credits: newCredits,
+          credits: totalCredits,
           allowed_apps: selectedApps,
         },
       });
@@ -119,13 +175,26 @@ export default function Resellers() {
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
 
+      // Get the created reseller to insert per-app credits
+      const { data: newReseller } = await supabase.from("resellers")
+        .select("id").eq("email", newEmail.trim()).single();
+
+      if (newReseller) {
+        const creditInserts = selectedApps.map(appId => ({
+          reseller_id: newReseller.id,
+          application_id: appId,
+          credits: newAppCredits[appId] || 0,
+        }));
+        await supabase.from("reseller_app_credits").insert(creditInserts);
+      }
+
       await supabase.from("activity_logs").insert({
         user_id: user.id,
-        action: `Reseller "${newUsername.trim()}" created with ${newCredits} credits`,
+        action: `Reseller "${newUsername.trim()}" created with per-app credits`,
       });
 
       setNewUsername(""); setNewEmail(""); setNewPassword("");
-      setNewCredits(10); setSelectedApps([]);
+      setNewAppCredits({}); setSelectedApps([]);
       setDialogOpen(false);
       toast.success(`Reseller "${newUsername}" created successfully!`);
       fetchData();
@@ -143,9 +212,13 @@ export default function Resellers() {
     fetchData();
   };
 
-  const getAppNames = (allowedApps: string[] | null) => {
-    if (!allowedApps || allowedApps.length === 0) return "None";
-    return allowedApps.map((id) => apps.find((a) => a.id === id)?.name || "Unknown").join(", ");
+  const getAppCreditsDisplay = (resellerId: string) => {
+    const credits = appCreditsMap[resellerId] || [];
+    if (credits.length === 0) return "No credits";
+    return credits.map(c => {
+      const appName = apps.find(a => a.id === c.application_id)?.name || "Unknown";
+      return `${appName}: ${c.credits}`;
+    }).join(", ");
   };
 
   return (
@@ -153,13 +226,13 @@ export default function Resellers() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Resellers</h1>
-          <p className="text-sm text-muted-foreground">Manage reseller accounts, credits, and app access</p>
+          <p className="text-sm text-muted-foreground">Manage reseller accounts with per-app credits</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Add Reseller</Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg">
+          <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Create Reseller Account</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -172,30 +245,37 @@ export default function Resellers() {
                   <Input placeholder="reseller@mail.com" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="bg-secondary border-border" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Password</label>
-                  <div className="relative">
-                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="bg-secondary border-border pr-10" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Initial Credits</label>
-                  <Input type="number" min={1} value={newCredits} onChange={(e) => setNewCredits(Number(e.target.value))} className="bg-secondary border-border" />
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Password</label>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="bg-secondary border-border pr-10" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
               <div>
-                <label className="mb-2 block text-xs font-medium text-muted-foreground">Allowed Applications</label>
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">Applications & Credits Per App</label>
                 {apps.length === 0 && <p className="text-xs text-muted-foreground">No apps available. Create an application first.</p>}
-                <div className="space-y-2 max-h-40 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
+                <div className="space-y-2 max-h-52 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
                   {apps.map((app) => (
-                    <label key={app.id} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
-                      <Checkbox checked={selectedApps.includes(app.id)} onCheckedChange={() => toggleApp(app.id)} />
-                      <span className="text-sm text-foreground">{app.name}</span>
-                    </label>
+                    <div key={app.id} className="space-y-1">
+                      <label className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
+                        <Checkbox checked={selectedApps.includes(app.id)} onCheckedChange={() => toggleApp(app.id)} />
+                        <span className="text-sm text-foreground">{app.name}</span>
+                      </label>
+                      {selectedApps.includes(app.id) && (
+                        <div className="ml-8 flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground shrink-0">Credits:</span>
+                          <Input
+                            type="number" min={0}
+                            value={newAppCredits[app.id] || 0}
+                            onChange={(e) => setNewAppCredits({ ...newAppCredits, [app.id]: Number(e.target.value) })}
+                            className="bg-secondary border-border h-7 text-xs w-24"
+                          />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -209,43 +289,50 @@ export default function Resellers() {
 
       {/* Edit Reseller Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg">
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Reseller — {editingReseller?.username}</DialogTitle></DialogHeader>
           {editingReseller && (
             <div className="space-y-4 pt-4">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Current Credits: <span className="font-mono text-primary font-semibold">{editCredits}</span></label>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={() => setCreditAdjust(a => a - 10)} className="shrink-0">
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    value={creditAdjust}
-                    onChange={(e) => setCreditAdjust(Number(e.target.value))}
-                    className="bg-secondary border-border text-center"
-                    placeholder="Adjust credits (+/-)"
-                  />
-                  <Button variant="outline" size="icon" onClick={() => setCreditAdjust(a => a + 10)} className="shrink-0">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  New total: <span className="font-mono text-primary font-semibold">{editCredits + creditAdjust}</span>
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-medium text-muted-foreground">Allowed Applications</label>
-                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">Applications & Credits</label>
+                <div className="space-y-2 max-h-64 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
                   {apps.map((app) => (
-                    <label key={app.id} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
-                      <Checkbox checked={editSelectedApps.includes(app.id)} onCheckedChange={() => toggleEditApp(app.id)} />
-                      <span className="text-sm text-foreground">{app.name}</span>
-                    </label>
+                    <div key={app.id} className="space-y-1">
+                      <label className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
+                        <Checkbox checked={editSelectedApps.includes(app.id)} onCheckedChange={() => toggleEditApp(app.id)} />
+                        <span className="text-sm text-foreground">{app.name}</span>
+                      </label>
+                      {editSelectedApps.includes(app.id) && (
+                        <div className="ml-8 flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground shrink-0">Credits:</span>
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setEditAppCredits({ ...editAppCredits, [app.id]: Math.max(0, (editAppCredits[app.id] || 0) - 10) })}>
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number" min={0}
+                              value={editAppCredits[app.id] || 0}
+                              onChange={(e) => setEditAppCredits({ ...editAppCredits, [app.id]: Number(e.target.value) })}
+                              className="bg-secondary border-border h-7 text-xs w-20 text-center"
+                            />
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setEditAppCredits({ ...editAppCredits, [app.id]: (editAppCredits[app.id] || 0) + 10 })}>
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
                 {apps.length === 0 && <p className="text-xs text-muted-foreground">No apps available.</p>}
+              </div>
+
+              <div className="rounded-md bg-secondary/30 p-3">
+                <p className="text-xs text-muted-foreground">
+                  Total credits: <span className="font-mono text-primary font-semibold">
+                    {editSelectedApps.reduce((sum, id) => sum + (editAppCredits[id] || 0), 0)}
+                  </span>
+                </p>
               </div>
 
               <Button onClick={saveReseller} className="w-full btn-glow" disabled={saving}>
@@ -269,11 +356,19 @@ export default function Resellers() {
           <div key={r.id} className="rounded-lg border border-border bg-card p-4 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-foreground">{r.username}</span>
-              <span className="font-mono text-primary font-semibold text-sm">{r.credits} credits</span>
+              <span className="text-xs text-muted-foreground">Gen: {r.total_generated}</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-1">{r.email}</p>
-            <p className="text-xs text-muted-foreground mb-2">Apps: {getAppNames(r.allowed_apps)}</p>
-            <p className="text-xs text-muted-foreground mb-3">Generated: {r.total_generated} · {formatDate(r.created_at)}</p>
+            <p className="text-xs text-muted-foreground mb-2">{r.email}</p>
+            <div className="space-y-1 mb-3">
+              {(appCreditsMap[r.id] || []).map((c: any) => (
+                <div key={c.id} className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{apps.find(a => a.id === c.application_id)?.name || "Unknown"}</span>
+                  <span className="font-mono text-primary font-semibold">{c.credits} credits</span>
+                </div>
+              ))}
+              {!(appCreditsMap[r.id]?.length) && <p className="text-xs text-muted-foreground">No per-app credits</p>}
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">{formatDate(r.created_at)}</p>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => openEditDialog(r)} className="flex-1">
                 <Pencil className="h-3 w-3 mr-1" /> Edit
@@ -297,9 +392,8 @@ export default function Resellers() {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Username</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Credits</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">App Credits</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Allowed Apps</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -309,9 +403,18 @@ export default function Resellers() {
                 <tr key={r.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3 font-medium text-foreground">{r.username}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
-                  <td className="px-4 py-3"><span className="font-mono text-primary font-semibold">{r.credits}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="space-y-0.5">
+                      {(appCreditsMap[r.id] || []).map((c: any) => (
+                        <div key={c.id} className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">{apps.find(a => a.id === c.application_id)?.name || "?"}</span>
+                          <span className="font-mono text-primary font-semibold">{c.credits}</span>
+                        </div>
+                      ))}
+                      {!(appCreditsMap[r.id]?.length) && <span className="text-xs text-muted-foreground">—</span>}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-foreground">{r.total_generated}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">{getAppNames(r.allowed_apps)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">

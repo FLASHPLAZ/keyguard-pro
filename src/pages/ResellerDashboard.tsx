@@ -11,6 +11,7 @@ export default function ResellerDashboard() {
   const [reseller, setReseller] = useState<any>(null);
   const [licenses, setLicenses] = useState<any[]>([]);
   const [allowedApps, setAllowedApps] = useState<any[]>([]);
+  const [appCredits, setAppCredits] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -20,22 +21,29 @@ export default function ResellerDashboard() {
       setReseller(resellerData);
 
       if (resellerData) {
-        if (resellerData.allowed_apps?.length > 0) {
-          const { data: appsData } = await supabase
-            .from("applications").select("*").in("id", resellerData.allowed_apps);
-          setAllowedApps(appsData || []);
-        }
-        const { data: licData } = await supabase
-          .from("licenses").select("*, applications(name)")
-          .eq("created_by_reseller", resellerData.id)
-          .order("created_at", { ascending: false }).limit(10);
-        setLicenses(licData || []);
+        const [appsRes, licRes, creditsRes] = await Promise.all([
+          resellerData.allowed_apps?.length > 0
+            ? supabase.from("applications").select("*").in("id", resellerData.allowed_apps)
+            : Promise.resolve({ data: [] }),
+          supabase.from("licenses").select("*, applications(name)")
+            .eq("created_by_reseller", resellerData.id)
+            .order("created_at", { ascending: false }).limit(10),
+          supabase.from("reseller_app_credits").select("*").eq("reseller_id", resellerData.id),
+        ]);
+        setAllowedApps(appsRes.data || []);
+        setLicenses(licRes.data || []);
+        setAppCredits(creditsRes.data || []);
       }
     };
     fetchData();
   }, [user]);
 
   const activeLicenses = licenses.filter(l => l.status === "active").length;
+  const totalCredits = appCredits.reduce((sum, c) => sum + c.credits, 0);
+
+  const getAppCredit = (appId: string) => {
+    return appCredits.find(c => c.application_id === appId)?.credits || 0;
+  };
 
   return (
     <ResellerLayout>
@@ -47,34 +55,45 @@ export default function ResellerDashboard() {
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard title="Credits Left" value={reseller?.credits || 0} icon={CreditCard} />
+        <StatCard title="Total Credits" value={totalCredits} icon={CreditCard} />
         <StatCard title="Total Generated" value={reseller?.total_generated || 0} icon={Key} />
         <StatCard title="Active Licenses" value={activeLicenses} icon={CheckCircle} />
         <StatCard title="Allowed Apps" value={allowedApps.length} icon={AppWindow} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Per-App Credit Balances */}
         <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Allowed Applications</h3>
+          <h3 className="mb-4 text-sm font-semibold text-foreground">Credits Per Application</h3>
           {allowedApps.length === 0 ? (
             <p className="text-sm text-muted-foreground">No applications assigned yet</p>
           ) : (
             <div className="space-y-2">
-              {allowedApps.map((app) => (
-                <div key={app.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-4 py-3 transition-all duration-200 hover:bg-secondary/50">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{app.name}</p>
-                    <p className="text-xs text-muted-foreground">{app.description}</p>
+              {allowedApps.map((app) => {
+                const credits = getAppCredit(app.id);
+                return (
+                  <div key={app.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-4 py-3 transition-all duration-200 hover:bg-secondary/50">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">{app.name}</p>
+                      <p className="text-xs text-muted-foreground">{app.description}</p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <p className="font-mono text-lg font-bold text-primary">{credits}</p>
+                        <p className="text-xs text-muted-foreground">credits</p>
+                      </div>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${app.kill_switch ? "badge-banned" : app.suspended ? "badge-suspended" : "badge-active"}`}>
+                        {app.kill_switch ? "Killed" : app.suspended ? "Suspended" : "Active"}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${app.kill_switch ? "badge-banned" : app.suspended ? "badge-suspended" : "badge-active"}`}>
-                    {app.kill_switch ? "Killed" : app.suspended ? "Suspended" : "Active"}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
+        {/* Recent Keys */}
         <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "200ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">Recent Generated Keys</h3>
           {licenses.length === 0 ? (
