@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Search, CreditCard, Trash2, Eye, EyeOff } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,8 @@ export default function Resellers() {
   const [newCredits, setNewCredits] = useState(10);
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const fetchData = async () => {
     if (!user) return;
@@ -165,7 +168,7 @@ export default function Resellers() {
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search resellers..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search resellers..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
         </div>
       </div>
 
@@ -184,7 +187,7 @@ export default function Resellers() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r, i) => (
+              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((r, i) => (
                 <tr key={r.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3 font-medium text-foreground">{r.username}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
@@ -209,6 +212,7 @@ export default function Resellers() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No resellers found</div>
           )}
+          <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
     </DashboardLayout>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Copy, Search, Ban, ShieldCheck, RotateCcw, Trash2 } from "lucide-react";
+import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,8 @@ export default function ResellerKeys() {
   const [keyCount, setKeyCount] = useState(1);
   const [duration, setDuration] = useState("30");
   const [generating, setGenerating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const fetchData = async () => {
     if (!user) return;
@@ -217,7 +220,7 @@ export default function ResellerKeys() {
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search keys..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
         </div>
       </div>
 
@@ -235,7 +238,7 @@ export default function ResellerKeys() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lic, i) => (
+              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((lic, i) => (
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -280,6 +283,7 @@ export default function ResellerKeys() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No keys generated yet</div>
           )}
+          <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
     </ResellerLayout>
