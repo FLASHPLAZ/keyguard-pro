@@ -114,6 +114,7 @@ export default function ResellerKeys() {
         }),
       ]);
 
+      notifyDiscord("Reseller generated keys", { Reseller: reseller.username, Application: appData.name, Quantity: keyCount, Duration: getDurationLabel(days) });
       setDialogOpen(false);
       toast.success(`Generated ${keyCount} key(s)! Credits remaining for this app: ${availableCredits - keyCount}`);
       fetchData();
