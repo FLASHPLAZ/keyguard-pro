@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search } from "lucide-react";
+import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,7 @@ export default function Applications() {
   const [newAppName, setNewAppName] = useState("");
   const [newAppDesc, setNewAppDesc] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailApp, setDetailApp] = useState<any>(null);
 
   const fetchApps = async () => {
     if (!user) return;
@@ -29,11 +30,11 @@ export default function Applications() {
 
   const createApp = async () => {
     if (!newAppName.trim() || !user) return;
-    const { error } = await supabase.from("applications").insert({
+    const { data, error } = await supabase.from("applications").insert({
       name: newAppName.trim(),
       description: newAppDesc.trim(),
       user_id: user.id,
-    });
+    }).select().single();
     if (error) { toast.error(error.message); return; }
     await supabase.from("activity_logs").insert({
       user_id: user.id,
@@ -43,6 +44,7 @@ export default function Applications() {
     setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
+    if (data) setDetailApp(data);
     fetchApps();
   };
 
@@ -67,6 +69,14 @@ export default function Applications() {
     fetchApps();
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+  const validateEndpoint = `${supabaseUrl}/functions/v1/validate`;
+
   return (
     <DashboardLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -89,6 +99,64 @@ export default function Applications() {
         </Dialog>
       </div>
 
+      {/* App Details Dialog */}
+      <Dialog open={!!detailApp} onOpenChange={() => setDetailApp(null)}>
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg">
+          <DialogHeader><DialogTitle>Application Details</DialogTitle></DialogHeader>
+          {detailApp && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Application Name</label>
+                <p className="text-sm font-semibold text-foreground">{detailApp.name}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Application ID</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="flex-1 rounded bg-secondary px-3 py-2 text-xs font-mono text-primary break-all">{detailApp.id}</code>
+                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(detailApp.id, "App ID")} className="hover:bg-primary/10 shrink-0">
+                    <Copy className="h-4 w-4 text-primary" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Validation API Endpoint</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="flex-1 rounded bg-secondary px-3 py-2 text-xs font-mono text-primary break-all">{validateEndpoint}</code>
+                  <Button variant="ghost" size="icon" onClick={() => copyToClipboard(validateEndpoint, "Endpoint")} className="hover:bg-primary/10 shrink-0">
+                    <Copy className="h-4 w-4 text-primary" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Example Request (POST)</label>
+                <div className="relative mt-1">
+                  <pre className="rounded bg-secondary px-3 py-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap break-all">{`{
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+  "application_id": "${detailApp.id}",
+  "hwid": "MACHINE_HARDWARE_ID"
+}`}</pre>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="absolute top-1 right-1 hover:bg-primary/10"
+                    onClick={() => copyToClipboard(JSON.stringify({
+                      license_key: "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+                      application_id: detailApp.id,
+                      hwid: "MACHINE_HARDWARE_ID"
+                    }, null, 2), "Example payload")}
+                  >
+                    <Copy className="h-3.5 w-3.5 text-primary" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Created</label>
+                <p className="text-sm text-muted-foreground">{formatDate(detailApp.created_at)}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -97,11 +165,12 @@ export default function Applications() {
       </div>
 
       <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[550px]">
+        <div className="rounded-lg border border-border overflow-hidden min-w-[600px]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -117,6 +186,12 @@ export default function Applications() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
+                    <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1 max-w-[140px] truncate" title={app.id}>
+                      {app.id.slice(0, 8)}…
+                      <Copy className="h-3 w-3 shrink-0" />
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
                     {app.kill_switch ? (
                       <span className="badge-banned inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">KILLED</span>
                     ) : app.suspended ? (
@@ -128,6 +203,9 @@ export default function Applications() {
                   <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
+                        <Eye className="h-4 w-4 text-primary" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} title={app.suspended ? "Resume" : "Suspend"} className="hover:bg-warning/10">
                         {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
                       </Button>

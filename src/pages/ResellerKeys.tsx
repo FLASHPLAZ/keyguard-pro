@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Copy, Search } from "lucide-react";
+import { Plus, Copy, Search, Ban, ShieldCheck, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -103,6 +103,42 @@ export default function ResellerKeys() {
     toast.success("Copied to clipboard");
   };
 
+  const banKey = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Reseller banned license", license_key: licenseKey,
+      });
+    }
+    toast.success("License banned");
+    fetchData();
+  };
+
+  const unbanKey = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey,
+      });
+    }
+    toast.success("License unbanned");
+    fetchData();
+  };
+
+  const resetHwid = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").update({ hwid: null }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey,
+      });
+    }
+    toast.success("HWID reset");
+    fetchData();
+  };
+
   return (
     <ResellerLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -174,32 +210,53 @@ export default function ResellerKeys() {
       </div>
 
       <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[600px]">
+        <div className="rounded-lg border border-border overflow-hidden min-w-[750px]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Copy</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((lic, i) => (
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                  <td className="px-4 py-3"><span className="license-key">{lic.license_key}</span></td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
+                      {lic.license_key}
+                      <Copy className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-foreground">{lic.applications?.name || "Unknown"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{lic.hwid || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} className="hover:bg-primary/10">
-                      <Copy className="h-4 w-4 text-primary" />
-                    </Button>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10">
+                        <RotateCcw className="h-4 w-4 text-warning" />
+                      </Button>
+                      {lic.banned ? (
+                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10">
+                          <Ban className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy" className="hover:bg-primary/10">
+                        <Copy className="h-4 w-4 text-primary" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
