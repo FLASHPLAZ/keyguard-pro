@@ -48,6 +48,7 @@ export default function Applications() {
     setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
+    notifyDiscord("Application created", { Name: newAppName.trim() });
     if (data) setDetailApp(data);
     fetchApps();
   };
