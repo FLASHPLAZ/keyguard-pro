@@ -244,6 +244,9 @@ export default function Licenses() {
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
+                      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

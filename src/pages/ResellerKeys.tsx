@@ -265,6 +265,9 @@ export default function ResellerKeys() {
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
+                      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy" className="hover:bg-primary/10">
                         <Copy className="h-4 w-4 text-primary" />
                       </Button>

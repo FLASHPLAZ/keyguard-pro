@@ -40,6 +40,7 @@ const App = () => (
             {/* Reseller routes */}
             <Route path="/reseller" element={<ProtectedRoute requiredRole="reseller"><ResellerDashboard /></ProtectedRoute>} />
             <Route path="/reseller/keys" element={<ProtectedRoute requiredRole="reseller"><ResellerKeys /></ProtectedRoute>} />
+            <Route path="/reseller/logs" element={<ProtectedRoute requiredRole="reseller"><ResellerLogs /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
