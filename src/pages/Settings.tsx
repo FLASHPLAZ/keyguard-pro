@@ -199,7 +199,6 @@ export default function SettingsPage() {
 
   const autoBanEnabled = settings.auto_ban_enabled === "true";
 
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
     setCopiedKey(key);
