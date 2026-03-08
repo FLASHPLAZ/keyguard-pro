@@ -15,6 +15,7 @@ export default function ResellerKeys() {
   const { user } = useAuth();
   const [reseller, setReseller] = useState<any>(null);
   const [allowedApps, setAllowedApps] = useState<any[]>([]);
+  const [appCredits, setAppCredits] = useState<any[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function ResellerKeys() {
   const [keyCount, setKeyCount] = useState(1);
   const [duration, setDuration] = useState("30");
   const [generating, setGenerating] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -32,16 +34,18 @@ export default function ResellerKeys() {
     setReseller(resellerData);
 
     if (resellerData) {
-      if (resellerData.allowed_apps?.length > 0) {
-        const { data: appsData } = await supabase
-          .from("applications").select("id, name").in("id", resellerData.allowed_apps);
-        setAllowedApps(appsData || []);
-      }
-      const { data: licData } = await supabase
-        .from("licenses").select("*, applications(name)")
-        .eq("created_by_reseller", resellerData.id)
-        .order("created_at", { ascending: false });
-      setLicenses(licData || []);
+      const [appsRes, licRes, creditsRes] = await Promise.all([
+        resellerData.allowed_apps?.length > 0
+          ? supabase.from("applications").select("id, name").in("id", resellerData.allowed_apps)
+          : Promise.resolve({ data: [] }),
+        supabase.from("licenses").select("*, applications(name)")
+          .eq("created_by_reseller", resellerData.id)
+          .order("created_at", { ascending: false }),
+        supabase.from("reseller_app_credits").select("*").eq("reseller_id", resellerData.id),
+      ]);
+      setAllowedApps(appsRes.data || []);
+      setLicenses(licRes.data || []);
+      setAppCredits(creditsRes.data || []);
     }
   };
 
@@ -52,10 +56,18 @@ export default function ResellerKeys() {
     (l.applications?.name || "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const getAppCredit = (appId: string) => {
+    return appCredits.find(c => c.application_id === appId)?.credits || 0;
+  };
+
+  const selectedAppCredits = selectedApp ? getAppCredit(selectedApp) : 0;
+
   const generateKeys = async () => {
     if (!selectedApp || !reseller || !user) return;
-    if (reseller.credits < keyCount) {
-      toast.error(`Not enough credits. You have ${reseller.credits}, need ${keyCount}.`);
+    
+    const availableCredits = getAppCredit(selectedApp);
+    if (availableCredits < keyCount) {
+      toast.error(`Not enough credits for this app. Available: ${availableCredits}, need: ${keyCount}.`);
       return;
     }
 
@@ -78,21 +90,31 @@ export default function ResellerKeys() {
       const { error } = await supabase.from("licenses").insert(inserts);
       if (error) throw error;
 
+      // Deduct per-app credits
+      const creditRecord = appCredits.find(c => c.application_id === selectedApp);
+      if (creditRecord) {
+        await supabase.from("reseller_app_credits").update({
+          credits: creditRecord.credits - keyCount,
+          total_generated: creditRecord.total_generated + keyCount,
+        }).eq("id", creditRecord.id);
+      }
+
+      // Update reseller total
       await Promise.all([
         supabase.from("resellers").update({
-          credits: reseller.credits - keyCount,
+          credits: (reseller.credits || 0) - keyCount,
           total_generated: reseller.total_generated + keyCount,
         }).eq("id", reseller.id),
         supabase.from("activity_logs").insert({
           user_id: user.id,
-          action: `Reseller generated ${keyCount} key(s) (${getDurationLabel(days)})`,
+          action: `Reseller generated ${keyCount} key(s) for ${appData.name} (${getDurationLabel(days)})`,
           application_id: selectedApp,
           application_name: appData.name,
         }),
       ]);
 
       setDialogOpen(false);
-      toast.success(`Generated ${keyCount} key(s)! Credits remaining: ${reseller.credits - keyCount}`);
+      toast.success(`Generated ${keyCount} key(s)! Credits remaining for this app: ${availableCredits - keyCount}`);
       fetchData();
     } catch (err: any) {
       toast.error(err.message || "Failed to generate keys");
@@ -100,8 +122,6 @@ export default function ResellerKeys() {
       setGenerating(false);
     }
   };
-
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -163,13 +183,20 @@ export default function ResellerKeys() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Generate Keys</h1>
-          <p className="text-sm text-muted-foreground">
-            Credits: <span className="font-mono text-primary font-semibold">{reseller?.credits || 0}</span>
-          </p>
+          <div className="flex flex-wrap gap-3 mt-1">
+            {appCredits.map(c => {
+              const appName = allowedApps.find(a => a.id === c.application_id)?.name || "?";
+              return (
+                <span key={c.id} className="text-xs text-muted-foreground">
+                  {appName}: <span className="font-mono text-primary font-semibold">{c.credits}</span>
+                </span>
+              );
+            })}
+          </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button disabled={!reseller || reseller.credits < 1} className="btn-glow w-full sm:w-auto">
+            <Button disabled={!reseller || appCredits.every(c => c.credits < 1)} className="btn-glow w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Generate Keys
             </Button>
           </DialogTrigger>
@@ -181,9 +208,14 @@ export default function ResellerKeys() {
                 <Select value={selectedApp} onValueChange={setSelectedApp}>
                   <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select app" /></SelectTrigger>
                   <SelectContent className="bg-popover border-border">
-                    {allowedApps.map((app) => (
-                      <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>
-                    ))}
+                    {allowedApps.map((app) => {
+                      const credits = getAppCredit(app.id);
+                      return (
+                        <SelectItem key={app.id} value={app.id}>
+                          {app.name} ({credits} credits)
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -201,17 +233,17 @@ export default function ResellerKeys() {
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Quantity</label>
                 <Input
-                  type="number" min={1} max={reseller?.credits || 1}
+                  type="number" min={1} max={selectedAppCredits || 1}
                   value={keyCount}
-                  onChange={(e) => setKeyCount(Math.min(Number(e.target.value), reseller?.credits || 1))}
+                  onChange={(e) => setKeyCount(Math.min(Number(e.target.value), selectedAppCredits || 1))}
                   className="bg-secondary border-border"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                This will use <span className="text-primary font-semibold">{keyCount}</span> credit(s).
-                Remaining: <span className="text-primary font-semibold">{(reseller?.credits || 0) - keyCount}</span>
+                This will use <span className="text-primary font-semibold">{keyCount}</span> credit(s) from this app.
+                Remaining: <span className="text-primary font-semibold">{selectedAppCredits - keyCount}</span>
               </p>
-              <Button onClick={generateKeys} className="w-full btn-glow" disabled={generating}>
+              <Button onClick={generateKeys} className="w-full btn-glow" disabled={generating || selectedAppCredits < keyCount}>
                 {generating ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                 ) : "Generate"}
