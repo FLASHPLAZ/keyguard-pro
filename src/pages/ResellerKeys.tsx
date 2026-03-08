@@ -153,6 +153,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
     fetchData();
   };
