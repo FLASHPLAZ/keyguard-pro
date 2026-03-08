@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Copy, Search, Ban, ShieldCheck, RotateCcw, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Copy, Search, Ban, ShieldCheck, RotateCcw, Trash2, CheckSquare, X } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,7 @@ export default function ResellerKeys() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     if (!user) return;
@@ -57,11 +59,63 @@ export default function ResellerKeys() {
     (l.applications?.name || "").toLowerCase().includes(search.toLowerCase())
   );
 
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const getAppCredit = (appId: string) => {
     return appCredits.find(c => c.application_id === appId)?.credits || 0;
   };
 
   const selectedAppCredits = selectedApp ? getAppCredit(selectedApp) : 0;
+
+  // Selection helpers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (paged.every(l => selectedIds.has(l.id))) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        paged.forEach(l => next.delete(l.id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        paged.forEach(l => next.add(l.id));
+        return next;
+      });
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // Bulk actions
+  const bulkBan = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    await supabase.from("licenses").update({ banned: true, status: "banned" }).in("id", ids);
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk banned ${ids.length} license(s)` });
+    toast.success(`Banned ${ids.length} license(s)`);
+    notifyDiscord("Reseller bulk ban", { Reseller: reseller?.username, Count: ids.length });
+    clearSelection();
+    fetchData();
+  };
+
+  const bulkDelete = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    await supabase.from("licenses").delete().in("id", ids);
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk deleted ${ids.length} license(s)` });
+    toast.success(`Deleted ${ids.length} license(s)`);
+    notifyDiscord("Reseller bulk delete", { Reseller: reseller?.username, Count: ids.length });
+    clearSelection();
+    fetchData();
+  };
 
   const generateKeys = async () => {
     if (!selectedApp || !reseller || !user) return;
@@ -131,9 +185,7 @@ export default function ResellerKeys() {
   const banKey = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller banned license", license_key: licenseKey });
-    }
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller banned license", license_key: licenseKey });
     notifyDiscord("Reseller banned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License banned");
     fetchData();
@@ -143,9 +195,7 @@ export default function ResellerKeys() {
     const restoredStatus = hwid ? "active" : "unused";
     const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey });
-    }
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey });
     notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
     fetchData();
@@ -154,9 +204,7 @@ export default function ResellerKeys() {
   const resetHwid = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey });
-    }
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey });
     notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
     fetchData();
@@ -165,15 +213,11 @@ export default function ResellerKeys() {
   const deleteKey = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) {
-      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller deleted license", license_key: licenseKey });
-    }
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller deleted license", license_key: licenseKey });
     notifyDiscord("Reseller deleted license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License deleted");
     fetchData();
   };
-
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const ActionButtons = ({ lic }: { lic: any }) => (
     <div className="flex items-center gap-1 flex-wrap">
@@ -203,6 +247,27 @@ export default function ResellerKeys() {
       </Button>
     </div>
   );
+
+  const BulkBar = () => {
+    if (selectedIds.size === 0) return null;
+    return (
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 animate-fade-in">
+        <CheckSquare className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-foreground">{selectedIds.size} selected</span>
+        <div className="flex items-center gap-1.5 ml-auto flex-wrap">
+          <Button size="sm" variant="outline" onClick={bulkBan} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+            <Ban className="h-3 w-3 mr-1" /> Ban
+          </Button>
+          <Button size="sm" variant="outline" onClick={bulkDelete} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+            <Trash2 className="h-3 w-3 mr-1" /> Delete
+          </Button>
+          <Button size="sm" variant="ghost" onClick={clearSelection} className="h-8 text-xs">
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <ResellerLayout>
@@ -286,11 +351,18 @@ export default function ResellerKeys() {
         </div>
       </div>
 
+      <BulkBar />
+
       {/* Mobile card view */}
       <div className="space-y-3 md:hidden">
         {paged.map((lic, i) => (
-          <div key={lic.id} className="rounded-lg border border-border bg-card p-4 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-            <div className="flex items-start justify-between gap-2 mb-3">
+          <div key={lic.id} className={`rounded-lg border bg-card p-4 animate-fade-in ${selectedIds.has(lic.id) ? 'border-primary/50 bg-primary/5' : 'border-border'}`} style={{ animationDelay: `${i * 30}ms` }}>
+            <div className="flex items-start gap-3 mb-3">
+              <Checkbox
+                checked={selectedIds.has(lic.id)}
+                onCheckedChange={() => toggleSelect(lic.id)}
+                className="mt-1"
+              />
               <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity text-left min-w-0">
                 <span className="truncate text-sm">{lic.license_key}</span>
                 {copiedKey === lic.license_key ? (
@@ -341,6 +413,12 @@ export default function ResellerKeys() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="px-3 py-3 text-left">
+                  <Checkbox
+                    checked={paged.length > 0 && paged.every(l => selectedIds.has(l.id))}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
@@ -352,7 +430,10 @@ export default function ResellerKeys() {
             </thead>
             <tbody>
               {paged.map((lic, i) => (
-                <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                <tr key={lic.id} className={`table-row-hover border-b border-border animate-fade-in ${selectedIds.has(lic.id) ? 'bg-primary/5' : ''}`} style={{ animationDelay: `${i * 30}ms` }}>
+                  <td className="px-3 py-3">
+                    <Checkbox checked={selectedIds.has(lic.id)} onCheckedChange={() => toggleSelect(lic.id)} />
+                  </td>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
                       <span className="truncate max-w-[180px]">{lic.license_key}</span>
