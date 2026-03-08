@@ -49,7 +49,7 @@ export function DashboardSidebar() {
           <Key className="h-4 w-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-foreground">KeyVault</span>
+          <span className="text-lg font-bold tracking-tight text-foreground">Galactic Boosts</span>
         )}
       </div>
 
