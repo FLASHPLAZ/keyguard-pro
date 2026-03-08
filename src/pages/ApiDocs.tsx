@@ -32,6 +32,10 @@ const endpoints = [
       { name: "hwid", type: "string", required: false, desc: "Hardware ID for binding (max 100 chars). If omitted, no HWID binding occurs." },
       { name: "device_name", type: "string", required: false, desc: "Device hostname (max 100 chars). Logged for tracking and shown in Discord alerts." },
     ],
+    headers: [
+      { name: "X-Signature", required: "If signing enabled", desc: "HMAC-SHA256 hex signature of timestamp.body using app signing secret" },
+      { name: "X-Timestamp", required: "If signing enabled", desc: "Unix timestamp (seconds). Must be within 60 seconds of server time." },
+    ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
       { code: 400, message: "Invalid hwid", desc: "HWID exceeds 100 characters" },
@@ -41,6 +45,9 @@ const endpoints = [
       { code: 403, message: "License expired", desc: "License expiration date has passed" },
       { code: 403, message: "HWID mismatch", desc: "Key is already bound to a different HWID" },
       { code: 403, message: "License banned for sharing", desc: "Too many unique IPs detected (anti-sharing)" },
+      { code: 403, message: "Signature required", desc: "App requires request signing but no X-Signature/X-Timestamp headers sent" },
+      { code: 403, message: "Request expired", desc: "X-Timestamp is older than 60 seconds (replay protection)" },
+      { code: 403, message: "Invalid signature", desc: "HMAC signature doesn't match — possible payload tampering" },
       { code: 429, message: "Too many requests", desc: "Rate limit exceeded. Retry after window expires." },
       { code: 500, message: "Internal server error", desc: "Unexpected server error" },
     ],
