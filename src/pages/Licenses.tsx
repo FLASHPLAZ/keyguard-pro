@@ -96,6 +96,7 @@ export default function Licenses() {
       });
     }
     toast.success("License unbanned");
+    notifyDiscord("License unbanned", { Key: licenseKey });
     fetchData();
   };
 
