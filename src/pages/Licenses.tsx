@@ -186,7 +186,7 @@ export default function Licenses() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys or apps..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search keys or apps..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
