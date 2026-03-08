@@ -22,6 +22,8 @@ export default function ResellerKeys() {
   const [keyCount, setKeyCount] = useState(1);
   const [duration, setDuration] = useState("30");
   const [generating, setGenerating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const fetchData = async () => {
     if (!user) return;
