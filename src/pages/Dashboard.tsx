@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ totalApps: 0, totalLicenses: 0, activeLicenses: 0, expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0 });
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [recentLicenses, setRecentLicenses] = useState<any[]>([]);
+  const [resellerStats, setResellerStats] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
