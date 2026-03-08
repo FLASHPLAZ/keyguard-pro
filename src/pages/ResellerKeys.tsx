@@ -65,13 +65,11 @@ export default function ResellerKeys() {
 
   const generateKeys = async () => {
     if (!selectedApp || !reseller || !user) return;
-    
     const availableCredits = getAppCredit(selectedApp);
     if (availableCredits < keyCount) {
       toast.error(`Not enough credits for this app. Available: ${availableCredits}, need: ${keyCount}.`);
       return;
     }
-
     setGenerating(true);
     try {
       const { data: appData } = await supabase
@@ -91,7 +89,6 @@ export default function ResellerKeys() {
       const { error } = await supabase.from("licenses").insert(inserts);
       if (error) throw error;
 
-      // Deduct per-app credits
       const creditRecord = appCredits.find(c => c.application_id === selectedApp);
       if (creditRecord) {
         await supabase.from("reseller_app_credits").update({
@@ -100,7 +97,6 @@ export default function ResellerKeys() {
         }).eq("id", creditRecord.id);
       }
 
-      // Update reseller total
       await Promise.all([
         supabase.from("resellers").update({
           credits: (reseller.credits || 0) - keyCount,
@@ -136,9 +132,7 @@ export default function ResellerKeys() {
     const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Reseller banned license", license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller banned license", license_key: licenseKey });
     }
     notifyDiscord("Reseller banned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License banned");
@@ -150,9 +144,7 @@ export default function ResellerKeys() {
     const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey });
     }
     notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
@@ -163,9 +155,7 @@ export default function ResellerKeys() {
     const { error } = await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey });
     }
     notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
@@ -176,14 +166,43 @@ export default function ResellerKeys() {
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Reseller deleted license", license_key: licenseKey,
-      });
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller deleted license", license_key: licenseKey });
     }
     notifyDiscord("Reseller deleted license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License deleted");
     fetchData();
   };
+
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const ActionButtons = ({ lic }: { lic: any }) => (
+    <div className="flex items-center gap-1 flex-wrap">
+      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy" className="hover:bg-primary/10 h-8 w-8">
+        <Copy className="h-4 w-4 text-primary" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10 h-8 w-8">
+        <RotateCcw className="h-4 w-4 text-warning" />
+      </Button>
+      {lic.banned ? (
+        lic.banned_by_admin ? (
+          <Button variant="ghost" size="icon" disabled title="Banned by admin" className="opacity-50 cursor-not-allowed h-8 w-8">
+            <Ban className="h-4 w-4 text-destructive" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10 h-8 w-8">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+          </Button>
+        )
+      ) : (
+        <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10 h-8 w-8">
+          <Ban className="h-4 w-4 text-destructive" />
+        </Button>
+      )}
+      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+    </div>
+  );
 
   return (
     <ResellerLayout>
@@ -267,8 +286,58 @@ export default function ResellerKeys() {
         </div>
       </div>
 
-      <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[750px]">
+      {/* Mobile card view */}
+      <div className="space-y-3 md:hidden">
+        {paged.map((lic, i) => (
+          <div key={lic.id} className="rounded-lg border border-border bg-card p-4 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity text-left min-w-0">
+                <span className="truncate text-sm">{lic.license_key}</span>
+                {copiedKey === lic.license_key ? (
+                  <span className="text-xs text-emerald-400 font-sans font-medium shrink-0">Copied!</span>
+                ) : (
+                  <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+                )}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+              <div>
+                <span className="text-muted-foreground">App: </span>
+                <span className="text-foreground">{lic.applications?.name || "Unknown"}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Status: </span>
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${getLicenseStatusColor(lic.status)}`}>
+                  {lic.status}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Used: </span>
+                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
+                  {lic.hwid ? "Yes" : "No"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">HWID: </span>
+                <span className="font-mono text-muted-foreground break-all">{lic.hwid || "—"}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Expires: </span>
+                <span className="text-muted-foreground">{formatDate(lic.expires_at)}</span>
+              </div>
+            </div>
+            <ActionButtons lic={lic} />
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">No keys generated yet</div>
+        )}
+        <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block">
+        <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
@@ -282,7 +351,7 @@ export default function ResellerKeys() {
               </tr>
             </thead>
             <tbody>
-              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((lic, i) => (
+              {paged.map((lic, i) => (
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -309,30 +378,7 @@ export default function ResellerKeys() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10">
-                        <RotateCcw className="h-4 w-4 text-warning" />
-                      </Button>
-                      {lic.banned ? (
-                        lic.banned_by_admin ? (
-                          <Button variant="ghost" size="icon" disabled title="Banned by admin" className="opacity-50 cursor-not-allowed">
-                            <Ban className="h-4 w-4 text-destructive" />
-                          </Button>
-                        ) : (
-                          <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10">
-                            <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                          </Button>
-                        )
-                      ) : (
-                        <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10">
-                          <Ban className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy" className="hover:bg-primary/10">
-                        <Copy className="h-4 w-4 text-primary" />
-                      </Button>
+                      <ActionButtons lic={lic} />
                     </div>
                   </td>
                 </tr>
