@@ -94,6 +94,36 @@ export type Database = {
         }
         Relationships: []
       }
+      blacklist: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          license_key: string | null
+          reason: string | null
+          type: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          license_key?: string | null
+          reason?: string | null
+          type: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          license_key?: string | null
+          reason?: string | null
+          type?: string
+          value?: string
+        }
+        Relationships: []
+      }
       license_ips: {
         Row: {
           first_seen: string
@@ -130,6 +160,7 @@ export type Database = {
         Row: {
           application_id: string
           banned: boolean
+          banned_by_admin: boolean
           created_at: string
           created_by_reseller: string | null
           device_name: string | null
@@ -145,6 +176,7 @@ export type Database = {
         Insert: {
           application_id: string
           banned?: boolean
+          banned_by_admin?: boolean
           created_at?: string
           created_by_reseller?: string | null
           device_name?: string | null
@@ -160,6 +192,7 @@ export type Database = {
         Update: {
           application_id?: string
           banned?: boolean
+          banned_by_admin?: boolean
           created_at?: string
           created_by_reseller?: string | null
           device_name?: string | null
