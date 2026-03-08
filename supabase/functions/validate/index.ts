@@ -5,20 +5,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const RATE_LIMIT_MAX = 10; // max attempts per window
-const RATE_LIMIT_WINDOW_MINUTES = 5; // window size in minutes
+// Defaults — overridden by admin settings from DB
+const DEFAULT_RATE_LIMIT_MAX = 10;
+const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 5;
 
-async function sendDiscordWebhook(action: string, details: Record<string, any>) {
-  const webhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL");
+async function getAdminSettings(supabase: any): Promise<{ rateLimitMax: number; rateLimitWindow: number; discordWebhookUrl: string }> {
+  const { data } = await supabase
+    .from("settings")
+    .select("key, value");
+
+  let rateLimitMax = DEFAULT_RATE_LIMIT_MAX;
+  let rateLimitWindow = DEFAULT_RATE_LIMIT_WINDOW_MINUTES;
+  let discordWebhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
+
+  if (data) {
+    for (const row of data) {
+      if (row.key === "rate_limit_max") rateLimitMax = parseInt(row.value) || DEFAULT_RATE_LIMIT_MAX;
+      if (row.key === "rate_limit_window") rateLimitWindow = parseInt(row.value) || DEFAULT_RATE_LIMIT_WINDOW_MINUTES;
+      if (row.key === "discord_webhook_url" && row.value) discordWebhookUrl = row.value;
+    }
+  }
+
+  return { rateLimitMax, rateLimitWindow, discordWebhookUrl };
+}
+
+async function sendDiscordWebhook(webhookUrl: string, action: string, details: Record<string, any>) {
   if (!webhookUrl) return;
 
   const colorMap: Record<string, number> = {
-    "License validated": 0x00ff00,       // green
-    "HWID bound + validated": 0x00ff00,  // green
-    "Unknown key - rejected": 0xff0000,  // red
+    "License validated": 0x00ff00,
+    "HWID bound + validated": 0x00ff00,
+    "Unknown key - rejected": 0xff0000,
     "Banned license - rejected": 0xff0000,
-    "App disabled - rejected": 0xff6600, // orange
-    "Expired license - rejected": 0xffaa00, // yellow
+    "App disabled - rejected": 0xff6600,
+    "Expired license - rejected": 0xffaa00,
     "HWID mismatch - rejected": 0xff0000,
     "Rate limited": 0xff0000,
   };
@@ -40,14 +60,13 @@ async function sendDiscordWebhook(action: string, details: Record<string, any>) 
       body: JSON.stringify({ embeds: [embed] }),
     });
   } catch {
-    // silently fail - don't break validation over webhook
+    // silently fail
   }
 }
 
-async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
+async function checkRateLimit(supabase: any, ip: string, max: number, windowMinutes: number): Promise<boolean> {
+  const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
 
-  // Get current count for this IP in the window
   const { data } = await supabase
     .from("rate_limits")
     .select("id, attempt_count")
@@ -57,15 +76,12 @@ async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
     .single();
 
   if (data) {
-    if (data.attempt_count >= RATE_LIMIT_MAX) {
-      return true; // rate limited
-    }
+    if (data.attempt_count >= max) return true;
     await supabase
       .from("rate_limits")
       .update({ attempt_count: data.attempt_count + 1 })
       .eq("id", data.id);
   } else {
-    // Clean old entries and create new window
     await supabase
       .from("rate_limits")
       .delete()
@@ -103,13 +119,16 @@ Deno.serve(async (req) => {
 
     const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
 
+    // Load admin-configurable settings
+    const { rateLimitMax, rateLimitWindow, discordWebhookUrl } = await getAdminSettings(supabase);
+
     // Rate limit check
-    const isRateLimited = await checkRateLimit(supabase, clientIp);
+    const isRateLimited = await checkRateLimit(supabase, clientIp, rateLimitMax, rateLimitWindow);
     if (isRateLimited) {
-      await sendDiscordWebhook("Rate limited", { IP: clientIp, Key: license_key, HWID: hwid || "N/A" });
+      await sendDiscordWebhook(discordWebhookUrl, "Rate limited", { IP: clientIp, Key: license_key, HWID: hwid || "N/A" });
       return new Response(JSON.stringify({ valid: false, error: "Too many requests. Try again later." }), {
         status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(RATE_LIMIT_WINDOW_MINUTES * 60) },
+        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rateLimitWindow * 60) },
       });
     }
 
@@ -122,138 +141,84 @@ Deno.serve(async (req) => {
 
     if (error || !license) {
       await supabase.from("activity_logs").insert({
-        license_key,
-        action: "Unknown key - rejected",
-        ip: clientIp,
-        hwid: hwid || null,
+        license_key, action: "Unknown key - rejected", ip: clientIp, hwid: hwid || null,
       });
-      await sendDiscordWebhook("Unknown key - rejected", { Key: license_key, IP: clientIp, HWID: hwid || "N/A" });
+      await sendDiscordWebhook(discordWebhookUrl, "Unknown key - rejected", { Key: license_key, IP: clientIp, HWID: hwid || "N/A" });
       return new Response(JSON.stringify({ valid: false, error: "License not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const app = license.applications;
 
-    // Check if banned
     if (license.banned) {
       await supabase.from("activity_logs").insert({
-        license_key,
-        application_id: license.application_id,
-        application_name: app?.name,
-        action: "Banned license - rejected",
-        ip: clientIp,
-        hwid: hwid || license.hwid,
-        user_id: license.user_id,
+        license_key, application_id: license.application_id, application_name: app?.name,
+        action: "Banned license - rejected", ip: clientIp, hwid: hwid || license.hwid, user_id: license.user_id,
       });
-      await sendDiscordWebhook("Banned license - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid });
+      await sendDiscordWebhook(discordWebhookUrl, "Banned license - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "License is banned" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check app status
     if (app?.suspended || app?.kill_switch) {
       await supabase.from("activity_logs").insert({
-        license_key,
-        application_id: license.application_id,
-        application_name: app?.name,
-        action: "App disabled - rejected",
-        ip: clientIp,
-        hwid: hwid || license.hwid,
-        user_id: license.user_id,
+        license_key, application_id: license.application_id, application_name: app?.name,
+        action: "App disabled - rejected", ip: clientIp, hwid: hwid || license.hwid, user_id: license.user_id,
       });
-      await sendDiscordWebhook("App disabled - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid });
+      await sendDiscordWebhook(discordWebhookUrl, "App disabled - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "Application is disabled" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check expiry
     if (new Date(license.expires_at) < new Date()) {
       await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id);
       await supabase.from("activity_logs").insert({
-        license_key,
-        application_id: license.application_id,
-        application_name: app?.name,
-        action: "Expired license - rejected",
-        ip: clientIp,
-        hwid: hwid || license.hwid,
-        user_id: license.user_id,
+        license_key, application_id: license.application_id, application_name: app?.name,
+        action: "Expired license - rejected", ip: clientIp, hwid: hwid || license.hwid, user_id: license.user_id,
       });
-      await sendDiscordWebhook("Expired license - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid, "Expired At": license.expires_at });
+      await sendDiscordWebhook(discordWebhookUrl, "Expired license - rejected", { Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid, "Expired At": license.expires_at });
       return new Response(JSON.stringify({ valid: false, error: "License expired" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // HWID binding
     if (license.hwid && hwid && license.hwid !== hwid) {
       await supabase.from("activity_logs").insert({
-        license_key,
-        application_id: license.application_id,
-        application_name: app?.name,
-        action: "HWID mismatch - rejected",
-        ip: clientIp,
-        hwid: hwid,
-        user_id: license.user_id,
+        license_key, application_id: license.application_id, application_name: app?.name,
+        action: "HWID mismatch - rejected", ip: clientIp, hwid, user_id: license.user_id,
       });
-      await sendDiscordWebhook("HWID mismatch - rejected", { Key: license_key, App: app?.name, IP: clientIp, "Sent HWID": hwid, "Bound HWID": license.hwid });
+      await sendDiscordWebhook(discordWebhookUrl, "HWID mismatch - rejected", { Key: license_key, App: app?.name, IP: clientIp, "Sent HWID": hwid, "Bound HWID": license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "HWID mismatch" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Bind HWID on first use
     const updates: Record<string, any> = {
-      status: "active",
-      last_used: new Date().toISOString(),
-      ip: clientIp,
+      status: "active", last_used: new Date().toISOString(), ip: clientIp,
     };
-    if (!license.hwid && hwid) {
-      updates.hwid = hwid;
-    }
+    if (!license.hwid && hwid) updates.hwid = hwid;
 
     await supabase.from("licenses").update(updates).eq("id", license.id);
 
     const action = !license.hwid && hwid ? "HWID bound + validated" : "License validated";
-
     await supabase.from("activity_logs").insert({
-      license_key,
-      application_id: license.application_id,
-      application_name: app?.name,
-      action,
-      ip: clientIp,
-      hwid: hwid || license.hwid,
-      user_id: license.user_id,
+      license_key, application_id: license.application_id, application_name: app?.name,
+      action, ip: clientIp, hwid: hwid || license.hwid, user_id: license.user_id,
     });
-
-    await sendDiscordWebhook(action, {
-      Key: license_key,
-      App: app?.name,
-      IP: clientIp,
-      HWID: hwid || license.hwid,
-      Expires: license.expires_at,
+    await sendDiscordWebhook(discordWebhookUrl, action, {
+      Key: license_key, App: app?.name, IP: clientIp, HWID: hwid || license.hwid, Expires: license.expires_at,
     });
 
     return new Response(
-      JSON.stringify({
-        valid: true,
-        expires: license.expires_at,
-        hwid: updates.hwid || license.hwid,
-        app: app?.name,
-      }),
+      JSON.stringify({ valid: true, expires: license.expires_at, hwid: updates.hwid || license.hwid, app: app?.name }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     return new Response(JSON.stringify({ valid: false, error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
