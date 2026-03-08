@@ -12,16 +12,18 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ totalApps: 0, totalLicenses: 0, activeLicenses: 0, expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0 });
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [recentLicenses, setRecentLicenses] = useState<any[]>([]);
+  const [resellerStats, setResellerStats] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes] = await Promise.all([
+      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes] = await Promise.all([
         supabase.from("applications").select("id", { count: "exact", head: true }),
         supabase.from("licenses").select("id, status", { count: "exact" }),
         supabase.from("resellers").select("id", { count: "exact", head: true }),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
         supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
+        supabase.from("resellers").select("*").order("created_at", { ascending: false }),
       ]);
 
       const licenses = licensesRes.data || [];
@@ -35,6 +37,7 @@ export default function Dashboard() {
       });
       setRecentLogs(logsRes.data || []);
       setRecentLicenses(latestLicRes.data || []);
+      setResellerStats(resellerDetailRes.data || []);
     };
     fetchData();
   }, [user]);
@@ -144,6 +147,38 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {resellerStats.length > 0 && (
+        <div className="mt-8 rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
+          <h3 className="mb-4 text-sm font-semibold text-foreground">Reseller Statistics</h3>
+          <div className="table-responsive">
+            <div className="rounded-lg border border-border overflow-hidden min-w-[500px]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Username</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Credits</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resellerStats.map((r: any, i: number) => (
+                    <tr key={r.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                      <td className="px-4 py-3 font-medium text-foreground">{r.username}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
+                      <td className="px-4 py-3"><span className="font-mono text-primary font-semibold">{r.credits}</span></td>
+                      <td className="px-4 py-3 text-foreground">{r.total_generated}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

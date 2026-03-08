@@ -229,6 +229,9 @@ export default function Licenses() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10">
+                        <Copy className="h-4 w-4 text-primary" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => extendKey(lic.id, lic.expires_at, lic.license_key)} title="Extend 30 days" className="hover:bg-primary/10">
                         <Clock className="h-4 w-4 text-primary" />
                       </Button>
