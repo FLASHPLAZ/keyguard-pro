@@ -170,6 +170,7 @@ export default function SettingsPage() {
       });
     }
     toast.success("License unbanned");
+    notifyDiscord("Admin unbanned license", { Key: licenseKey });
     loadResellerKeys();
   }
 
