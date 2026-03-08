@@ -88,6 +88,38 @@ export type Database = {
         }
         Relationships: []
       }
+      license_ips: {
+        Row: {
+          first_seen: string
+          id: string
+          ip: string
+          last_seen: string
+          license_id: string
+        }
+        Insert: {
+          first_seen?: string
+          id?: string
+          ip: string
+          last_seen?: string
+          license_id: string
+        }
+        Update: {
+          first_seen?: string
+          id?: string
+          ip?: string
+          last_seen?: string
+          license_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_ips_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licenses: {
         Row: {
           application_id: string
