@@ -146,6 +146,7 @@ export default function SettingsPage() {
   async function removeBlacklistEntry(id: string) {
     await supabase.from("blacklist").delete().eq("id", id);
     toast.success("Removed from blacklist");
+    notifyDiscord("Blacklist entry removed", {});
     loadBlacklist();
   }
 
