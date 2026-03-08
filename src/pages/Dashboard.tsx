@@ -37,6 +37,7 @@ export default function Dashboard() {
       });
       setRecentLogs(logsRes.data || []);
       setRecentLicenses(latestLicRes.data || []);
+      setResellerStats(resellerDetailRes.data || []);
     };
     fetchData();
   }, [user]);
