@@ -10,6 +10,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function Resellers() {
   const { user } = useAuth();
