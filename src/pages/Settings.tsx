@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { TablePagination } from "@/components/TablePagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLicenseStatusColor, formatDate } from "@/lib/license";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 interface SettingsState {
   rate_limit_max: string;
@@ -112,6 +113,7 @@ export default function SettingsPage() {
     try {
       await Promise.all(Object.entries(settings).map(([key, value]) => saveSetting(key, value)));
       toast.success("Settings saved successfully");
+      notifyDiscord("Settings updated", { "Rate Limit": settings.rate_limit_max, "Window": settings.rate_limit_window + "m", "IP Threshold": settings.ip_change_threshold, "Auto-Ban": settings.auto_ban_enabled });
     } catch { toast.error("Failed to save settings"); }
     finally { setSaving(false); }
   }
@@ -135,6 +137,7 @@ export default function SettingsPage() {
       return;
     }
     toast.success(`${blType.toUpperCase()} blacklisted`);
+    notifyDiscord("IP/HWID blacklisted", { Type: blType.toUpperCase(), Value: blValue.trim(), Key: blLicenseKey.trim() || null, Reason: blReason.trim() || null });
     setBlValue(""); setBlLicenseKey(""); setBlReason("");
     setBlDialogOpen(false);
     loadBlacklist();
@@ -143,6 +146,7 @@ export default function SettingsPage() {
   async function removeBlacklistEntry(id: string) {
     await supabase.from("blacklist").delete().eq("id", id);
     toast.success("Removed from blacklist");
+    notifyDiscord("Blacklist entry removed", {});
     loadBlacklist();
   }
 
@@ -154,6 +158,7 @@ export default function SettingsPage() {
       });
     }
     toast.success("License banned by admin (reseller cannot unban)");
+    notifyDiscord("Admin banned license", { Key: licenseKey });
     loadResellerKeys();
   }
 
@@ -165,6 +170,7 @@ export default function SettingsPage() {
       });
     }
     toast.success("License unbanned");
+    notifyDiscord("Admin unbanned license", { Key: licenseKey });
     loadResellerKeys();
   }
 

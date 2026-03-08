@@ -10,6 +10,7 @@ import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, KeyRou
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function Applications() {
   const { user } = useAuth();
@@ -47,6 +48,7 @@ export default function Applications() {
     setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
+    notifyDiscord("Application created", { Name: newAppName.trim() });
     if (data) setDetailApp(data);
     fetchApps();
   };
@@ -55,6 +57,7 @@ export default function Applications() {
     await supabase.from("applications").update({ suspended: !current }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" ${!current ? "suspended" : "resumed"}` });
     toast.success("Application status updated");
+    notifyDiscord(!current ? "Application suspended" : "Application resumed", { App: name });
     fetchApps();
   };
 
@@ -62,6 +65,7 @@ export default function Applications() {
     await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Kill switch ${!current ? "enabled" : "disabled"} for "${name}"` });
     toast.success("Kill switch toggled");
+    notifyDiscord(!current ? "Kill switch enabled" : "Kill switch disabled", { App: name });
     fetchApps();
   };
 
@@ -69,12 +73,14 @@ export default function Applications() {
     await supabase.from("applications").delete().eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" deleted` });
     toast.success("Application deleted");
+    notifyDiscord("Application deleted", { App: name });
     fetchApps();
   };
 
   const toggleSignatureRequired = async (id: string, current: boolean) => {
     await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
+    notifyDiscord(!current ? "Request signing enabled" : "Request signing disabled", { "App ID": id });
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
   };
@@ -88,6 +94,7 @@ export default function Applications() {
     await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Signing secret regenerated for app ${id}` });
     toast.success("Signing secret regenerated");
+    notifyDiscord("Signing secret regenerated", { "App ID": id });
     setRegenerateAppId(null);
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });

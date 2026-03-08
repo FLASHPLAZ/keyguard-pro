@@ -10,6 +10,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function Licenses() {
   const { user } = useAuth();
@@ -67,6 +68,7 @@ export default function Licenses() {
 
     setDialogOpen(false);
     toast.success(`Generated ${keyCount} license key(s)`);
+    notifyDiscord("License keys generated", { App: appName, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
     fetchData();
   };
 
@@ -80,6 +82,7 @@ export default function Licenses() {
       });
     }
     toast.success("License banned");
+    notifyDiscord("License banned", { Key: licenseKey });
     fetchData();
   };
 
@@ -93,6 +96,7 @@ export default function Licenses() {
       });
     }
     toast.success("License unbanned");
+    notifyDiscord("License unbanned", { Key: licenseKey });
     fetchData();
   };
 
@@ -106,6 +110,7 @@ export default function Licenses() {
       });
     }
     toast.success("HWID reset");
+    notifyDiscord("HWID reset", { Key: licenseKey });
     fetchData();
   };
 
@@ -120,6 +125,7 @@ export default function Licenses() {
       });
     }
     toast.success("License extended by 30 days");
+    notifyDiscord("License extended", { Key: licenseKey, "Added": "+30 days" });
     fetchData();
   };
 
@@ -132,6 +138,7 @@ export default function Licenses() {
       });
     }
     toast.success("License deleted");
+    notifyDiscord("License deleted", { Key: licenseKey });
     fetchData();
   };
 
