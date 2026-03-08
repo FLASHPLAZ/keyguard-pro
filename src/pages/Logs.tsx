@@ -50,6 +50,7 @@ export default function Logs() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">IP Address</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">User ID</th>
               </tr>
             </thead>
             <tbody>
