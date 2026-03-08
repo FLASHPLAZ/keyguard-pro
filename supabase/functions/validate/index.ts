@@ -25,6 +25,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Extract client IP early so it's available for all log entries
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+
     // Find license
     const { data: license, error } = await supabase
       .from("licenses")
@@ -33,14 +36,31 @@ Deno.serve(async (req) => {
       .single();
 
     if (error || !license) {
+      await supabase.from("activity_logs").insert({
+        license_key,
+        action: "Unknown key - rejected",
+        ip: clientIp,
+        hwid: hwid || null,
+      });
       return new Response(JSON.stringify({ valid: false, error: "License not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const app = license.applications;
+
     // Check if banned
     if (license.banned) {
+      await supabase.from("activity_logs").insert({
+        license_key,
+        application_id: license.application_id,
+        application_name: app?.name,
+        action: "Banned license - rejected",
+        ip: clientIp,
+        hwid: hwid || license.hwid,
+        user_id: license.user_id,
+      });
       return new Response(JSON.stringify({ valid: false, error: "License is banned" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -48,8 +68,16 @@ Deno.serve(async (req) => {
     }
 
     // Check app status
-    const app = license.applications;
     if (app?.suspended || app?.kill_switch) {
+      await supabase.from("activity_logs").insert({
+        license_key,
+        application_id: license.application_id,
+        application_name: app?.name,
+        action: "App disabled - rejected",
+        ip: clientIp,
+        hwid: hwid || license.hwid,
+        user_id: license.user_id,
+      });
       return new Response(JSON.stringify({ valid: false, error: "Application is disabled" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,6 +87,15 @@ Deno.serve(async (req) => {
     // Check expiry
     if (new Date(license.expires_at) < new Date()) {
       await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id);
+      await supabase.from("activity_logs").insert({
+        license_key,
+        application_id: license.application_id,
+        application_name: app?.name,
+        action: "Expired license - rejected",
+        ip: clientIp,
+        hwid: hwid || license.hwid,
+        user_id: license.user_id,
+      });
       return new Response(JSON.stringify({ valid: false, error: "License expired" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,10 +103,7 @@ Deno.serve(async (req) => {
     }
 
     // HWID binding
-    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
-
     if (license.hwid && hwid && license.hwid !== hwid) {
-      // Log failed attempt
       await supabase.from("activity_logs").insert({
         license_key,
         application_id: license.application_id,
