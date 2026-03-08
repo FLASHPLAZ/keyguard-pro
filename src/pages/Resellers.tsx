@@ -198,6 +198,7 @@ export default function Resellers() {
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setNewAppCredits({}); setSelectedApps([]);
       setDialogOpen(false);
+      notifyDiscord("Reseller created", { Username: newUsername.trim(), Email: newEmail.trim(), Apps: selectedApps.length, "Total credits": totalCredits });
       toast.success(`Reseller "${newUsername}" created successfully!`);
       fetchData();
     } catch (err: any) {
