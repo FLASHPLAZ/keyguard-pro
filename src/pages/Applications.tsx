@@ -73,6 +73,7 @@ export default function Applications() {
     await supabase.from("applications").delete().eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" deleted` });
     toast.success("Application deleted");
+    notifyDiscord("Application deleted", { App: name });
     fetchApps();
   };
 
