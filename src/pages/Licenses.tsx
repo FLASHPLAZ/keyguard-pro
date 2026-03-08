@@ -135,9 +135,13 @@ export default function Licenses() {
     fetchData();
   };
 
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
+    setCopiedKey(key);
     toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedKey(null), 1500);
   };
 
   return (
