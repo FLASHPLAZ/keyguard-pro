@@ -101,9 +101,13 @@ export default function ResellerKeys() {
     }
   };
 
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
   const copyKey = (key: string) => {
     navigator.clipboard.writeText(key);
+    setCopiedKey(key);
     toast.success("Copied to clipboard");
+    setTimeout(() => setCopiedKey(null), 1500);
   };
 
   const banKey = async (id: string, licenseKey: string) => {
