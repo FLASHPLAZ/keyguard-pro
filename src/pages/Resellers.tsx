@@ -10,6 +10,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function Resellers() {
   const { user } = useAuth();
@@ -143,6 +144,7 @@ export default function Resellers() {
         action: `Updated reseller "${editingReseller.username}" — ${editSelectedApps.length} apps configured`,
       });
 
+      notifyDiscord("Reseller updated", { Username: editingReseller.username, "Apps configured": editSelectedApps.length, "Total credits": editSelectedApps.reduce((sum: number, id: string) => sum + (editAppCredits[id] || 0), 0) });
       setEditDialogOpen(false);
       toast.success(`Reseller "${editingReseller.username}" updated`);
       fetchData();
@@ -196,6 +198,7 @@ export default function Resellers() {
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setNewAppCredits({}); setSelectedApps([]);
       setDialogOpen(false);
+      notifyDiscord("Reseller created", { Username: newUsername.trim(), Email: newEmail.trim(), Apps: selectedApps.length, "Total credits": totalCredits });
       toast.success(`Reseller "${newUsername}" created successfully!`);
       fetchData();
     } catch (err: any) {
@@ -209,6 +212,7 @@ export default function Resellers() {
     await supabase.from("resellers").delete().eq("id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller "${username}" deleted` });
     toast.success("Reseller deleted");
+    notifyDiscord("Reseller deleted", { Username: username });
     fetchData();
   };
 
