@@ -179,6 +179,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller deleted license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller deleted license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License deleted");
     fetchData();
   };
