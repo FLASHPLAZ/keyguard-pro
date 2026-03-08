@@ -24,6 +24,8 @@ export default function Resellers() {
   const [newCredits, setNewCredits] = useState(10);
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const fetchData = async () => {
     if (!user) return;
