@@ -223,7 +223,11 @@ export default function Licenses() {
                       <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10">
                         <RotateCcw className="h-4 w-4 text-warning" />
                       </Button>
-                      {!lic.banned && (
+                      {lic.banned ? (
+                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                        </Button>
+                      ) : (
                         <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10">
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
