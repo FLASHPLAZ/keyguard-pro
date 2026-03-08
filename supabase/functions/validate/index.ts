@@ -19,13 +19,11 @@ interface AdminSettings {
 
 async function getAdminSettings(supabase: any): Promise<AdminSettings> {
   const { data } = await supabase.from("settings").select("key, value");
-
   let rateLimitMax = DEFAULT_RATE_LIMIT_MAX;
   let rateLimitWindow = DEFAULT_RATE_LIMIT_WINDOW_MINUTES;
   let discordWebhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
   let ipChangeThreshold = DEFAULT_IP_THRESHOLD;
   let autoBanEnabled = true;
-
   if (data) {
     for (const row of data) {
       if (row.key === "rate_limit_max") rateLimitMax = parseInt(row.value) || DEFAULT_RATE_LIMIT_MAX;
@@ -35,7 +33,6 @@ async function getAdminSettings(supabase: any): Promise<AdminSettings> {
       if (row.key === "auto_ban_enabled") autoBanEnabled = row.value !== "false";
     }
   }
-
   return { rateLimitMax, rateLimitWindow, discordWebhookUrl, ipChangeThreshold, autoBanEnabled };
 }
 
@@ -44,9 +41,7 @@ function formatExpiry(expiresAt: string): string {
   const now = new Date();
   const diffMs = expiry.getTime() - now.getTime();
   const daysLeft = Math.ceil(diffMs / (1000 * 3600 * 24));
-
   const dateStr = expiry.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
   if (daysLeft > 36000) return `${dateStr} (Lifetime)`;
   if (daysLeft <= 0) return `${dateStr} (Expired)`;
   if (daysLeft === 1) return `${dateStr} (1 day left)`;
@@ -67,7 +62,6 @@ async function lookupCountry(ip: string): Promise<string> {
 
 async function sendDiscordWebhook(webhookUrl: string, action: string, details: Record<string, any>) {
   if (!webhookUrl) return;
-
   const colorMap: Record<string, number> = {
     "License validated": 0x00ff00,
     "HWID bound + validated": 0x00ff00,
@@ -78,8 +72,9 @@ async function sendDiscordWebhook(webhookUrl: string, action: string, details: R
     "HWID mismatch - rejected": 0xff0000,
     "Rate limited": 0xff0000,
     "Auto-banned (IP sharing)": 0xff0000,
+    "Blacklisted IP - rejected": 0xff0000,
+    "Blacklisted HWID - rejected": 0xff0000,
   };
-
   const embed = {
     title: `🔑 ${action}`,
     color: colorMap[action] || 0x808080,
@@ -89,21 +84,17 @@ async function sendDiscordWebhook(webhookUrl: string, action: string, details: R
     timestamp: new Date().toISOString(),
     footer: { text: "Galactic Boosts License System" },
   };
-
   try {
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ embeds: [embed] }),
     });
-  } catch {
-    // silently fail
-  }
+  } catch { /* silently fail */ }
 }
 
 async function checkRateLimit(supabase: any, ip: string, max: number, windowMinutes: number): Promise<boolean> {
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
-
   const { data } = await supabase
     .from("rate_limits")
     .select("id, attempt_count")
@@ -111,55 +102,51 @@ async function checkRateLimit(supabase: any, ip: string, max: number, windowMinu
     .eq("endpoint", "validate")
     .gte("window_start", windowStart)
     .single();
-
   if (data) {
     if (data.attempt_count >= max) return true;
-    await supabase
-      .from("rate_limits")
-      .update({ attempt_count: data.attempt_count + 1 })
-      .eq("id", data.id);
+    await supabase.from("rate_limits").update({ attempt_count: data.attempt_count + 1 }).eq("id", data.id);
   } else {
-    await supabase
-      .from("rate_limits")
-      .delete()
-      .eq("ip", ip)
-      .eq("endpoint", "validate")
-      .lt("window_start", windowStart);
-
-    await supabase
-      .from("rate_limits")
-      .insert({ ip, endpoint: "validate", attempt_count: 1, window_start: new Date().toISOString() });
+    await supabase.from("rate_limits").delete().eq("ip", ip).eq("endpoint", "validate").lt("window_start", windowStart);
+    await supabase.from("rate_limits").insert({ ip, endpoint: "validate", attempt_count: 1, window_start: new Date().toISOString() });
   }
-
   return false;
 }
 
 async function trackIpAndCheckSharing(
-  supabase: any,
-  licenseId: string,
-  ip: string,
-  threshold: number,
-  autoBan: boolean
+  supabase: any, licenseId: string, ip: string, threshold: number, autoBan: boolean
 ): Promise<{ shouldBan: boolean; uniqueIpCount: number }> {
-  await supabase
-    .from("license_ips")
-    .upsert(
-      { license_id: licenseId, ip, last_seen: new Date().toISOString() },
-      { onConflict: "license_id,ip" }
-    );
-
-  const { count } = await supabase
-    .from("license_ips")
-    .select("id", { count: "exact", head: true })
-    .eq("license_id", licenseId);
-
+  await supabase.from("license_ips").upsert(
+    { license_id: licenseId, ip, last_seen: new Date().toISOString() },
+    { onConflict: "license_id,ip" }
+  );
+  const { count } = await supabase.from("license_ips").select("id", { count: "exact", head: true }).eq("license_id", licenseId);
   const uniqueIpCount = count || 0;
+  if (autoBan && uniqueIpCount >= threshold) return { shouldBan: true, uniqueIpCount };
+  return { shouldBan: false, uniqueIpCount };
+}
 
-  if (autoBan && uniqueIpCount >= threshold) {
-    return { shouldBan: true, uniqueIpCount };
+async function checkBlacklist(supabase: any, ip: string, hwid: string | null): Promise<{ blocked: boolean; type: string; reason: string }> {
+  // Check IP blacklist
+  const { data: ipBlock } = await supabase
+    .from("blacklist")
+    .select("reason")
+    .eq("type", "ip")
+    .eq("value", ip)
+    .maybeSingle();
+  if (ipBlock) return { blocked: true, type: "ip", reason: ipBlock.reason || "IP is blacklisted" };
+
+  // Check HWID blacklist
+  if (hwid) {
+    const { data: hwidBlock } = await supabase
+      .from("blacklist")
+      .select("reason")
+      .eq("type", "hwid")
+      .eq("value", hwid)
+      .maybeSingle();
+    if (hwidBlock) return { blocked: true, type: "hwid", reason: hwidBlock.reason || "HWID is blacklisted" };
   }
 
-  return { shouldBan: false, uniqueIpCount };
+  return { blocked: false, type: "", reason: "" };
 }
 
 Deno.serve(async (req) => {
@@ -172,35 +159,42 @@ Deno.serve(async (req) => {
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return new Response(JSON.stringify({ valid: false, error: "Invalid license_key" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
     if (hwid && (typeof hwid !== "string" || hwid.length > 100)) {
       return new Response(JSON.stringify({ valid: false, error: "Invalid hwid" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate device_name input
     const sanitizedDeviceName = (device_name && typeof device_name === "string")
-      ? device_name.slice(0, 100).trim()
-      : null;
+      ? device_name.slice(0, 100).trim() : null;
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
 
-    // Load settings + resolve country in parallel
     const [settings, country] = await Promise.all([
       getAdminSettings(supabase),
       lookupCountry(clientIp),
     ]);
+
+    // Blacklist check (before rate limit to save resources)
+    const blacklistResult = await checkBlacklist(supabase, clientIp, hwid || null);
+    if (blacklistResult.blocked) {
+      const action = blacklistResult.type === "ip" ? "Blacklisted IP - rejected" : "Blacklisted HWID - rejected";
+      await supabase.from("activity_logs").insert({
+        license_key, action, ip: clientIp, hwid: hwid || null,
+        device_name: sanitizedDeviceName, country,
+      });
+      await sendDiscordWebhook(settings.discordWebhookUrl, action, {
+        Key: license_key, IP: clientIp, HWID: hwid || "N/A", Country: country,
+        Device: sanitizedDeviceName || "N/A", Reason: blacklistResult.reason,
+      });
+      return new Response(JSON.stringify({ valid: false, error: "Access denied" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Rate limit check
     const isRateLimited = await checkRateLimit(supabase, clientIp, settings.rateLimitMax, settings.rateLimitWindow);
@@ -209,8 +203,7 @@ Deno.serve(async (req) => {
         IP: clientIp, Key: license_key, HWID: hwid || "N/A", Country: country, Device: sanitizedDeviceName || "N/A",
       });
       return new Response(JSON.stringify({ valid: false, error: "Too many requests. Try again later." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
       });
     }
 
@@ -236,13 +229,8 @@ Deno.serve(async (req) => {
 
     const app = license.applications;
     const logBase = {
-      license_key,
-      application_id: license.application_id,
-      application_name: app?.name,
-      ip: clientIp,
-      user_id: license.user_id,
-      device_name: sanitizedDeviceName,
-      country,
+      license_key, application_id: license.application_id, application_name: app?.name,
+      ip: clientIp, user_id: license.user_id, device_name: sanitizedDeviceName, country,
     };
     const embedBase = {
       Key: license_key, App: app?.name, IP: clientIp, Country: country, Device: sanitizedDeviceName || "N/A",
@@ -289,7 +277,6 @@ Deno.serve(async (req) => {
     const { shouldBan, uniqueIpCount } = await trackIpAndCheckSharing(
       supabase, license.id, clientIp, settings.ipChangeThreshold, settings.autoBanEnabled
     );
-
     if (shouldBan) {
       await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", license.id);
       await supabase.from("activity_logs").insert({ ...logBase, action: "Auto-banned (IP sharing)", hwid: hwid || license.hwid });
@@ -318,13 +305,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        valid: true,
-        expires: license.expires_at,
-        expires_readable: formatExpiry(license.expires_at),
-        hwid: updates.hwid || license.hwid,
-        app: app?.name,
-        country,
-        device_name: sanitizedDeviceName,
+        valid: true, expires: license.expires_at, expires_readable: formatExpiry(license.expires_at),
+        hwid: updates.hwid || license.hwid, app: app?.name, country, device_name: sanitizedDeviceName,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
