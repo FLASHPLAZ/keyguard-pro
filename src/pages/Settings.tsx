@@ -158,6 +158,7 @@ export default function SettingsPage() {
       });
     }
     toast.success("License banned by admin (reseller cannot unban)");
+    notifyDiscord("Admin banned license", { Key: licenseKey });
     loadResellerKeys();
   }
 
