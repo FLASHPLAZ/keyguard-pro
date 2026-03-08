@@ -19,7 +19,9 @@ export type Database = {
           action: string
           application_id: string | null
           application_name: string | null
+          country: string | null
           created_at: string
+          device_name: string | null
           hwid: string | null
           id: string
           ip: string | null
@@ -30,7 +32,9 @@ export type Database = {
           action: string
           application_id?: string | null
           application_name?: string | null
+          country?: string | null
           created_at?: string
+          device_name?: string | null
           hwid?: string | null
           id?: string
           ip?: string | null
@@ -41,7 +45,9 @@ export type Database = {
           action?: string
           application_id?: string | null
           application_name?: string | null
+          country?: string | null
           created_at?: string
+          device_name?: string | null
           hwid?: string | null
           id?: string
           ip?: string | null
@@ -126,6 +132,7 @@ export type Database = {
           banned: boolean
           created_at: string
           created_by_reseller: string | null
+          device_name: string | null
           expires_at: string
           hwid: string | null
           id: string
@@ -140,6 +147,7 @@ export type Database = {
           banned?: boolean
           created_at?: string
           created_by_reseller?: string | null
+          device_name?: string | null
           expires_at: string
           hwid?: string | null
           id?: string
@@ -154,6 +162,7 @@ export type Database = {
           banned?: boolean
           created_at?: string
           created_by_reseller?: string | null
+          device_name?: string | null
           expires_at?: string
           hwid?: string | null
           id?: string

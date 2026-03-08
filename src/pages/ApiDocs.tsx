@@ -333,8 +333,9 @@ export default function ApiDocs() {
           <li>Generate <strong className="text-foreground">License Keys</strong> for that application.</li>
           <li>Copy the code example above into your project.</li>
           <li>Replace the API URL if needed (it's embedded in the snippet).</li>
-          <li>Call <code className="text-foreground bg-secondary/50 px-1 rounded">/validate</code> on startup with the user's key + HWID.</li>
+          <li>Call <code className="text-foreground bg-secondary/50 px-1 rounded">/validate</code> on startup with the user's key + HWID + device_name.</li>
           <li>If <code className="text-foreground bg-secondary/50 px-1 rounded">valid: true</code> → run your app. Otherwise → show the error and exit.</li>
+          <li>The code snippets include a <strong className="text-foreground">"Save license key"</strong> prompt — users can type <code className="text-foreground bg-secondary/50 px-1 rounded">y</code> to save their key locally so they don't need to re-enter it.</li>
           <li>Build your project as an executable and distribute with license keys.</li>
           <li>(Optional) Set up <strong className="text-foreground">Discord webhooks</strong> and <strong className="text-foreground">anti-sharing</strong> in Settings.</li>
           <li>(Optional) Create <strong className="text-foreground">Resellers</strong> to let others distribute keys on your behalf.</li>
