@@ -140,6 +140,7 @@ export default function ResellerKeys() {
         user_id: user.id, action: "Reseller banned license", license_key: licenseKey,
       });
     }
+    notifyDiscord("Reseller banned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License banned");
     fetchData();
   };
