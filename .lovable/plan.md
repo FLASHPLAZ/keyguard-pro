@@ -1,27 +1,46 @@
 
 
-No, you do **not** need to host any backend separately.
+## Audit Results and Fix Plan
 
-Your entire backend is already running on **Lovable Cloud**, which provides:
+### Custom Domain
+Yes, you can use your own domain. After publishing, go to **Settings → Domains** in Lovable and connect it. You'll need to add an A record pointing to `185.158.133.1` at your domain registrar. The API endpoint will still use the backend URL (shown in API docs) -- your custom domain is for the dashboard frontend only.
 
-- **Database** — all your tables (licenses, applications, resellers, activity_logs, etc.) are live and running
-- **Authentication** — user signup, login, and role management (admin/reseller) are handled automatically
-- **Edge Functions** — your `/validate` endpoint is already deployed and publicly accessible at:
-  ```
-  https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/validate
-  ```
-  This is the URL your bots/exes call to validate license keys. It requires no additional hosting.
+### Issues Found
 
-### What this means for your workflow:
+**1. Validate endpoint doesn't log banned/expired/app-disabled attempts**
+Currently the edge function only logs on successful validation and HWID mismatch. When a banned, expired, or app-disabled license is checked, no log entry is created -- meaning you're missing visibility into failed attempts. Fix: add `activity_logs` inserts for all rejection paths with IP + HWID.
 
-1. **Dashboard** (admin + reseller panels) — hosted automatically when you publish your Lovable project
-2. **API endpoint** (`/validate`) — already live and auto-deployed whenever you edit the edge function
-3. **Database** — managed for you, no server to maintain
+**2. API docs code snippets are fine (no application_id needed)**
+The `/validate` endpoint looks up licenses by `license_key` alone (which is unique), so application_id is NOT required in the API call. The snippets are correct as-is.
 
-### To go live:
-- Click **Publish** in the top-right corner to deploy your frontend (dashboard)
-- Your backend (API + database) is **already live** — no extra steps needed
-- Optionally connect a custom domain in Settings → Domains
+**3. Logs pages already show HWID, IP, and timestamps**
+Both admin and reseller log pages display these columns. The `formatDate` function includes date + time (hour:minute). The data will appear once real validations come through the API.
 
-**In short: everything is hosted for you. Just publish and share your API URL with your bot/exe clients.**
+**4. Missing language examples in docs**
+Currently: Python, C#, Node.js, C++. Should add: **Go**, **Java**, **Rust** for broader coverage.
+
+### Implementation Plan
+
+**Step 1: Fix validate edge function -- log ALL rejection events**
+Add `activity_logs` inserts before returning for:
+- Banned license (line 43-48) -- log with IP, HWID, action "Banned license - rejected"
+- App disabled (line 52-57) -- log with IP, HWID, action "App disabled - rejected"  
+- Expired license (line 60-66) -- log with IP, HWID, action "Expired license - rejected"
+- License not found (line 35-40) -- log with IP, action "Unknown key - rejected"
+
+Move the `clientIp` extraction (line 69) earlier so it's available for all log entries.
+
+**Step 2: Add Go, Java, Rust code snippets to API docs**
+Add three new language tabs to `ApiDocs.tsx` with full working examples including HWID detection and license validation.
+
+**Step 3: No database changes needed**
+The `activity_logs` table already has all required columns (ip, hwid, action, license_key, etc.). RLS policies are correct. The edge function uses service role key so inserts bypass RLS.
+
+### Readiness Summary
+After these fixes, the system is ready to deploy:
+- `/validate` endpoint: live and working
+- Dashboard (admin + reseller): fully functional
+- HWID binding, ban/unban, extend, delete: all working
+- Logging: will capture ALL validation attempts after fix
+- Custom domain: connect after publishing
 
