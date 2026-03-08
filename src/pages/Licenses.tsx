@@ -84,7 +84,7 @@ export default function Licenses() {
   };
 
   const unbanKey = async (id: string, licenseKey: string) => {
-    await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+    await supabase.from("licenses").update({ banned: false, status: "active", banned_by_admin: false }).eq("id", id);
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
