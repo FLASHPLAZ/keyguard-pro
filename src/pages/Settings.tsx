@@ -2,18 +2,22 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, Bell, Settings2, Save, Loader2 } from "lucide-react";
+import { Shield, Bell, Settings2, Save, Loader2, Lock } from "lucide-react";
 
 interface SettingsState {
   rate_limit_max: string;
   rate_limit_window: string;
   discord_webhook_url: string;
+  ip_change_threshold: string;
+  auto_ban_enabled: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
   rate_limit_max: "10",
   rate_limit_window: "5",
   discord_webhook_url: "",
+  ip_change_threshold: "5",
+  auto_ban_enabled: "true",
 };
 
 export default function SettingsPage() {
@@ -91,6 +95,8 @@ export default function SettingsPage() {
     );
   }
 
+  const autoBanEnabled = settings.auto_ban_enabled === "true";
+
   return (
     <DashboardLayout>
       <div className="mb-8 flex items-center justify-between animate-fade-in">
@@ -120,7 +126,7 @@ export default function SettingsPage() {
               <label className="mb-1 block text-xs text-muted-foreground">System Name</label>
               <input
                 className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
-                defaultValue="Galactic"
+                defaultValue="Galactic Boosts"
                 readOnly
               />
             </div>
@@ -202,31 +208,40 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Anti-Sharing */}
+        {/* Anti-Sharing Protection */}
         <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
           <div className="mb-4 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
+            <Lock className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold text-foreground">Anti-Sharing Protection</h3>
           </div>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Detect and automatically ban licenses used from too many different IP addresses.
+          </p>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">IP Change Threshold</p>
-                <p className="text-xs text-muted-foreground">Flag license after N unique IPs</p>
+                <p className="text-xs text-muted-foreground">Auto-ban after N unique IPs validate a license</p>
               </div>
               <input
                 type="number"
+                min={2}
+                max={50}
                 className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
-                defaultValue={5}
+                value={settings.ip_change_threshold}
+                onChange={(e) => updateSetting("ip_change_threshold", e.target.value)}
               />
             </div>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">Auto-Ban on Threshold</p>
-                <p className="text-xs text-muted-foreground">Automatically ban flagged licenses</p>
+                <p className="text-xs text-muted-foreground">Automatically ban licenses exceeding the IP threshold</p>
               </div>
-              <button className="relative h-6 w-11 rounded-full bg-primary transition-colors">
-                <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-primary-foreground transition-transform translate-x-5" />
+              <button
+                onClick={() => updateSetting("auto_ban_enabled", autoBanEnabled ? "false" : "true")}
+                className={`relative h-6 w-11 rounded-full transition-colors ${autoBanEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+              >
+                <span className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-primary-foreground transition-transform ${autoBanEnabled ? "translate-x-5" : "translate-x-0"}`} />
               </button>
             </div>
           </div>
