@@ -62,6 +62,7 @@ export default function Logs() {
                   <td className="px-4 py-3 text-foreground">{log.application_name || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.ip || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.hwid || "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.user_id ? log.user_id.slice(0, 8) + "…" : "—"}</td>
                 </tr>
               ))}
             </tbody>
