@@ -114,6 +114,7 @@ export default function ApiDocs() {
           <li><a href="#base-url" className="hover:text-primary transition-colors">Base URL</a></li>
           <li><a href="#endpoints" className="hover:text-primary transition-colors">API Endpoints</a></li>
           <li><a href="#hwid" className="hover:text-primary transition-colors">HWID Binding</a></li>
+          <li><a href="#request-signing" className="hover:text-primary transition-colors">Request Signing (HMAC)</a></li>
           <li><a href="#security" className="hover:text-primary transition-colors">Security Features</a></li>
           <li><a href="#examples" className="hover:text-primary transition-colors">Code Examples</a></li>
           <li><a href="#quickstart" className="hover:text-primary transition-colors">Quick Start</a></li>
