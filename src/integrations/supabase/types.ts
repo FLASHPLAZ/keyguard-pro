@@ -175,6 +175,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          endpoint: string
+          id: string
+          ip: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       resellers: {
         Row: {
           admin_id: string
