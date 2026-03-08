@@ -139,6 +139,13 @@ export type Database = {
             referencedRelation: "applications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "licenses_created_by_reseller_fkey"
+            columns: ["created_by_reseller"]
+            isOneToOne: false
+            referencedRelation: "resellers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
