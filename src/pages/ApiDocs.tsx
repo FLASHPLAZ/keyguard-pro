@@ -303,6 +303,34 @@ export default function ApiDocs() {
         </ol>
       </div>
 
+      {/* Request Signing */}
+      <div id="request-signing" className="mb-8 rounded-lg border border-border bg-card p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-3">
+          <Shield className="h-5 w-5 text-primary" /> Request Signing (HMAC-SHA256)
+        </h2>
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>Prevent payload tampering by enabling request signing on your application. When enabled, every validation request must include an HMAC-SHA256 signature.</p>
+          <div className="rounded-md border border-border bg-secondary/30 p-4">
+            <h3 className="font-semibold text-foreground mb-2">How it works</h3>
+            <ol className="list-decimal list-inside space-y-1.5">
+              <li>Enable <strong className="text-foreground">Request Signing</strong> in the Application details dialog and copy the <strong className="text-foreground">Signing Secret</strong>.</li>
+              <li>In your client, build the JSON body string, then compute: <code className="text-foreground bg-secondary/50 px-1 rounded">HMAC-SHA256(secret, timestamp + "." + body)</code></li>
+              <li>Send the hex-encoded signature as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Signature</code> header and the unix timestamp as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Timestamp</code> header.</li>
+              <li>The server verifies the signature and rejects requests older than <strong className="text-foreground">60 seconds</strong> (replay protection).</li>
+            </ol>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-4">
+            <h3 className="font-semibold text-foreground mb-2">Security benefits</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Prevents modification of license_key, hwid, or device_name in transit</li>
+              <li>60-second timestamp window blocks replay attacks</li>
+              <li>Per-application secrets — compromise of one app doesn't affect others</li>
+              <li>Backward compatible — apps without signing enabled continue to work normally</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Security Features */}
       <div id="security" className="mb-8 rounded-lg border border-border bg-card p-5">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
@@ -320,6 +348,10 @@ export default function ApiDocs() {
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Kill Switch</h3>
             <p className="text-xs text-muted-foreground">Instantly disable all validations for an application. Toggle from the Applications page.</p>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="font-semibold text-foreground text-sm mb-1">Request Signing</h3>
+            <p className="text-xs text-muted-foreground">HMAC-SHA256 request signing prevents payload tampering and replay attacks. Enable per-app from Applications page.</p>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Discord Webhooks</h3>
