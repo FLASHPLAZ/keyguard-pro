@@ -3,8 +3,10 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +19,7 @@ export default function Applications() {
   const [newAppDesc, setNewAppDesc] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
+  const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
 
   const fetchApps = async () => {
     if (!user) return;
@@ -69,6 +72,27 @@ export default function Applications() {
     fetchApps();
   };
 
+  const toggleSignatureRequired = async (id: string, current: boolean) => {
+    await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
+    fetchApps();
+    if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
+  };
+
+  const regenerateSecret = async (id: string) => {
+    // Generate a new 64-char hex secret client-side
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Signing secret regenerated for app ${id}` });
+    toast.success("Signing secret regenerated");
+    setRegenerateAppId(null);
+    fetchApps();
+    if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
@@ -101,7 +125,7 @@ export default function Applications() {
 
       {/* App Details Dialog */}
       <Dialog open={!!detailApp} onOpenChange={() => setDetailApp(null)}>
-        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg">
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Application Details</DialogTitle></DialogHeader>
           {detailApp && (
             <div className="space-y-4 pt-2">
@@ -127,6 +151,48 @@ export default function Applications() {
                   </Button>
                 </div>
               </div>
+
+              {/* Request Signing Section */}
+              <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-semibold text-foreground">Request Signing (HMAC)</label>
+                  </div>
+                  <Switch
+                    checked={detailApp.signature_required || false}
+                    onCheckedChange={() => toggleSignatureRequired(detailApp.id, detailApp.signature_required)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, all validation requests must include a valid HMAC-SHA256 signature. Unsigned requests will be rejected.
+                </p>
+
+                {detailApp.signing_secret && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Signing Secret</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="flex-1 rounded bg-secondary px-3 py-2 text-xs font-mono text-primary break-all select-all">
+                        {detailApp.signing_secret}
+                      </code>
+                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(detailApp.signing_secret, "Signing secret")} className="hover:bg-primary/10 shrink-0">
+                        <Copy className="h-4 w-4 text-primary" />
+                      </Button>
+                    </div>
+                    <div className="mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRegenerateAppId(detailApp.id)}
+                        className="text-xs"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" /> Regenerate Secret
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Example Request (POST)</label>
                 <div className="relative mt-1">
@@ -157,6 +223,24 @@ export default function Applications() {
         </DialogContent>
       </Dialog>
 
+      {/* Regenerate Secret Confirmation */}
+      <AlertDialog open={!!regenerateAppId} onOpenChange={() => setRegenerateAppId(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Regenerate Signing Secret?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will invalidate the current signing secret. All clients using the old secret will fail signature verification until updated with the new secret.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => regenerateAppId && regenerateSecret(regenerateAppId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Regenerate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -172,6 +256,7 @@ export default function Applications() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Signing</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -198,6 +283,15 @@ export default function Applications() {
                       <span className="badge-suspended inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Suspended</span>
                     ) : (
                       <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {app.signature_required ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        <ShieldCheck className="h-3 w-3" /> On
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Off</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>

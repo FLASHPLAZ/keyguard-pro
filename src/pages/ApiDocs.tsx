@@ -32,6 +32,10 @@ const endpoints = [
       { name: "hwid", type: "string", required: false, desc: "Hardware ID for binding (max 100 chars). If omitted, no HWID binding occurs." },
       { name: "device_name", type: "string", required: false, desc: "Device hostname (max 100 chars). Logged for tracking and shown in Discord alerts." },
     ],
+    headers: [
+      { name: "X-Signature", required: "If signing enabled", desc: "HMAC-SHA256 hex signature of timestamp.body using app signing secret" },
+      { name: "X-Timestamp", required: "If signing enabled", desc: "Unix timestamp (seconds). Must be within 60 seconds of server time." },
+    ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
       { code: 400, message: "Invalid hwid", desc: "HWID exceeds 100 characters" },
@@ -41,6 +45,9 @@ const endpoints = [
       { code: 403, message: "License expired", desc: "License expiration date has passed" },
       { code: 403, message: "HWID mismatch", desc: "Key is already bound to a different HWID" },
       { code: 403, message: "License banned for sharing", desc: "Too many unique IPs detected (anti-sharing)" },
+      { code: 403, message: "Signature required", desc: "App requires request signing but no X-Signature/X-Timestamp headers sent" },
+      { code: 403, message: "Request expired", desc: "X-Timestamp is older than 60 seconds (replay protection)" },
+      { code: 403, message: "Invalid signature", desc: "HMAC signature doesn't match — possible payload tampering" },
       { code: 429, message: "Too many requests", desc: "Rate limit exceeded. Retry after window expires." },
       { code: 500, message: "Internal server error", desc: "Unexpected server error" },
     ],
@@ -107,6 +114,7 @@ export default function ApiDocs() {
           <li><a href="#base-url" className="hover:text-primary transition-colors">Base URL</a></li>
           <li><a href="#endpoints" className="hover:text-primary transition-colors">API Endpoints</a></li>
           <li><a href="#hwid" className="hover:text-primary transition-colors">HWID Binding</a></li>
+          <li><a href="#request-signing" className="hover:text-primary transition-colors">Request Signing (HMAC)</a></li>
           <li><a href="#security" className="hover:text-primary transition-colors">Security Features</a></li>
           <li><a href="#examples" className="hover:text-primary transition-colors">Code Examples</a></li>
           <li><a href="#quickstart" className="hover:text-primary transition-colors">Quick Start</a></li>
@@ -224,6 +232,33 @@ export default function ApiDocs() {
               </div>
             )}
 
+            {/* Headers */}
+            {"headers" in ep && ep.headers && (
+              <div className="border-t border-border p-4">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Request Headers (for signed requests)</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b border-border">
+                        <th className="pb-2 pr-4 font-medium">Header</th>
+                        <th className="pb-2 pr-4 font-medium">Required</th>
+                        <th className="pb-2 font-medium">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ep.headers.map((h: any) => (
+                        <tr key={h.name} className="border-b border-border/50">
+                          <td className="py-2 pr-4 font-mono text-foreground">{h.name}</td>
+                          <td className="py-2 pr-4 text-muted-foreground">{h.required}</td>
+                          <td className="py-2 text-muted-foreground">{h.desc}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Errors */}
             {"errors" in ep && ep.errors && (
               <div className="border-t border-border p-4">
@@ -268,6 +303,34 @@ export default function ApiDocs() {
         </ol>
       </div>
 
+      {/* Request Signing */}
+      <div id="request-signing" className="mb-8 rounded-lg border border-border bg-card p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-3">
+          <Shield className="h-5 w-5 text-primary" /> Request Signing (HMAC-SHA256)
+        </h2>
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>Prevent payload tampering by enabling request signing on your application. When enabled, every validation request must include an HMAC-SHA256 signature.</p>
+          <div className="rounded-md border border-border bg-secondary/30 p-4">
+            <h3 className="font-semibold text-foreground mb-2">How it works</h3>
+            <ol className="list-decimal list-inside space-y-1.5">
+              <li>Enable <strong className="text-foreground">Request Signing</strong> in the Application details dialog and copy the <strong className="text-foreground">Signing Secret</strong>.</li>
+              <li>In your client, build the JSON body string, then compute: <code className="text-foreground bg-secondary/50 px-1 rounded">HMAC-SHA256(secret, timestamp + "." + body)</code></li>
+              <li>Send the hex-encoded signature as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Signature</code> header and the unix timestamp as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Timestamp</code> header.</li>
+              <li>The server verifies the signature and rejects requests older than <strong className="text-foreground">60 seconds</strong> (replay protection).</li>
+            </ol>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-4">
+            <h3 className="font-semibold text-foreground mb-2">Security benefits</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Prevents modification of license_key, hwid, or device_name in transit</li>
+              <li>60-second timestamp window blocks replay attacks</li>
+              <li>Per-application secrets — compromise of one app doesn't affect others</li>
+              <li>Backward compatible — apps without signing enabled continue to work normally</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Security Features */}
       <div id="security" className="mb-8 rounded-lg border border-border bg-card p-5">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
@@ -285,6 +348,10 @@ export default function ApiDocs() {
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Kill Switch</h3>
             <p className="text-xs text-muted-foreground">Instantly disable all validations for an application. Toggle from the Applications page.</p>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="font-semibold text-foreground text-sm mb-1">Request Signing</h3>
+            <p className="text-xs text-muted-foreground">HMAC-SHA256 request signing prevents payload tampering and replay attacks. Enable per-app from Applications page.</p>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Discord Webhooks</h3>

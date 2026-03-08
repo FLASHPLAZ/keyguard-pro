@@ -2,12 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature, x-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const DEFAULT_RATE_LIMIT_MAX = 10;
 const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 5;
 const DEFAULT_IP_THRESHOLD = 5;
+const SIGNATURE_MAX_AGE_SECONDS = 60;
 
 interface AdminSettings {
   rateLimitMax: number;
@@ -74,6 +75,8 @@ async function sendDiscordWebhook(webhookUrl: string, action: string, details: R
     "Auto-banned (IP sharing)": 0xff0000,
     "Blacklisted IP - rejected": 0xff0000,
     "Blacklisted HWID - rejected": 0xff0000,
+    "Invalid signature - rejected": 0xff0000,
+    "Expired request - rejected": 0xff0000,
   };
   const embed = {
     title: `🔑 ${action}`,
@@ -126,7 +129,6 @@ async function trackIpAndCheckSharing(
 }
 
 async function checkBlacklist(supabase: any, ip: string, hwid: string | null): Promise<{ blocked: boolean; type: string; reason: string }> {
-  // Check IP blacklist
   const { data: ipBlock } = await supabase
     .from("blacklist")
     .select("reason")
@@ -135,7 +137,6 @@ async function checkBlacklist(supabase: any, ip: string, hwid: string | null): P
     .maybeSingle();
   if (ipBlock) return { blocked: true, type: "ip", reason: ipBlock.reason || "IP is blacklisted" };
 
-  // Check HWID blacklist
   if (hwid) {
     const { data: hwidBlock } = await supabase
       .from("blacklist")
@@ -149,13 +150,36 @@ async function checkBlacklist(supabase: any, ip: string, hwid: string | null): P
   return { blocked: false, type: "", reason: "" };
 }
 
+async function verifyHmacSignature(
+  body: string,
+  signature: string,
+  timestamp: string,
+  secret: string
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signingPayload = `${timestamp}.${body}`;
+  const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(signingPayload));
+  const expectedSignature = Array.from(new Uint8Array(mac))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return expectedSignature === signature.toLowerCase();
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { license_key, hwid, device_name } = await req.json();
+    const rawBody = await req.text();
+    const { license_key, hwid, device_name } = JSON.parse(rawBody);
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return new Response(JSON.stringify({ valid: false, error: "Invalid license_key" }), {
@@ -178,6 +202,14 @@ Deno.serve(async (req) => {
       getAdminSettings(supabase),
       lookupCountry(clientIp),
     ]);
+
+    // ── HMAC Signature Verification ──
+    // We need the application_id from the license to look up the signing secret.
+    // First, find the license to get application_id, then check signature if required.
+    // But we also want to check signature BEFORE processing. So we look up the license
+    // first (lightweight), then verify signature if needed.
+    const providedSignature = req.headers.get("x-signature");
+    const providedTimestamp = req.headers.get("x-timestamp");
 
     // Blacklist check (before rate limit to save resources)
     const blacklistResult = await checkBlacklist(supabase, clientIp, hwid || null);
@@ -207,10 +239,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find license
+    // Find license (also fetches app with signing_secret and signature_required)
     const { data: license, error } = await supabase
       .from("licenses")
-      .select("*, applications(name, suspended, kill_switch)")
+      .select("*, applications(name, suspended, kill_switch, signing_secret, signature_required)")
       .eq("license_key", license_key)
       .single();
 
@@ -228,6 +260,53 @@ Deno.serve(async (req) => {
     }
 
     const app = license.applications;
+
+    // ── Signature verification (after we know the app) ──
+    if (app?.signature_required && app?.signing_secret) {
+      const logBase = {
+        license_key, application_id: license.application_id, application_name: app?.name,
+        ip: clientIp, user_id: license.user_id, device_name: sanitizedDeviceName, country,
+      };
+      const embedBase = {
+        Key: license_key, App: app?.name, IP: clientIp, Country: country, Device: sanitizedDeviceName || "N/A",
+      };
+
+      if (!providedSignature || !providedTimestamp) {
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
+          ...embedBase, HWID: hwid || "N/A", Reason: "Missing signature or timestamp header",
+        });
+        return new Response(JSON.stringify({ valid: false, error: "Signature required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Replay protection: check timestamp age
+      const requestTime = parseInt(providedTimestamp);
+      const now = Math.floor(Date.now() / 1000);
+      if (isNaN(requestTime) || Math.abs(now - requestTime) > SIGNATURE_MAX_AGE_SECONDS) {
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Expired request - rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "Expired request - rejected", {
+          ...embedBase, HWID: hwid || "N/A", Reason: "Request timestamp expired (>60s)",
+        });
+        return new Response(JSON.stringify({ valid: false, error: "Request expired" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify HMAC
+      const isValid = await verifyHmacSignature(rawBody, providedSignature, providedTimestamp, app.signing_secret);
+      if (!isValid) {
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
+          ...embedBase, HWID: hwid || "N/A", Reason: "HMAC signature mismatch - possible tampering",
+        });
+        return new Response(JSON.stringify({ valid: false, error: "Invalid signature" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const logBase = {
       license_key, application_id: license.application_id, application_name: app?.name,
       ip: clientIp, user_id: license.user_id, device_name: sanitizedDeviceName, country,

@@ -71,6 +71,8 @@ export type Database = {
           id: string
           kill_switch: boolean
           name: string
+          signature_required: boolean
+          signing_secret: string | null
           suspended: boolean
           user_id: string
         }
@@ -80,6 +82,8 @@ export type Database = {
           id?: string
           kill_switch?: boolean
           name: string
+          signature_required?: boolean
+          signing_secret?: string | null
           suspended?: boolean
           user_id: string
         }
@@ -89,6 +93,8 @@ export type Database = {
           id?: string
           kill_switch?: boolean
           name?: string
+          signature_required?: boolean
+          signing_secret?: string | null
           suspended?: boolean
           user_id?: string
         }
