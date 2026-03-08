@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Ban, RotateCcw, Clock, Copy } from "lucide-react";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -77,6 +77,19 @@ export default function Licenses() {
       });
     }
     toast.success("License banned");
+    fetchData();
+  };
+
+  const unbanKey = async (id: string, licenseKey: string) => {
+    await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "License unbanned",
+        license_key: licenseKey,
+      });
+    }
+    toast.success("License unbanned");
     fetchData();
   };
 
@@ -210,7 +223,11 @@ export default function Licenses() {
                       <Button variant="ghost" size="icon" onClick={() => resetHwid(lic.id, lic.license_key)} title="Reset HWID" className="hover:bg-warning/10">
                         <RotateCcw className="h-4 w-4 text-warning" />
                       </Button>
-                      {!lic.banned && (
+                      {lic.banned ? (
+                        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key)} title="Unban" className="hover:bg-emerald-500/10">
+                          <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                        </Button>
+                      ) : (
                         <Button variant="ghost" size="icon" onClick={() => banKey(lic.id, lic.license_key)} title="Ban" className="hover:bg-destructive/10">
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
