@@ -135,6 +135,7 @@ export default function Licenses() {
       });
     }
     toast.success("License deleted");
+    notifyDiscord("License deleted", { Key: licenseKey });
     fetchData();
   };
 
