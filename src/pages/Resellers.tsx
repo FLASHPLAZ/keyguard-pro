@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, CreditCard, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, CreditCard, Trash2, Eye, EyeOff, Pencil, Minus } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,11 @@ export default function Resellers() {
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingReseller, setEditingReseller] = useState<any>(null);
+  const [editCredits, setEditCredits] = useState(0);
+  const [editSelectedApps, setEditSelectedApps] = useState<string[]>([]);
+  const [creditAdjust, setCreditAdjust] = useState(0);
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -24,6 +29,7 @@ export default function Resellers() {
   const [newCredits, setNewCredits] = useState(10);
   const [selectedApps, setSelectedApps] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -48,6 +54,49 @@ export default function Resellers() {
     setSelectedApps((prev) =>
       prev.includes(appId) ? prev.filter((a) => a !== appId) : [...prev, appId]
     );
+  };
+
+  const toggleEditApp = (appId: string) => {
+    setEditSelectedApps((prev) =>
+      prev.includes(appId) ? prev.filter((a) => a !== appId) : [...prev, appId]
+    );
+  };
+
+  const openEditDialog = (reseller: any) => {
+    setEditingReseller(reseller);
+    setEditCredits(reseller.credits);
+    setEditSelectedApps(reseller.allowed_apps || []);
+    setCreditAdjust(0);
+    setEditDialogOpen(true);
+  };
+
+  const saveReseller = async () => {
+    if (!editingReseller || !user) return;
+    setSaving(true);
+    try {
+      const newCredits = editCredits + creditAdjust;
+      if (newCredits < 0) { toast.error("Credits cannot be negative"); return; }
+
+      const { error } = await supabase.from("resellers").update({
+        credits: newCredits,
+        allowed_apps: editSelectedApps,
+      }).eq("id", editingReseller.id);
+
+      if (error) throw error;
+
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: `Updated reseller "${editingReseller.username}" — credits: ${newCredits}, apps: ${editSelectedApps.length}`,
+      });
+
+      setEditDialogOpen(false);
+      toast.success(`Reseller "${editingReseller.username}" updated`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update reseller");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const createReseller = async () => {
@@ -85,13 +134,6 @@ export default function Resellers() {
     } finally {
       setCreating(false);
     }
-  };
-
-  const addCredits = async (id: string, current: number, username: string) => {
-    await supabase.from("resellers").update({ credits: current + 10 }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Added 10 credits to reseller "${username}"` });
-    toast.success("Added 10 credits");
-    fetchData();
   };
 
   const deleteReseller = async (id: string, username: string) => {
@@ -165,6 +207,55 @@ export default function Resellers() {
         </Dialog>
       </div>
 
+      {/* Edit Reseller Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg">
+          <DialogHeader><DialogTitle>Edit Reseller — {editingReseller?.username}</DialogTitle></DialogHeader>
+          {editingReseller && (
+            <div className="space-y-4 pt-4">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Current Credits: <span className="font-mono text-primary font-semibold">{editCredits}</span></label>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setCreditAdjust(a => a - 10)} className="shrink-0">
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    value={creditAdjust}
+                    onChange={(e) => setCreditAdjust(Number(e.target.value))}
+                    className="bg-secondary border-border text-center"
+                    placeholder="Adjust credits (+/-)"
+                  />
+                  <Button variant="outline" size="icon" onClick={() => setCreditAdjust(a => a + 10)} className="shrink-0">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  New total: <span className="font-mono text-primary font-semibold">{editCredits + creditAdjust}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted-foreground">Allowed Applications</label>
+                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border border-border bg-secondary/50 p-3">
+                  {apps.map((app) => (
+                    <label key={app.id} className="flex items-center gap-3 cursor-pointer hover:bg-secondary/80 rounded px-2 py-1.5 transition-colors">
+                      <Checkbox checked={editSelectedApps.includes(app.id)} onCheckedChange={() => toggleEditApp(app.id)} />
+                      <span className="text-sm text-foreground">{app.name}</span>
+                    </label>
+                  ))}
+                </div>
+                {apps.length === 0 && <p className="text-xs text-muted-foreground">No apps available.</p>}
+              </div>
+
+              <Button onClick={saveReseller} className="w-full btn-glow" disabled={saving}>
+                {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : "Save Changes"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -172,7 +263,34 @@ export default function Resellers() {
         </div>
       </div>
 
-      <div className="table-responsive">
+      {/* Mobile card view */}
+      <div className="block sm:hidden space-y-3">
+        {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((r, i) => (
+          <div key={r.id} className="rounded-lg border border-border bg-card p-4 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-foreground">{r.username}</span>
+              <span className="font-mono text-primary font-semibold text-sm">{r.credits} credits</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-1">{r.email}</p>
+            <p className="text-xs text-muted-foreground mb-2">Apps: {getAppNames(r.allowed_apps)}</p>
+            <p className="text-xs text-muted-foreground mb-3">Generated: {r.total_generated} · {formatDate(r.created_at)}</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => openEditDialog(r)} className="flex-1">
+                <Pencil className="h-3 w-3 mr-1" /> Edit
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => deleteReseller(r.id, r.username)} className="text-destructive hover:bg-destructive/10">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">No resellers found</div>
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block table-responsive">
         <div className="rounded-lg border border-border overflow-hidden min-w-[750px]">
           <table className="w-full text-sm">
             <thead>
@@ -197,8 +315,8 @@ export default function Resellers() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => addCredits(r.id, r.credits, r.username)} title="Add 10 credits" className="hover:bg-primary/10">
-                        <CreditCard className="h-4 w-4 text-primary" />
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(r)} title="Edit reseller" className="hover:bg-primary/10">
+                        <Pencil className="h-4 w-4 text-primary" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => deleteReseller(r.id, r.username)} title="Delete" className="hover:bg-destructive/10">
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -212,9 +330,10 @@ export default function Resellers() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No resellers found</div>
           )}
-          <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
+
+      <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
     </DashboardLayout>
   );
 }
