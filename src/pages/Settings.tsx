@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { TablePagination } from "@/components/TablePagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLicenseStatusColor, formatDate } from "@/lib/license";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 interface SettingsState {
   rate_limit_max: string;
