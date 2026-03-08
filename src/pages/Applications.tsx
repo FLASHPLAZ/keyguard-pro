@@ -10,6 +10,7 @@ import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, KeyRou
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function Applications() {
   const { user } = useAuth();
