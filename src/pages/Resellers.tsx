@@ -187,7 +187,7 @@ export default function Resellers() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r, i) => (
+              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((r, i) => (
                 <tr key={r.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3 font-medium text-foreground">{r.username}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
@@ -212,6 +212,7 @@ export default function Resellers() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No resellers found</div>
           )}
+          <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
     </DashboardLayout>

@@ -238,7 +238,7 @@ export default function ResellerKeys() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lic, i) => (
+              {filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((lic, i) => (
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -283,6 +283,7 @@ export default function ResellerKeys() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No keys generated yet</div>
           )}
+          <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
     </ResellerLayout>
