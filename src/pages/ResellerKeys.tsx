@@ -275,6 +275,7 @@ export default function ResellerKeys() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
