@@ -145,8 +145,9 @@ export default function ResellerKeys() {
     fetchData();
   };
 
-  const unbanKey = async (id: string, licenseKey: string) => {
-    const { error } = await supabase.from("licenses").update({ banned: false, status: "active" }).eq("id", id);
+  const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
+    const restoredStatus = hwid ? "active" : "unused";
+    const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     if (user) {
       await supabase.from("activity_logs").insert({
