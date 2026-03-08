@@ -2,3 +2,6 @@ project_id = "mcpbzkekllhsmtelfvbe"
 
 [functions.validate]
 verify_jwt = false
+
+[functions.create-reseller]
+verify_jwt = false
