@@ -15,6 +15,7 @@ import ApiDocs from "./pages/ApiDocs";
 import SettingsPage from "./pages/Settings";
 import ResellerDashboard from "./pages/ResellerDashboard";
 import ResellerKeys from "./pages/ResellerKeys";
+import ResellerLogs from "./pages/ResellerLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             {/* Reseller routes */}
             <Route path="/reseller" element={<ProtectedRoute requiredRole="reseller"><ResellerDashboard /></ProtectedRoute>} />
             <Route path="/reseller/keys" element={<ProtectedRoute requiredRole="reseller"><ResellerKeys /></ProtectedRoute>} />
+            <Route path="/reseller/logs" element={<ProtectedRoute requiredRole="reseller"><ResellerLogs /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

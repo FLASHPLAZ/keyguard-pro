@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { ResellerLayout } from "@/components/ResellerLayout";
 import { formatDate } from "@/lib/license";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function Logs() {
+export default function ResellerLogs() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(500)
+    supabase.from("activity_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200)
       .then(({ data }) => setLogs(data || []));
   }, [user]);
 
@@ -26,10 +26,10 @@ export default function Logs() {
   );
 
   return (
-    <DashboardLayout>
+    <ResellerLayout>
       <div className="mb-6 animate-fade-in">
         <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
-        <p className="text-sm text-muted-foreground">Track all license activity and system events</p>
+        <p className="text-sm text-muted-foreground">Track your license activity and events</p>
       </div>
 
       <div className="mb-4">
@@ -50,7 +50,6 @@ export default function Logs() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">IP Address</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">User ID</th>
               </tr>
             </thead>
             <tbody>
@@ -62,7 +61,6 @@ export default function Logs() {
                   <td className="px-4 py-3 text-foreground">{log.application_name || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.ip || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.hwid || "—"}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{log.user_id ? log.user_id.slice(0, 8) + "…" : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -72,6 +70,6 @@ export default function Logs() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </ResellerLayout>
   );
 }

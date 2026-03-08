@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy } from "lucide-react";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -117,6 +117,18 @@ export default function Licenses() {
       });
     }
     toast.success("License extended by 30 days");
+    fetchData();
+  };
+
+  const deleteKey = async (id: string, licenseKey: string) => {
+    const { error } = await supabase.from("licenses").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    if (user) {
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "License deleted", license_key: licenseKey,
+      });
+    }
+    toast.success("License deleted");
     fetchData();
   };
 
@@ -232,6 +244,9 @@ export default function Licenses() {
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
+                      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

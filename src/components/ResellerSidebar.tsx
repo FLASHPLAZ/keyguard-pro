@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -14,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/reseller" },
   { icon: Key, label: "Generate Keys", path: "/reseller/keys" },
+  { icon: ScrollText, label: "Logs", path: "/reseller/logs" },
 ];
 
 export function ResellerSidebar() {
