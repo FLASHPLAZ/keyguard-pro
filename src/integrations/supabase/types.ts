@@ -14,16 +14,229 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_logs: {
+        Row: {
+          action: string
+          application_id: string | null
+          application_name: string | null
+          created_at: string
+          hwid: string | null
+          id: string
+          ip: string | null
+          license_key: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          application_id?: string | null
+          application_name?: string | null
+          created_at?: string
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          license_key?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          application_id?: string | null
+          application_name?: string | null
+          created_at?: string
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          license_key?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kill_switch: boolean
+          name: string
+          suspended: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kill_switch?: boolean
+          name: string
+          suspended?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kill_switch?: boolean
+          name?: string
+          suspended?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      licenses: {
+        Row: {
+          application_id: string
+          banned: boolean
+          created_at: string
+          created_by_reseller: string | null
+          expires_at: string
+          hwid: string | null
+          id: string
+          ip: string | null
+          last_used: string | null
+          license_key: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          banned?: boolean
+          created_at?: string
+          created_by_reseller?: string | null
+          expires_at: string
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          last_used?: string | null
+          license_key: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          banned?: boolean
+          created_at?: string
+          created_by_reseller?: string | null
+          expires_at?: string
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          last_used?: string | null
+          license_key?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licenses_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          role: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          role?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      resellers: {
+        Row: {
+          admin_id: string
+          allowed_apps: string[] | null
+          created_at: string
+          credits: number
+          email: string
+          id: string
+          total_generated: number
+          user_id: string | null
+          username: string
+        }
+        Insert: {
+          admin_id: string
+          allowed_apps?: string[] | null
+          created_at?: string
+          credits?: number
+          email: string
+          id?: string
+          total_generated?: number
+          user_id?: string | null
+          username: string
+        }
+        Update: {
+          admin_id?: string
+          allowed_apps?: string[] | null
+          created_at?: string
+          credits?: number
+          email?: string
+          id?: string
+          total_generated?: number
+          user_id?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "reseller"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +363,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "reseller"],
+    },
   },
 } as const
