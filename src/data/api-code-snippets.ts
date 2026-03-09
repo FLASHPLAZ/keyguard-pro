@@ -16,6 +16,7 @@ HEARTBEAT_URL = "${API_BASE}/heartbeat"
 HEARTBEAT_INTERVAL = 30  # seconds — check every 30s for instant kill
 LICENSE_FILE = "license.dat"
 SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
+APPLICATION_ID = ""  # Set your application UUID here (from dashboard)
 
 def get_hwid():
     """Get a unique hardware ID (Windows)"""
@@ -53,6 +54,8 @@ def validate_license(key: str) -> bool:
             "hwid": get_hwid(),
             "device_name": get_device_name()
         }
+        if APPLICATION_ID:
+            payload["application_id"] = APPLICATION_ID
         body_str = json.dumps(payload, separators=(',', ':'))
         
         headers = {"Content-Type": "application/json"}
@@ -87,7 +90,10 @@ def heartbeat_loop(key: str):
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         try:
-            resp = requests.post(HEARTBEAT_URL, json={"license_key": key}, timeout=5)
+            hb_payload = {"license_key": key}
+            if APPLICATION_ID:
+                hb_payload["application_id"] = APPLICATION_ID
+            resp = requests.post(HEARTBEAT_URL, json=hb_payload, timeout=5)
             data = resp.json()
             if not data.get("active"):
                 reason = data.get("reason", "License no longer active")
@@ -136,6 +142,7 @@ class LicenseValidator
     private static readonly HttpClient client = new HttpClient();
     private static readonly string LICENSE_FILE = "license.dat";
     private static readonly string SIGNING_SECRET = ""; // Set your app's signing secret here
+    private static readonly string APPLICATION_ID = ""; // Set your application UUID here
 
     static string GetHWID()
     {
@@ -175,12 +182,14 @@ class LicenseValidator
     {
         try
         {
-            var payload = JsonSerializer.Serialize(new
+            var payloadObj = new
             {
                 license_key = licenseKey,
                 hwid = GetHWID(),
-                device_name = GetDeviceName()
-            });
+                device_name = GetDeviceName(),
+                application_id = string.IsNullOrEmpty(APPLICATION_ID) ? null : APPLICATION_ID
+            };
+            var payload = JsonSerializer.Serialize(payloadObj);
 
             var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -264,6 +273,7 @@ const HEARTBEAT_URL = "${API_BASE}/heartbeat";
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const LICENSE_FILE = "license.dat";
 const SIGNING_SECRET = ""; // Set your app's signing secret here
+const APPLICATION_ID = ""; // Set your application UUID here
 
 function getHWID() {
   try {
@@ -306,6 +316,7 @@ async function validateLicense(licenseKey) {
       hwid: getHWID(),
       device_name: getDeviceName()
     };
+    if (APPLICATION_ID) payload.application_id = APPLICATION_ID;
     const bodyStr = JSON.stringify(payload);
     
     const headers = { 'Content-Type': 'application/json' };
@@ -373,7 +384,7 @@ const ask = (q) => new Promise(r => rl.question(q, r));
       const res = await fetch(HEARTBEAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_key: key })
+        body: JSON.stringify({ license_key: key, ...(APPLICATION_ID ? { application_id: APPLICATION_ID } : {}) })
       });
       const data = await res.json();
       if (!data.active) {
@@ -404,6 +415,7 @@ using json = nlohmann::json;
 const std::string API_URL = "${API_BASE}/validate";
 const std::string LICENSE_FILE = "license.dat";
 const std::string SIGNING_SECRET = ""; // Set your app's signing secret here
+const std::string APPLICATION_ID = ""; // Set your application UUID here
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
     s->append((char*)contents, size * nmemb);
@@ -475,6 +487,7 @@ bool validateLicense(const std::string& licenseKey) {
         {"hwid", getHWID()},
         {"device_name", getDeviceName()}
     };
+    if (!APPLICATION_ID.empty()) payload["application_id"] = APPLICATION_ID;
     std::string postData = payload.dump();
     std::string response;
 
@@ -571,6 +584,7 @@ import (
 const apiURL = "${API_BASE}/validate"
 const licenseFile = "license.dat"
 const signingSecret = "" // Set your app's signing secret here
+const applicationID = "" // Set your application UUID here
 
 func getHWID() string {
 	out, err := exec.Command("wmic", "csproduct", "get", "uuid").Output()
@@ -616,9 +630,10 @@ func signRequest(bodyStr string, secret string) (string, string) {
 }
 
 type ValidateRequest struct {
-	LicenseKey string \`json:"license_key"\`
-	HWID       string \`json:"hwid"\`
-	DeviceName string \`json:"device_name"\`
+	LicenseKey    string \`json:"license_key"\`
+	HWID          string \`json:"hwid"\`
+	DeviceName    string \`json:"device_name"\`
+	ApplicationID string \`json:"application_id,omitempty"\`
 }
 
 type ValidateResponse struct {
@@ -633,9 +648,10 @@ type ValidateResponse struct {
 
 func validateLicense(key string) bool {
 	payload, _ := json.Marshal(ValidateRequest{
-		LicenseKey: key,
-		HWID:       getHWID(),
-		DeviceName: getDeviceName(),
+		LicenseKey:    key,
+		HWID:          getHWID(),
+		DeviceName:    getDeviceName(),
+		ApplicationID: applicationID,
 	})
 	bodyStr := string(payload)
 
@@ -728,6 +744,7 @@ public class LicenseValidator {
     private static final String API_URL = "${API_BASE}/validate";
     private static final String LICENSE_FILE = "license.dat";
     private static final String SIGNING_SECRET = ""; // Set your app's signing secret here
+    private static final String APPLICATION_ID = ""; // Set your application UUID here
 
     static String getHWID() {
         try {
@@ -777,6 +794,7 @@ public class LicenseValidator {
             payload.addProperty("license_key", licenseKey);
             payload.addProperty("hwid", getHWID());
             payload.addProperty("device_name", getDeviceName());
+            if (!APPLICATION_ID.isEmpty()) payload.addProperty("application_id", APPLICATION_ID);
             String bodyStr = payload.toString();
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
@@ -873,6 +891,7 @@ type HmacSha256 = Hmac<Sha256>;
 const API_URL: &str = "${API_BASE}/validate";
 const LICENSE_FILE: &str = "license.dat";
 const SIGNING_SECRET: &str = ""; // Set your app's signing secret here
+const APPLICATION_ID: &str = ""; // Set your application UUID here
 
 fn get_hwid() -> String {
     let output = Command::new("wmic")
@@ -923,6 +942,8 @@ struct ValidateRequest {
     license_key: String,
     hwid: String,
     device_name: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    application_id: String,
 }
 
 #[derive(Deserialize)]
@@ -939,6 +960,7 @@ fn validate_license(key: &str) -> bool {
         license_key: key.to_string(),
         hwid: get_hwid(),
         device_name: get_device_name(),
+        application_id: APPLICATION_ID.to_string(),
     };
     let body_str = serde_json::to_string(&payload).unwrap();
 

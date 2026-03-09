@@ -16,6 +16,7 @@ import datetime
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "YOUR_BOT_TOKEN")
 API_BASE = "${API_BASE}"
 BOT_API_KEY = os.getenv("BOT_API_KEY", "YOUR_BOT_API_KEY")  # From Settings → Bot API Key
+APPLICATION_ID = os.getenv("APPLICATION_ID", "YOUR_APP_UUID")  # From Applications page
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", "0"))  # Channel ID for logging
 
 intents = discord.Intents.default()
@@ -164,7 +165,7 @@ class CheckLicenseModal(discord.ui.Modal, title="🔍 Check License"):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            status, data = await api_request("validate", {"license_key": key}, auth=False)
+            status, data = await api_request("validate", {"license_key": key, "application_id": APPLICATION_ID}, auth=False)
 
             if data.get("valid"):
                 embed = discord.Embed(title="✅ License Valid", color=0x00ff00)
@@ -264,7 +265,7 @@ async def reset_cmd(interaction: discord.Interaction, license_key: str):
 async def check_cmd(interaction: discord.Interaction, license_key: str):
     await interaction.response.defer(ephemeral=True)
     try:
-        status, data = await api_request("validate", {"license_key": license_key}, auth=False)
+        status, data = await api_request("validate", {"license_key": license_key, "application_id": APPLICATION_ID}, auth=False)
 
         if data.get("valid"):
             embed = discord.Embed(title="✅ License Valid", color=0x00ff00)
@@ -363,6 +364,7 @@ const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "YOUR_BOT_TOKEN";
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || "YOUR_CLIENT_ID";
 const API_BASE = "${API_BASE}";
 const BOT_API_KEY = process.env.BOT_API_KEY || "YOUR_BOT_API_KEY"; // From Settings → Bot API Key
+const APPLICATION_ID = process.env.APPLICATION_ID || "YOUR_APP_UUID"; // From Applications page
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -502,7 +504,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.customId === "check_license_modal") {
       await interaction.deferReply({ ephemeral: true });
       try {
-        const { data } = await apiRequest("validate", { license_key: key }, false);
+        const { data } = await apiRequest("validate", { license_key: key, application_id: APPLICATION_ID }, false);
         let embed;
         if (data.valid) {
           embed = new EmbedBuilder()
@@ -604,7 +606,7 @@ client.on("interactionCreate", async (interaction) => {
     const licenseKey = interaction.options.getString("license_key");
     await interaction.deferReply({ ephemeral: true });
     try {
-      const { data } = await apiRequest("validate", { license_key: licenseKey }, false);
+      const { data } = await apiRequest("validate", { license_key: licenseKey, application_id: APPLICATION_ID }, false);
       let embed;
       if (data.valid) {
         embed = new EmbedBuilder()
