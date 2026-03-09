@@ -960,6 +960,7 @@ fn validate_license(key: &str) -> bool {
         license_key: key.to_string(),
         hwid: get_hwid(),
         device_name: get_device_name(),
+        application_id: APPLICATION_ID.to_string(),
     };
     let body_str = serde_json::to_string(&payload).unwrap();
 
