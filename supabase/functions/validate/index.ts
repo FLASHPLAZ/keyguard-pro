@@ -317,8 +317,8 @@ Deno.serve(async (req) => {
     };
 
     if (license.banned) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Banned license - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Banned license - rejected", { ...embedBase, HWID: hwid || license.hwid });
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Banned License — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🚫 Banned License — Rejected", { ...embedBase, "🖥️ HWID": hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "License is banned" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
