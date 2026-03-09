@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
+import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { AppWindow, Key, CheckCircle, XCircle, Ban, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -74,7 +75,7 @@ export default function Dashboard() {
         <StatCard title="Resellers" value={stats.totalResellers} icon={Users} />
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">License Validations (7 days)</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -109,6 +110,8 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        <ActiveSessionsWidget />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
