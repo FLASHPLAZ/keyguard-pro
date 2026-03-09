@@ -359,9 +359,9 @@ Deno.serve(async (req) => {
     );
     if (shouldBan) {
       await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", license.id);
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Auto-banned (IP sharing)", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Auto-banned (IP sharing)", {
-        ...embedBase, HWID: hwid || license.hwid, "Unique IPs": uniqueIpCount, Threshold: settings.ipChangeThreshold,
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Auto-Banned (IP Sharing)", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🔨 Auto-Banned (IP Sharing)", {
+        ...embedBase, "🖥️ HWID": hwid || license.hwid, "🌐 Unique IPs": uniqueIpCount, "⚙️ Threshold": settings.ipChangeThreshold,
       });
       return new Response(JSON.stringify({ valid: false, error: "License banned for sharing" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
