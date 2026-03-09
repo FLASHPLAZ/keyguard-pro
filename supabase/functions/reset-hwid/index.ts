@@ -5,11 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const RATE_LIMIT_MAX = 10;       // 10 resets per window
-const RATE_LIMIT_WINDOW_MIN = 5; // 5 minute window
+const DEFAULT_RATE_LIMIT_MAX = 10;
+const DEFAULT_RATE_LIMIT_WINDOW_MIN = 5;
 
-async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
-  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MIN * 60 * 1000).toISOString();
+async function getResetHwidSettings(supabase: any) {
+  const { data } = await supabase.from("settings").select("key, value");
+  let rateLimitMax = DEFAULT_RATE_LIMIT_MAX;
+  let rateLimitWindow = DEFAULT_RATE_LIMIT_WINDOW_MIN;
+  if (data) {
+    for (const row of data) {
+      if (row.key === "resethwid_rate_limit_max") rateLimitMax = parseInt(row.value) || DEFAULT_RATE_LIMIT_MAX;
+      if (row.key === "resethwid_rate_limit_window") rateLimitWindow = parseInt(row.value) || DEFAULT_RATE_LIMIT_WINDOW_MIN;
+    }
+  }
+  return { rateLimitMax, rateLimitWindow };
+}
+
+async function checkRateLimit(supabase: any, ip: string, max: number, windowMinutes: number): Promise<boolean> {
+  const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
   const { data } = await supabase
     .from("rate_limits")
     .select("id, attempt_count")
@@ -19,7 +32,7 @@ async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
     .single();
 
   if (data) {
-    if (data.attempt_count >= RATE_LIMIT_MAX) return true;
+    if (data.attempt_count >= max) return true;
     await supabase.from("rate_limits").update({ attempt_count: data.attempt_count + 1 }).eq("id", data.id);
   } else {
     await supabase.from("rate_limits").delete().eq("ip", ip).eq("endpoint", "reset-hwid").lt("window_start", windowStart);
@@ -47,12 +60,14 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const settings = await getResetHwidSettings(supabase);
+
     // Rate limit check
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
-    const isRateLimited = await checkRateLimit(supabase, clientIp);
+    const isRateLimited = await checkRateLimit(supabase, clientIp, settings.rateLimitMax, settings.rateLimitWindow);
     if (isRateLimited) {
       return new Response(JSON.stringify({ success: false, error: "Too many requests. Try again later." }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(RATE_LIMIT_WINDOW_MIN * 60) },
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
       });
     }
 

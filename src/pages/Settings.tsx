@@ -267,12 +267,15 @@ export default function SettingsPage() {
               <Shield className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Rate Limiting</h3>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">Prevent brute-force attacks by limiting validation requests per IP.</p>
-            <div className="space-y-4">
+            <p className="mb-4 text-xs text-muted-foreground">Prevent brute-force attacks by limiting requests per IP per endpoint.</p>
+            
+            {/* Validate endpoint */}
+            <p className="text-xs font-semibold text-primary mb-2">Validate Endpoint</p>
+            <div className="space-y-3 mb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-foreground">Max Attempts</p>
-                  <p className="text-xs text-muted-foreground">Maximum requests per window per IP</p>
+                  <p className="text-xs text-muted-foreground">Per window per IP</p>
                 </div>
                 <input type="number" min={1} max={100}
                   className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
@@ -280,12 +283,55 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-foreground">Window (minutes)</p>
-                  <p className="text-xs text-muted-foreground">Time window for counting attempts</p>
+                  <p className="text-sm text-foreground">Window (min)</p>
                 </div>
                 <input type="number" min={1} max={60}
                   className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
                   value={settings.rate_limit_window} onChange={(e) => updateSetting("rate_limit_window", e.target.value)} />
+              </div>
+            </div>
+
+            {/* Heartbeat endpoint */}
+            <p className="text-xs font-semibold text-primary mb-2">Heartbeat Endpoint</p>
+            <div className="space-y-3 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-foreground">Max Attempts</p>
+                  <p className="text-xs text-muted-foreground">Per window per IP</p>
+                </div>
+                <input type="number" min={1} max={200}
+                  className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+                  value={settings.heartbeat_rate_limit_max} onChange={(e) => updateSetting("heartbeat_rate_limit_max", e.target.value)} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-foreground">Window (min)</p>
+                </div>
+                <input type="number" min={1} max={60}
+                  className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+                  value={settings.heartbeat_rate_limit_window} onChange={(e) => updateSetting("heartbeat_rate_limit_window", e.target.value)} />
+              </div>
+            </div>
+
+            {/* Reset HWID endpoint */}
+            <p className="text-xs font-semibold text-primary mb-2">Reset HWID Endpoint</p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-foreground">Max Attempts</p>
+                  <p className="text-xs text-muted-foreground">Per window per IP</p>
+                </div>
+                <input type="number" min={1} max={100}
+                  className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+                  value={settings.resethwid_rate_limit_max} onChange={(e) => updateSetting("resethwid_rate_limit_max", e.target.value)} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-foreground">Window (min)</p>
+                </div>
+                <input type="number" min={1} max={60}
+                  className="w-20 rounded-md border border-border bg-secondary px-3 py-2 text-center text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+                  value={settings.resethwid_rate_limit_window} onChange={(e) => updateSetting("resethwid_rate_limit_window", e.target.value)} />
               </div>
             </div>
           </div>
