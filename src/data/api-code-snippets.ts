@@ -90,7 +90,10 @@ def heartbeat_loop(key: str):
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         try:
-            resp = requests.post(HEARTBEAT_URL, json={"license_key": key}, timeout=5)
+            hb_payload = {"license_key": key}
+            if APPLICATION_ID:
+                hb_payload["application_id"] = APPLICATION_ID
+            resp = requests.post(HEARTBEAT_URL, json=hb_payload, timeout=5)
             data = resp.json()
             if not data.get("active"):
                 reason = data.get("reason", "License no longer active")
