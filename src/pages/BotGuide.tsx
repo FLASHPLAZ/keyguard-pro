@@ -1001,9 +1001,30 @@ export default function BotGuide() {
           <li><strong className="text-foreground">Ephemeral responses:</strong> All results are sent as ephemeral messages — only the user who clicked sees them</li>
           <li><strong className="text-foreground">Rate limit:</strong> Add a cooldown to prevent spam (e.g. 1 reset per user per 5 minutes)</li>
           <li><strong className="text-foreground">Guild commands:</strong> For instant slash command sync, register commands per-guild instead of globally during development</li>
-          <li><strong className="text-foreground">Token refresh:</strong> For production, automate login via Auth API instead of using a static token</li>
+          <li><strong className="text-foreground">API Key auth:</strong> The Bot API Key never expires — no need for token refresh or login flows</li>
           <li><strong className="text-foreground">Hosting:</strong> Run the bot on a VPS, Railway, or Replit to keep it online 24/7</li>
         </ul>
+
+        <h3 className="font-semibold text-foreground mt-6 mb-3 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" /> Heartbeat Endpoint — Instant Kill on Ban
+        </h3>
+        <div className="text-sm text-muted-foreground space-y-2">
+          <p>
+            Use the <code className="text-foreground bg-secondary/50 px-1 rounded">/heartbeat</code> endpoint in your client software to check if a license is still active every 30–60 seconds.
+            If you ban a key, suspend an app, or flip the kill switch, the client will detect it on the next heartbeat and <strong className="text-foreground">exit immediately</strong>.
+          </p>
+          <pre className="rounded bg-secondary/50 p-3 font-mono text-xs text-foreground overflow-x-auto">{`POST /heartbeat
+{ "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX" }
+
+// Response when active:
+{ "active": true }
+
+// Response when banned/expired/disabled:
+{ "active": false, "reason": "License is banned" }`}</pre>
+          <p className="text-xs text-muted-foreground">
+            Add this to your client code as a background thread/timer. See the API Docs code examples — they include a heartbeat loop that calls <code className="text-foreground bg-secondary/50 px-1 rounded">sys.exit()</code> / <code className="text-foreground bg-secondary/50 px-1 rounded">process.exit()</code> when the license becomes invalid.
+          </p>
+        </div>
       </div>
     </DashboardLayout>
   );
