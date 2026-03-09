@@ -2,11 +2,25 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
+import { CountryHeatmap } from "@/components/CountryHeatmap";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { AppWindow, Key, CheckCircle, XCircle, Ban, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+
+function getLast7DaysLabels(): { label: string; dateStr: string }[] {
+  const days: { label: string; dateStr: string }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push({
+      label: d.toLocaleDateString("en-US", { weekday: "short" }),
+      dateStr: d.toISOString().split("T")[0],
+    });
+  }
+  return days;
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -14,17 +28,26 @@ export default function Dashboard() {
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [recentLicenses, setRecentLicenses] = useState<any[]>([]);
   const [resellerStats, setResellerStats] = useState<any[]>([]);
+  const [barData, setBarData] = useState<{ name: string; validations: number }[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
-      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes] = await Promise.all([
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes, validationLogsRes] = await Promise.all([
         supabase.from("applications").select("id", { count: "exact", head: true }),
         supabase.from("licenses").select("id, status", { count: "exact" }),
         supabase.from("resellers").select("id", { count: "exact", head: true }),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
         supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
         supabase.from("resellers").select("*").order("created_at", { ascending: false }),
+        supabase.from("activity_logs")
+          .select("created_at")
+          .in("action", ["License Login", "First Login — HWID Bound"])
+          .gte("created_at", sevenDaysAgo.toISOString())
+          .order("created_at", { ascending: true }),
       ]);
 
       const licenses = licensesRes.data || [];
@@ -39,19 +62,21 @@ export default function Dashboard() {
       setRecentLogs(logsRes.data || []);
       setRecentLicenses(latestLicRes.data || []);
       setResellerStats(resellerDetailRes.data || []);
+
+      // Build bar chart from real data
+      const days = getLast7DaysLabels();
+      const countsByDate = new Map<string, number>();
+      for (const row of validationLogsRes.data || []) {
+        const dateKey = new Date(row.created_at).toISOString().split("T")[0];
+        countsByDate.set(dateKey, (countsByDate.get(dateKey) || 0) + 1);
+      }
+      setBarData(days.map(d => ({
+        name: d.label,
+        validations: countsByDate.get(d.dateStr) || 0,
+      })));
     };
     fetchData();
   }, [user]);
-
-  const barData = [
-    { name: "Mon", validations: 45 },
-    { name: "Tue", validations: 62 },
-    { name: "Wed", validations: 38 },
-    { name: "Thu", validations: 71 },
-    { name: "Fri", validations: 55 },
-    { name: "Sat", validations: 29 },
-    { name: "Sun", validations: 18 },
-  ];
 
   const pieData = [
     { name: "Active", value: stats.activeLicenses || 1, color: "hsl(142, 72%, 45%)" },
@@ -75,14 +100,14 @@ export default function Dashboard() {
         <StatCard title="Resellers" value={stats.totalResellers} icon={Users} />
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
           <h3 className="mb-4 text-sm font-semibold text-foreground">License Validations (7 days)</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={barData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
               <XAxis dataKey="name" stroke="hsl(215, 12%, 50%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 12%, 50%)" fontSize={12} />
+              <YAxis stroke="hsl(215, 12%, 50%)" fontSize={12} allowDecimals={false} />
               <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 12%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "6px", color: "hsl(210, 20%, 92%)" }} />
               <Bar dataKey="validations" fill="hsl(174, 72%, 52%)" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -110,8 +135,11 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+      </div>
 
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ActiveSessionsWidget />
+        <CountryHeatmap />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
