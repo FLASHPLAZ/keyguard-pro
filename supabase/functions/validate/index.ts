@@ -64,22 +64,22 @@ async function lookupCountry(ip: string): Promise<string> {
 async function sendDiscordWebhook(webhookUrl: string, action: string, details: Record<string, any>) {
   if (!webhookUrl) return;
   const colorMap: Record<string, number> = {
-    "License validated": 0x00ff00,
-    "HWID bound + validated": 0x00ff00,
-    "Unknown key - rejected": 0xff0000,
-    "Banned license - rejected": 0xff0000,
-    "App disabled - rejected": 0xff6600,
-    "Expired license - rejected": 0xffaa00,
-    "HWID mismatch - rejected": 0xff0000,
-    "Rate limited": 0xff0000,
-    "Auto-banned (IP sharing)": 0xff0000,
-    "Blacklisted IP - rejected": 0xff0000,
-    "Blacklisted HWID - rejected": 0xff0000,
-    "Invalid signature - rejected": 0xff0000,
-    "Expired request - rejected": 0xff0000,
+    "✅ License Login Successful": 0x00ff00,
+    "✅ First Login — HWID Bound": 0x00cc88,
+    "❌ Unknown Key — Rejected": 0xff0000,
+    "🚫 Banned License — Rejected": 0xff0000,
+    "⛔ App Disabled — Rejected": 0xff6600,
+    "⏰ Expired License — Rejected": 0xffaa00,
+    "🔒 HWID Mismatch — Rejected": 0xff0000,
+    "🚦 Rate Limited": 0xff0000,
+    "🔨 Auto-Banned (IP Sharing)": 0xff0000,
+    "🛑 Blacklisted IP — Rejected": 0xff0000,
+    "🛑 Blacklisted HWID — Rejected": 0xff0000,
+    "⚠️ Invalid Signature — Rejected": 0xff0000,
+    "⏳ Expired Request — Rejected": 0xff0000,
   };
   const embed = {
-    title: `🔑 ${action}`,
+    title: action,
     color: colorMap[action] || 0x808080,
     fields: Object.entries(details)
       .filter(([_, v]) => v != null)
@@ -214,14 +214,15 @@ Deno.serve(async (req) => {
     // Blacklist check (before rate limit to save resources)
     const blacklistResult = await checkBlacklist(supabase, clientIp, hwid || null);
     if (blacklistResult.blocked) {
-      const action = blacklistResult.type === "ip" ? "Blacklisted IP - rejected" : "Blacklisted HWID - rejected";
+      const action = blacklistResult.type === "ip" ? "🛑 Blacklisted IP — Rejected" : "🛑 Blacklisted HWID — Rejected";
+      const dbAction = blacklistResult.type === "ip" ? "Blacklisted IP — Rejected" : "Blacklisted HWID — Rejected";
       await supabase.from("activity_logs").insert({
-        license_key, action, ip: clientIp, hwid: hwid || null,
+        license_key, action: dbAction, ip: clientIp, hwid: hwid || null,
         device_name: sanitizedDeviceName, country,
       });
       await sendDiscordWebhook(settings.discordWebhookUrl, action, {
-        Key: license_key, IP: clientIp, HWID: hwid || "N/A", Country: country,
-        Device: sanitizedDeviceName || "N/A", Reason: blacklistResult.reason,
+        "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country,
+        "💻 Device": sanitizedDeviceName || "N/A", "📝 Reason": blacklistResult.reason,
       });
       return new Response(JSON.stringify({ valid: false, error: "Access denied" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -231,8 +232,8 @@ Deno.serve(async (req) => {
     // Rate limit check
     const isRateLimited = await checkRateLimit(supabase, clientIp, settings.rateLimitMax, settings.rateLimitWindow);
     if (isRateLimited) {
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Rate limited", {
-        IP: clientIp, Key: license_key, HWID: hwid || "N/A", Country: country, Device: sanitizedDeviceName || "N/A",
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🚦 Rate Limited", {
+        "🌐 IP": clientIp, "🔑 Key": license_key, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
       });
       return new Response(JSON.stringify({ valid: false, error: "Too many requests. Try again later." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
@@ -248,11 +249,11 @@ Deno.serve(async (req) => {
 
     if (error || !license) {
       await supabase.from("activity_logs").insert({
-        license_key, action: "Unknown key - rejected", ip: clientIp, hwid: hwid || null,
+        license_key, action: "Unknown Key — Rejected", ip: clientIp, hwid: hwid || null,
         device_name: sanitizedDeviceName, country,
       });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Unknown key - rejected", {
-        Key: license_key, IP: clientIp, HWID: hwid || "N/A", Country: country, Device: sanitizedDeviceName || "N/A",
+      await sendDiscordWebhook(settings.discordWebhookUrl, "❌ Unknown Key — Rejected", {
+        "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
       });
       return new Response(JSON.stringify({ valid: false, error: "License not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -272,9 +273,9 @@ Deno.serve(async (req) => {
       };
 
       if (!providedSignature || !providedTimestamp) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "Missing signature or timestamp header",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⚠️ Invalid Signature — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Missing signature or timestamp header",
         });
         return new Response(JSON.stringify({ valid: false, error: "Signature required" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -285,9 +286,9 @@ Deno.serve(async (req) => {
       const requestTime = parseInt(providedTimestamp);
       const now = Math.floor(Date.now() / 1000);
       if (isNaN(requestTime) || Math.abs(now - requestTime) > SIGNATURE_MAX_AGE_SECONDS) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Expired request - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Expired request - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "Request timestamp expired (>60s)",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Expired Request — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⏳ Expired Request — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Request timestamp expired (>60s)",
         });
         return new Response(JSON.stringify({ valid: false, error: "Request expired" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -297,9 +298,9 @@ Deno.serve(async (req) => {
       // Verify HMAC
       const isValid = await verifyHmacSignature(rawBody, providedSignature, providedTimestamp, app.signing_secret);
       if (!isValid) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "HMAC signature mismatch - possible tampering",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⚠️ Invalid Signature — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "HMAC signature mismatch — possible tampering",
         });
         return new Response(JSON.stringify({ valid: false, error: "Invalid signature" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -312,20 +313,20 @@ Deno.serve(async (req) => {
       ip: clientIp, user_id: license.user_id, device_name: sanitizedDeviceName, country,
     };
     const embedBase = {
-      Key: license_key, App: app?.name, IP: clientIp, Country: country, Device: sanitizedDeviceName || "N/A",
+      "🔑 Key": license_key, "📱 App": app?.name, "🌐 IP": clientIp, "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
     };
 
     if (license.banned) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Banned license - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Banned license - rejected", { ...embedBase, HWID: hwid || license.hwid });
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Banned License — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🚫 Banned License — Rejected", { ...embedBase, "🖥️ HWID": hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "License is banned" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (app?.suspended || app?.kill_switch) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "App disabled - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "App disabled - rejected", { ...embedBase, HWID: hwid || license.hwid });
+      await supabase.from("activity_logs").insert({ ...logBase, action: "App Disabled — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "⛔ App Disabled — Rejected", { ...embedBase, "🖥️ HWID": hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "Application is disabled" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -333,9 +334,9 @@ Deno.serve(async (req) => {
 
     if (new Date(license.expires_at) < new Date()) {
       await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id);
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Expired license - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Expired license - rejected", {
-        ...embedBase, HWID: hwid || license.hwid, Expires: formatExpiry(license.expires_at),
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Expired License — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "⏰ Expired License — Rejected", {
+        ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at),
       });
       return new Response(JSON.stringify({ valid: false, error: "License expired" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -343,9 +344,9 @@ Deno.serve(async (req) => {
     }
 
     if (license.hwid && hwid && license.hwid !== hwid) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "HWID mismatch - rejected", hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "HWID mismatch - rejected", {
-        ...embedBase, "Sent HWID": hwid, "Bound HWID": license.hwid,
+      await supabase.from("activity_logs").insert({ ...logBase, action: "HWID Mismatch — Rejected", hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🔒 HWID Mismatch — Rejected", {
+        ...embedBase, "🖥️ Sent HWID": hwid, "🔐 Bound HWID": license.hwid,
       });
       return new Response(JSON.stringify({ valid: false, error: "HWID mismatch" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -358,9 +359,9 @@ Deno.serve(async (req) => {
     );
     if (shouldBan) {
       await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", license.id);
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Auto-banned (IP sharing)", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Auto-banned (IP sharing)", {
-        ...embedBase, HWID: hwid || license.hwid, "Unique IPs": uniqueIpCount, Threshold: settings.ipChangeThreshold,
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Auto-Banned (IP Sharing)", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🔨 Auto-Banned (IP Sharing)", {
+        ...embedBase, "🖥️ HWID": hwid || license.hwid, "🌐 Unique IPs": uniqueIpCount, "⚙️ Threshold": settings.ipChangeThreshold,
       });
       return new Response(JSON.stringify({ valid: false, error: "License banned for sharing" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -376,10 +377,11 @@ Deno.serve(async (req) => {
 
     await supabase.from("licenses").update(updates).eq("id", license.id);
 
-    const action = !license.hwid && hwid ? "HWID bound + validated" : "License validated";
+    const action = !license.hwid && hwid ? "First Login — HWID Bound" : "License Login";
+    const discordAction = !license.hwid && hwid ? "✅ First Login — HWID Bound" : "✅ License Login Successful";
     await supabase.from("activity_logs").insert({ ...logBase, action, hwid: hwid || license.hwid });
-    await sendDiscordWebhook(settings.discordWebhookUrl, action, {
-      ...embedBase, HWID: hwid || license.hwid, Expires: formatExpiry(license.expires_at),
+    await sendDiscordWebhook(settings.discordWebhookUrl, discordAction, {
+      ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at),
     });
 
     return new Response(
