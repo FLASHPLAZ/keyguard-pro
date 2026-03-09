@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -19,43 +19,57 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Authenticate: require admin Bearer token
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    );
-
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Check admin role
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+    // ── Authentication: API Key OR Bearer Token ──
+    const apiKey = req.headers.get("x-api-key");
+    const authHeader = req.headers.get("authorization");
+    let authenticatedUserId: string | null = null;
 
-    if (!roleData) {
-      return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (apiKey) {
+      // API Key auth — look up bot_api_key from settings
+      const { data: settingsData } = await supabase.from("settings").select("key, value");
+      const storedKey = settingsData?.find((s: any) => s.key === "bot_api_key" && s.value)?.value;
+      if (!storedKey || storedKey !== apiKey) {
+        return new Response(JSON.stringify({ success: false, error: "Invalid API key" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // API key is valid — find the admin user_id from settings owner
+      const adminSetting = settingsData?.find((s: any) => s.key === "bot_api_key");
+      authenticatedUserId = (adminSetting as any)?.user_id || null;
+    } else if (authHeader?.startsWith("Bearer ")) {
+      // JWT Bearer token auth
+      const token = authHeader.replace("Bearer ", "");
+      const supabaseAuth = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!
+      );
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+      if (authError || !user) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Check admin role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      authenticatedUserId = user.id;
+    } else {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized — provide X-API-Key or Authorization header" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -83,7 +97,7 @@ Deno.serve(async (req) => {
 
     // Log the action
     await supabase.from("activity_logs").insert({
-      user_id: user.id,
+      user_id: authenticatedUserId,
       action: "HWID reset via API",
       license_key,
       application_id: license.application_id,
