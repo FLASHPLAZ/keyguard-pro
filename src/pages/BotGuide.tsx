@@ -900,12 +900,12 @@ export default function BotGuide() {
               </thead>
               <tbody>
                 <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 font-mono text-foreground">Authorization</td>
-                  <td className="py-2 text-muted-foreground">Bearer &lt;admin_access_token&gt;</td>
+                  <td className="py-2 pr-4 font-mono text-foreground">X-API-Key</td>
+                  <td className="py-2 text-muted-foreground">&lt;your_bot_api_key&gt; (preferred for bots)</td>
                 </tr>
                 <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 font-mono text-foreground">Content-Type</td>
-                  <td className="py-2 text-muted-foreground">application/json</td>
+                  <td className="py-2 pr-4 font-mono text-foreground">Authorization</td>
+                  <td className="py-2 text-muted-foreground">Bearer &lt;admin_access_token&gt; (alternative)</td>
                 </tr>
               </tbody>
             </table>
