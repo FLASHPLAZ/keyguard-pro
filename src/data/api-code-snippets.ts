@@ -384,7 +384,7 @@ const ask = (q) => new Promise(r => rl.question(q, r));
       const res = await fetch(HEARTBEAT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_key: key })
+        body: JSON.stringify({ license_key: key, ...(APPLICATION_ID ? { application_id: APPLICATION_ID } : {}) })
       });
       const data = await res.json();
       if (!data.active) {
