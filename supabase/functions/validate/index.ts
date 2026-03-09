@@ -232,8 +232,8 @@ Deno.serve(async (req) => {
     // Rate limit check
     const isRateLimited = await checkRateLimit(supabase, clientIp, settings.rateLimitMax, settings.rateLimitWindow);
     if (isRateLimited) {
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Rate limited", {
-        IP: clientIp, Key: license_key, HWID: hwid || "N/A", Country: country, Device: sanitizedDeviceName || "N/A",
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🚦 Rate Limited", {
+        "🌐 IP": clientIp, "🔑 Key": license_key, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
       });
       return new Response(JSON.stringify({ valid: false, error: "Too many requests. Try again later." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
