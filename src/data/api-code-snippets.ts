@@ -12,6 +12,8 @@ import json
 import threading
 
 API_URL = "${API_BASE}/validate"
+HEARTBEAT_URL = "${API_BASE}/heartbeat"
+HEARTBEAT_INTERVAL = 30  # seconds — check every 30s for instant kill
 LICENSE_FILE = "license.dat"
 SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
 
