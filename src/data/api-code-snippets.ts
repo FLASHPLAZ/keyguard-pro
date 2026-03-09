@@ -794,6 +794,7 @@ public class LicenseValidator {
             payload.addProperty("license_key", licenseKey);
             payload.addProperty("hwid", getHWID());
             payload.addProperty("device_name", getDeviceName());
+            if (!APPLICATION_ID.isEmpty()) payload.addProperty("application_id", APPLICATION_ID);
             String bodyStr = payload.toString();
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
