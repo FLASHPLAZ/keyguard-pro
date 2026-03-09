@@ -648,9 +648,10 @@ type ValidateResponse struct {
 
 func validateLicense(key string) bool {
 	payload, _ := json.Marshal(ValidateRequest{
-		LicenseKey: key,
-		HWID:       getHWID(),
-		DeviceName: getDeviceName(),
+		LicenseKey:    key,
+		HWID:          getHWID(),
+		DeviceName:    getDeviceName(),
+		ApplicationID: applicationID,
 	})
 	bodyStr := string(payload)
 
