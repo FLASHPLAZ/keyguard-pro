@@ -249,11 +249,11 @@ Deno.serve(async (req) => {
 
     if (error || !license) {
       await supabase.from("activity_logs").insert({
-        license_key, action: "Unknown key - rejected", ip: clientIp, hwid: hwid || null,
+        license_key, action: "Unknown Key — Rejected", ip: clientIp, hwid: hwid || null,
         device_name: sanitizedDeviceName, country,
       });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Unknown key - rejected", {
-        Key: license_key, IP: clientIp, HWID: hwid || "N/A", Country: country, Device: sanitizedDeviceName || "N/A",
+      await sendDiscordWebhook(settings.discordWebhookUrl, "❌ Unknown Key — Rejected", {
+        "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
       });
       return new Response(JSON.stringify({ valid: false, error: "License not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
