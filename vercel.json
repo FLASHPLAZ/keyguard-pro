@@ -1,3 +1,10 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/validate", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/validate" },
+    { "source": "/api/heartbeat", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/heartbeat" },
+    { "source": "/api/reset-hwid", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/reset-hwid" },
+    { "source": "/api/create-reseller", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/create-reseller" },
+    { "source": "/api/notify-discord", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/notify-discord" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
