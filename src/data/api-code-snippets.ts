@@ -744,6 +744,7 @@ public class LicenseValidator {
     private static final String API_URL = "${API_BASE}/validate";
     private static final String LICENSE_FILE = "license.dat";
     private static final String SIGNING_SECRET = ""; // Set your app's signing secret here
+    private static final String APPLICATION_ID = ""; // Set your application UUID here
 
     static String getHWID() {
         try {
