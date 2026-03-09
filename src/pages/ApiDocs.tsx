@@ -16,7 +16,8 @@ const endpoints = [
     request: `{
   "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
   "hwid": "machine-hardware-id",
-  "device_name": "DESKTOP-ABC123"
+  "device_name": "DESKTOP-ABC123",
+  "application_id": "your-app-uuid"
 }`,
     response: `{
   "valid": true,
