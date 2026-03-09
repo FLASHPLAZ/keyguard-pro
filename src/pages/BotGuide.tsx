@@ -771,7 +771,7 @@ export default function BotGuide() {
           <li>A Discord server where you have <strong className="text-foreground">Manage Server</strong> permission</li>
           <li>A Discord bot created via the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord Developer Portal</a></li>
           <li>Python 3.8+ or Node.js 18+ installed on the machine running the bot</li>
-          <li>Your <strong className="text-foreground">Admin Auth Token</strong> (see Step 3 below)</li>
+          <li>Your <strong className="text-foreground">Bot API Key</strong> from Settings page (click Generate)</li>
           <li><span className="text-foreground font-medium">(Node.js only)</span> Your bot's <strong className="text-foreground">Application/Client ID</strong> from the Developer Portal</li>
         </ol>
       </div>
