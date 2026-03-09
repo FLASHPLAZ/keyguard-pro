@@ -866,7 +866,7 @@ export default function BotGuide() {
           <span className="rounded bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">X-API-Key (Bot API Key)</span>
         </div>
         <div className="px-4 py-3 border-b border-border">
-          <p className="text-sm text-muted-foreground">Reset HWID binding for a license key. Requires admin authentication.</p>
+          <p className="text-sm text-muted-foreground">Reset HWID binding for a license key. Authenticate with Bot API Key or admin Bearer token.</p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
           <div className="p-4">
