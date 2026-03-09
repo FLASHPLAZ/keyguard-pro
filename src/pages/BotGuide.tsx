@@ -863,7 +863,7 @@ export default function BotGuide() {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-b border-border px-4 py-3">
           <span className="rounded bg-primary/15 px-2 py-0.5 font-mono text-xs font-bold text-primary">POST</span>
           <span className="font-mono text-sm text-foreground">/reset-hwid</span>
-          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">Bearer token (admin only)</span>
+          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">X-API-Key (Bot API Key)</span>
         </div>
         <div className="px-4 py-3 border-b border-border">
           <p className="text-sm text-muted-foreground">Reset HWID binding for a license key. Requires admin authentication.</p>
