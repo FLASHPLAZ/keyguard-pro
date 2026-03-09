@@ -837,7 +837,7 @@ export default function BotGuide() {
           <h3 className="font-semibold text-foreground mb-2">Step 5 — Configure & Run the Bot</h3>
           <ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
             <li>Copy the bot code below (Python or Node.js)</li>
-            <li>Replace the config values: <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">ADMIN_AUTH_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">LOG_CHANNEL_ID</code></li>
+            <li>Replace the config values: <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_API_KEY</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">LOG_CHANNEL_ID</code></li>
             <li><span className="text-foreground font-medium">(Node.js only)</span> Also set <code className="text-foreground bg-secondary/50 px-1 rounded">CLIENT_ID</code></li>
             <li>Install dependencies and run:
               <div className="mt-2 space-y-2">
