@@ -81,6 +81,21 @@ def validate_license(key: str) -> bool:
         print(f"⚠️ Connection error: {e}")
         return False
 
+def heartbeat_loop(key: str):
+    """Background thread: periodically checks if license is still active.
+    Exits the program immediately if banned, expired, or app disabled."""
+    while True:
+        time.sleep(HEARTBEAT_INTERVAL)
+        try:
+            resp = requests.post(HEARTBEAT_URL, json={"license_key": key}, timeout=5)
+            data = resp.json()
+            if not data.get("active"):
+                reason = data.get("reason", "License no longer active")
+                print(f"\\n🚫 KILLED: {reason}")
+                os._exit(1)  # Force exit immediately
+        except Exception:
+            pass  # Network error — retry next cycle
+
 if __name__ == "__main__":
     saved = load_saved_key()
     if saved:
@@ -97,6 +112,11 @@ if __name__ == "__main__":
         if save == "y":
             save_key(key)
             print("✅ Key saved to license.dat")
+    
+    # Start heartbeat thread — will kill the app if license is banned/expired
+    hb = threading.Thread(target=heartbeat_loop, args=(key,), daemon=True)
+    hb.start()
+    print(f"💓 Heartbeat active (checking every {HEARTBEAT_INTERVAL}s)")
     
     print("\\n🚀 Application starting...")
     # Your app code here
