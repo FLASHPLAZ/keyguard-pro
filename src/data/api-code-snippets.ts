@@ -630,9 +630,10 @@ func signRequest(bodyStr string, secret string) (string, string) {
 }
 
 type ValidateRequest struct {
-	LicenseKey string \`json:"license_key"\`
-	HWID       string \`json:"hwid"\`
-	DeviceName string \`json:"device_name"\`
+	LicenseKey    string \`json:"license_key"\`
+	HWID          string \`json:"hwid"\`
+	DeviceName    string \`json:"device_name"\`
+	ApplicationID string \`json:"application_id,omitempty"\`
 }
 
 type ValidateResponse struct {
