@@ -487,6 +487,7 @@ bool validateLicense(const std::string& licenseKey) {
         {"hwid", getHWID()},
         {"device_name", getDeviceName()}
     };
+    if (!APPLICATION_ID.empty()) payload["application_id"] = APPLICATION_ID;
     std::string postData = payload.dump();
     std::string response;
 
