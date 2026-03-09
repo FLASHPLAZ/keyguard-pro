@@ -51,14 +51,23 @@ function formatExpiry(expiresAt: string): string {
 
 async function lookupCountry(ip: string): Promise<string> {
   if (!ip || ip === "unknown") return "Unknown";
+  // Try ip-api.com first (free, no key needed, 45 req/min)
+  try {
+    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=country`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country && data.country !== "") return data.country;
+    }
+  } catch { /* fall through */ }
+  // Fallback to ipapi.co
   try {
     const resp = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
-    if (!resp.ok) return "Unknown";
-    const data = await resp.json();
-    return data.country_name || data.country || "Unknown";
-  } catch {
-    return "Unknown";
-  }
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country_name) return data.country_name;
+    }
+  } catch { /* ignore */ }
+  return "Unknown";
 }
 
 async function sendDiscordWebhook(webhookUrl: string, action: string, details: Record<string, any>) {
