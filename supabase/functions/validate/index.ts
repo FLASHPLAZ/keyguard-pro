@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
       ip: clientIp, user_id: license.user_id, device_name: sanitizedDeviceName, country,
     };
     const embedBase = {
-      Key: license_key, App: app?.name, IP: clientIp, Country: country, Device: sanitizedDeviceName || "N/A",
+      "🔑 Key": license_key, "📱 App": app?.name, "🌐 IP": clientIp, "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A",
     };
 
     if (license.banned) {
