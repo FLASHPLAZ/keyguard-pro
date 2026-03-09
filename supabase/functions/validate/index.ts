@@ -344,9 +344,9 @@ Deno.serve(async (req) => {
     }
 
     if (license.hwid && hwid && license.hwid !== hwid) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "HWID mismatch - rejected", hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "HWID mismatch - rejected", {
-        ...embedBase, "Sent HWID": hwid, "Bound HWID": license.hwid,
+      await supabase.from("activity_logs").insert({ ...logBase, action: "HWID Mismatch — Rejected", hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🔒 HWID Mismatch — Rejected", {
+        ...embedBase, "🖥️ Sent HWID": hwid, "🔐 Bound HWID": license.hwid,
       });
       return new Response(JSON.stringify({ valid: false, error: "HWID mismatch" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
