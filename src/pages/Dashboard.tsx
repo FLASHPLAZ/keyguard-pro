@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
+import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { AppWindow, Key, CheckCircle, XCircle, Ban, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
