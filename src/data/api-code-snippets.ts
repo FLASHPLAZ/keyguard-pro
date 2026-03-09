@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import json
+import threading
 
 API_URL = "${API_BASE}/validate"
 LICENSE_FILE = "license.dat"
