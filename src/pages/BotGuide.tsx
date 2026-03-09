@@ -804,20 +804,20 @@ export default function BotGuide() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-5">
-          <h3 className="font-semibold text-foreground mb-2">Step 3 — Get Your Admin Auth Token</h3>
+          <h3 className="font-semibold text-foreground mb-2">Step 3 — Get Your Bot API Key</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p>The <code className="text-foreground bg-secondary/50 px-1 rounded">/reset-hwid</code> endpoint requires admin authentication. To get your token:</p>
+            <p>The <code className="text-foreground bg-secondary/50 px-1 rounded">/reset-hwid</code> endpoint requires authentication. Generate a simple API key:</p>
             <ol className="list-decimal list-inside space-y-1.5">
-              <li>Log into the Galactic Boosts dashboard</li>
-              <li>Open your browser's <strong className="text-foreground">Developer Tools</strong> (F12)</li>
-              <li>Go to <strong className="text-foreground">Application</strong> → <strong className="text-foreground">Local Storage</strong></li>
-              <li>Find the key containing <code className="text-foreground bg-secondary/50 px-1 rounded">access_token</code> — copy its value</li>
-              <li>This is your <code className="text-foreground bg-secondary/50 px-1 rounded">ADMIN_AUTH_TOKEN</code></li>
+              <li>Go to <strong className="text-foreground">Settings</strong> in the sidebar</li>
+              <li>Find the <strong className="text-foreground">Bot API Key</strong> field under Discord Notifications</li>
+              <li>Click <strong className="text-foreground">Generate</strong> to create a new key</li>
+              <li>Click <strong className="text-foreground">Save Changes</strong></li>
+              <li>Copy the key — this is your <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_API_KEY</code></li>
             </ol>
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <p className="text-xs text-destructive">
-                <strong>Security:</strong> Auth tokens expire. For a production bot, implement a login flow that signs in with your admin email/password using the Auth API and refreshes the token automatically.
+            <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
+              <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
+                <strong>No token expiry!</strong> Unlike auth tokens, the Bot API Key never expires. Send it as the <code className="bg-secondary/50 px-1 rounded">X-API-Key</code> header — no JWT or login flow needed.
               </p>
             </div>
           </div>
