@@ -891,6 +891,7 @@ type HmacSha256 = Hmac<Sha256>;
 const API_URL: &str = "${API_BASE}/validate";
 const LICENSE_FILE: &str = "license.dat";
 const SIGNING_SECRET: &str = ""; // Set your app's signing secret here
+const APPLICATION_ID: &str = ""; // Set your application UUID here
 
 fn get_hwid() -> String {
     let output = Command::new("wmic")
