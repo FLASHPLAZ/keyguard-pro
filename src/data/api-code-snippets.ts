@@ -1,4 +1,4 @@
-const API_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+const API_BASE = "https://license.galacticboosts.online/api";
 
 export const pythonSnippet = `import requests
 import subprocess

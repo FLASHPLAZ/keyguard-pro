@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
 
-const API_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1`;
+const API_BASE = "https://license.galacticboosts.online/api";
 
 const endpoints = [
   {
