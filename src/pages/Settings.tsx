@@ -15,6 +15,10 @@ import { notifyDiscord } from "@/lib/discord-notify";
 interface SettingsState {
   rate_limit_max: string;
   rate_limit_window: string;
+  heartbeat_rate_limit_max: string;
+  heartbeat_rate_limit_window: string;
+  resethwid_rate_limit_max: string;
+  resethwid_rate_limit_window: string;
   discord_webhook_url: string;
   ip_change_threshold: string;
   auto_ban_enabled: string;
@@ -24,6 +28,10 @@ interface SettingsState {
 const DEFAULT_SETTINGS: SettingsState = {
   rate_limit_max: "10",
   rate_limit_window: "5",
+  heartbeat_rate_limit_max: "60",
+  heartbeat_rate_limit_window: "5",
+  resethwid_rate_limit_max: "10",
+  resethwid_rate_limit_window: "5",
   discord_webhook_url: "",
   ip_change_threshold: "5",
   auto_ban_enabled: "true",
