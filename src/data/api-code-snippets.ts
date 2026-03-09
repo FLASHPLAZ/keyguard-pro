@@ -366,6 +366,24 @@ const ask = (q) => new Promise(r => rl.question(q, r));
   }
 
   rl.close();
+
+  // Start heartbeat — kills the app if license is banned/expired/disabled
+  setInterval(async () => {
+    try {
+      const res = await fetch(HEARTBEAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key: key })
+      });
+      const data = await res.json();
+      if (!data.active) {
+        console.log(\`\\n🚫 KILLED: \${data.reason || 'License no longer active'}\`);
+        process.exit(1);
+      }
+    } catch {} // Network error — retry next cycle
+  }, HEARTBEAT_INTERVAL);
+  console.log(\`💓 Heartbeat active (checking every \${HEARTBEAT_INTERVAL / 1000}s)\`);
+
   console.log('\\n🚀 Application starting...');
   // Your app code here
 })();`;
