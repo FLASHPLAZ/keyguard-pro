@@ -165,7 +165,7 @@ class CheckLicenseModal(discord.ui.Modal, title="🔍 Check License"):
         await interaction.response.defer(ephemeral=True)
 
         try:
-            status, data = await api_request("validate", {"license_key": key}, auth=False)
+            status, data = await api_request("validate", {"license_key": key, "application_id": APPLICATION_ID}, auth=False)
 
             if data.get("valid"):
                 embed = discord.Embed(title="✅ License Valid", color=0x00ff00)
