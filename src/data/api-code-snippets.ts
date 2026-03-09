@@ -273,6 +273,7 @@ const HEARTBEAT_URL = "${API_BASE}/heartbeat";
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const LICENSE_FILE = "license.dat";
 const SIGNING_SECRET = ""; // Set your app's signing secret here
+const APPLICATION_ID = ""; // Set your application UUID here
 
 function getHWID() {
   try {
