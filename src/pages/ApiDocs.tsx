@@ -43,6 +43,7 @@ const endpoints = [
       { code: 400, message: "Invalid hwid", desc: "HWID exceeds 100 characters" },
       { code: 404, message: "License not found", desc: "No license matches the provided key" },
       { code: 403, message: "License is banned", desc: "License has been banned by admin or auto-ban" },
+      { code: 403, message: "License does not belong to this application", desc: "application_id was provided but doesn't match the license's app" },
       { code: 403, message: "Application is disabled", desc: "App is suspended or kill-switch is active" },
       { code: 403, message: "License expired", desc: "License expiration date has passed" },
       { code: 403, message: "HWID mismatch", desc: "Key is already bound to a different HWID" },
