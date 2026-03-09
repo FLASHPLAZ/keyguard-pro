@@ -214,14 +214,15 @@ Deno.serve(async (req) => {
     // Blacklist check (before rate limit to save resources)
     const blacklistResult = await checkBlacklist(supabase, clientIp, hwid || null);
     if (blacklistResult.blocked) {
-      const action = blacklistResult.type === "ip" ? "Blacklisted IP - rejected" : "Blacklisted HWID - rejected";
+      const action = blacklistResult.type === "ip" ? "🛑 Blacklisted IP — Rejected" : "🛑 Blacklisted HWID — Rejected";
+      const dbAction = blacklistResult.type === "ip" ? "Blacklisted IP — Rejected" : "Blacklisted HWID — Rejected";
       await supabase.from("activity_logs").insert({
-        license_key, action, ip: clientIp, hwid: hwid || null,
+        license_key, action: dbAction, ip: clientIp, hwid: hwid || null,
         device_name: sanitizedDeviceName, country,
       });
       await sendDiscordWebhook(settings.discordWebhookUrl, action, {
-        Key: license_key, IP: clientIp, HWID: hwid || "N/A", Country: country,
-        Device: sanitizedDeviceName || "N/A", Reason: blacklistResult.reason,
+        "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country,
+        "💻 Device": sanitizedDeviceName || "N/A", "📝 Reason": blacklistResult.reason,
       });
       return new Response(JSON.stringify({ valid: false, error: "Access denied" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
