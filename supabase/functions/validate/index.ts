@@ -377,10 +377,11 @@ Deno.serve(async (req) => {
 
     await supabase.from("licenses").update(updates).eq("id", license.id);
 
-    const action = !license.hwid && hwid ? "HWID bound + validated" : "License validated";
+    const action = !license.hwid && hwid ? "First Login — HWID Bound" : "License Login";
+    const discordAction = !license.hwid && hwid ? "✅ First Login — HWID Bound" : "✅ License Login Successful";
     await supabase.from("activity_logs").insert({ ...logBase, action, hwid: hwid || license.hwid });
-    await sendDiscordWebhook(settings.discordWebhookUrl, action, {
-      ...embedBase, HWID: hwid || license.hwid, Expires: formatExpiry(license.expires_at),
+    await sendDiscordWebhook(settings.discordWebhookUrl, discordAction, {
+      ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at),
     });
 
     return new Response(
