@@ -18,6 +18,7 @@ interface SettingsState {
   discord_webhook_url: string;
   ip_change_threshold: string;
   auto_ban_enabled: string;
+  bot_api_key: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   discord_webhook_url: "",
   ip_change_threshold: "5",
   auto_ban_enabled: "true",
+  bot_api_key: "",
 };
 
 interface BlacklistEntry {
