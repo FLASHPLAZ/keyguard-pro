@@ -606,7 +606,7 @@ client.on("interactionCreate", async (interaction) => {
     const licenseKey = interaction.options.getString("license_key");
     await interaction.deferReply({ ephemeral: true });
     try {
-      const { data } = await apiRequest("validate", { license_key: licenseKey }, false);
+      const { data } = await apiRequest("validate", { license_key: licenseKey, application_id: APPLICATION_ID }, false);
       let embed;
       if (data.valid) {
         embed = new EmbedBuilder()
