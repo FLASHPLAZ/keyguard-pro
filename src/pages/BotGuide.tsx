@@ -387,7 +387,7 @@ async function logAction(action, user, details) {
 // ─── API Helper ───
 async function apiRequest(endpoint, payload, auth = true) {
   const headers = { "Content-Type": "application/json" };
-  if (auth) headers["Authorization"] = \`Bearer \${ADMIN_AUTH_TOKEN}\`;
+  if (auth) headers["X-API-Key"] = BOT_API_KEY;
   const res = await fetch(\`\${API_BASE}/\${endpoint}\`, {
     method: "POST", headers, body: JSON.stringify(payload),
   });
