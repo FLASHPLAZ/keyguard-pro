@@ -182,12 +182,14 @@ class LicenseValidator
     {
         try
         {
-            var payload = JsonSerializer.Serialize(new
+            var payloadObj = new
             {
                 license_key = licenseKey,
                 hwid = GetHWID(),
-                device_name = GetDeviceName()
-            });
+                device_name = GetDeviceName(),
+                application_id = string.IsNullOrEmpty(APPLICATION_ID) ? null : APPLICATION_ID
+            };
+            var payload = JsonSerializer.Serialize(payloadObj);
 
             var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
