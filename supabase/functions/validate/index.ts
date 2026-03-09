@@ -325,8 +325,8 @@ Deno.serve(async (req) => {
     }
 
     if (app?.suspended || app?.kill_switch) {
-      await supabase.from("activity_logs").insert({ ...logBase, action: "App disabled - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "App disabled - rejected", { ...embedBase, HWID: hwid || license.hwid });
+      await supabase.from("activity_logs").insert({ ...logBase, action: "App Disabled — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "⛔ App Disabled — Rejected", { ...embedBase, "🖥️ HWID": hwid || license.hwid });
       return new Response(JSON.stringify({ valid: false, error: "Application is disabled" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
