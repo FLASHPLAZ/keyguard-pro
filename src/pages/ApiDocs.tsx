@@ -91,19 +91,25 @@ const endpoints = [
     method: "POST",
     path: "/heartbeat",
     auth: "None (public)",
-    description: "Lightweight status check for running clients. Call every 30-60 seconds to detect bans, suspensions, or kill switch instantly. No side effects — no logging, no HWID binding, no IP tracking.",
+    description: "Lightweight status check for running clients. Call every 30-60 seconds to detect bans, suspensions, or kill switch instantly. Logs activity with country tracking.",
     request: `{
-  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+  "application_id": "your-app-uuid"
 }`,
     response: `{
-  "active": true
+  "active": true,
+  "app": "MyApp",
+  "country": "United States"
 }`,
     fields: [
       { name: "license_key", type: "string", required: true, desc: "The license key to check (max 50 chars)" },
+      { name: "application_id", type: "string", required: false, desc: "Application UUID. If provided, verifies the license belongs to this app." },
     ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
+      { code: 403, message: "License does not belong to this application", desc: "application_id was provided but doesn't match the license's app" },
       { code: 404, message: "License not found", desc: "No license matches the provided key" },
+      { code: 429, message: "Too many requests", desc: "Rate limit exceeded" },
       { code: 500, message: "Internal server error", desc: "Unexpected server error" },
     ],
   },
