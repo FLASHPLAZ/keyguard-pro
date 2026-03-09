@@ -316,6 +316,7 @@ async function validateLicense(licenseKey) {
       hwid: getHWID(),
       device_name: getDeviceName()
     };
+    if (APPLICATION_ID) payload.application_id = APPLICATION_ID;
     const bodyStr = JSON.stringify(payload);
     
     const headers = { 'Content-Type': 'application/json' };
