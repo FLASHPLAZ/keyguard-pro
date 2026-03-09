@@ -51,7 +51,7 @@ async def api_request(endpoint: str, payload: dict, auth: bool = True):
     """Make a request to the Galactic Boosts API."""
     headers = {"Content-Type": "application/json"}
     if auth:
-        headers["Authorization"] = f"Bearer {ADMIN_AUTH_TOKEN}"
+        headers["X-API-Key"] = BOT_API_KEY
     async with aiohttp.ClientSession() as session:
         async with session.post(
             f"{API_BASE}/{endpoint}",
