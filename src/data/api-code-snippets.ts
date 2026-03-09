@@ -54,6 +54,8 @@ def validate_license(key: str) -> bool:
             "hwid": get_hwid(),
             "device_name": get_device_name()
         }
+        if APPLICATION_ID:
+            payload["application_id"] = APPLICATION_ID
         body_str = json.dumps(payload, separators=(',', ':'))
         
         headers = {"Content-Type": "application/json"}
