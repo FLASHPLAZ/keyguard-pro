@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Shield, Bell, Settings2, Save, Loader2, Lock, Ban, ShieldCheck, Plus, Trash2, Search, Copy, Clock, RotateCcw, ShieldBan } from "lucide-react";
+import { Shield, Bell, Settings2, Save, Loader2, Lock, Ban, ShieldCheck, Plus, Trash2, Search, Copy, Clock, RotateCcw, ShieldBan, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,6 +18,7 @@ interface SettingsState {
   discord_webhook_url: string;
   ip_change_threshold: string;
   auto_ban_enabled: string;
+  bot_api_key: string;
 }
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   discord_webhook_url: "",
   ip_change_threshold: "5",
   auto_ban_enabled: "true",
+  bot_api_key: "",
 };
 
 interface BlacklistEntry {
@@ -297,6 +299,23 @@ export default function SettingsPage() {
                 placeholder="https://discord.com/api/webhooks/..."
                 value={settings.discord_webhook_url} onChange={(e) => updateSetting("discord_webhook_url", e.target.value)} />
               <p className="mt-1 text-xs text-muted-foreground">Create a webhook in Discord: Server Settings → Integrations → Webhooks → New Webhook</p>
+            </div>
+            <div className="mt-4">
+              <label className="mb-1 block text-xs text-muted-foreground">Bot API Key</label>
+              <div className="flex gap-2">
+                <input type="text"
+                  className="flex-1 rounded-md border border-border bg-secondary px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
+                  placeholder="Generate or paste an API key for your Discord bot"
+                  value={settings.bot_api_key} onChange={(e) => updateSetting("bot_api_key", e.target.value)} />
+                <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => {
+                  const key = "gk_" + crypto.randomUUID().replace(/-/g, "");
+                  updateSetting("bot_api_key", key);
+                  toast.success("API key generated — click Save to apply");
+                }}>
+                  <Key className="h-3.5 w-3.5" /> Generate
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Used by your Discord bot to authenticate with the reset-hwid endpoint (send as <code className="text-foreground bg-secondary/50 px-1 rounded">X-API-Key</code> header)</p>
             </div>
           </div>
 

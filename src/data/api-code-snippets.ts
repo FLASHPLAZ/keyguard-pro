@@ -9,8 +9,11 @@ import os
 import sys
 import time
 import json
+import threading
 
 API_URL = "${API_BASE}/validate"
+HEARTBEAT_URL = "${API_BASE}/heartbeat"
+HEARTBEAT_INTERVAL = 30  # seconds — check every 30s for instant kill
 LICENSE_FILE = "license.dat"
 SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
 
@@ -78,6 +81,21 @@ def validate_license(key: str) -> bool:
         print(f"⚠️ Connection error: {e}")
         return False
 
+def heartbeat_loop(key: str):
+    """Background thread: periodically checks if license is still active.
+    Exits the program immediately if banned, expired, or app disabled."""
+    while True:
+        time.sleep(HEARTBEAT_INTERVAL)
+        try:
+            resp = requests.post(HEARTBEAT_URL, json={"license_key": key}, timeout=5)
+            data = resp.json()
+            if not data.get("active"):
+                reason = data.get("reason", "License no longer active")
+                print(f"\\n🚫 KILLED: {reason}")
+                os._exit(1)  # Force exit immediately
+        except Exception:
+            pass  # Network error — retry next cycle
+
 if __name__ == "__main__":
     saved = load_saved_key()
     if saved:
@@ -94,6 +112,11 @@ if __name__ == "__main__":
         if save == "y":
             save_key(key)
             print("✅ Key saved to license.dat")
+    
+    # Start heartbeat thread — will kill the app if license is banned/expired
+    hb = threading.Thread(target=heartbeat_loop, args=(key,), daemon=True)
+    hb.start()
+    print(f"💓 Heartbeat active (checking every {HEARTBEAT_INTERVAL}s)")
     
     print("\\n🚀 Application starting...")
     # Your app code here
@@ -237,6 +260,8 @@ const fs = require('fs');
 const os = require('os');
 
 const API_URL = "${API_BASE}/validate";
+const HEARTBEAT_URL = "${API_BASE}/heartbeat";
+const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const LICENSE_FILE = "license.dat";
 const SIGNING_SECRET = ""; // Set your app's signing secret here
 
@@ -341,6 +366,24 @@ const ask = (q) => new Promise(r => rl.question(q, r));
   }
 
   rl.close();
+
+  // Start heartbeat — kills the app if license is banned/expired/disabled
+  setInterval(async () => {
+    try {
+      const res = await fetch(HEARTBEAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_key: key })
+      });
+      const data = await res.json();
+      if (!data.active) {
+        console.log(\`\\n🚫 KILLED: \${data.reason || 'License no longer active'}\`);
+        process.exit(1);
+      }
+    } catch {} // Network error — retry next cycle
+  }, HEARTBEAT_INTERVAL);
+  console.log(\`💓 Heartbeat active (checking every \${HEARTBEAT_INTERVAL / 1000}s)\`);
+
   console.log('\\n🚀 Application starting...');
   // Your app code here
 })();`;

@@ -15,7 +15,7 @@ import datetime
 # ─── Configuration ───
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "YOUR_BOT_TOKEN")
 API_BASE = "${API_BASE}"
-ADMIN_AUTH_TOKEN = os.getenv("ADMIN_AUTH_TOKEN", "YOUR_SUPABASE_AUTH_TOKEN")
+BOT_API_KEY = os.getenv("BOT_API_KEY", "YOUR_BOT_API_KEY")  # From Settings → Bot API Key
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", "0"))  # Channel ID for logging
 
 intents = discord.Intents.default()
@@ -51,7 +51,7 @@ async def api_request(endpoint: str, payload: dict, auth: bool = True):
     """Make a request to the Galactic Boosts API."""
     headers = {"Content-Type": "application/json"}
     if auth:
-        headers["Authorization"] = f"Bearer {ADMIN_AUTH_TOKEN}"
+        headers["X-API-Key"] = BOT_API_KEY
     async with aiohttp.ClientSession() as session:
         async with session.post(
             f"{API_BASE}/{endpoint}",
@@ -362,7 +362,7 @@ const nodejsBot = `const {
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "YOUR_BOT_TOKEN";
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || "YOUR_CLIENT_ID";
 const API_BASE = "${API_BASE}";
-const ADMIN_AUTH_TOKEN = process.env.ADMIN_AUTH_TOKEN || "YOUR_SUPABASE_AUTH_TOKEN";
+const BOT_API_KEY = process.env.BOT_API_KEY || "YOUR_BOT_API_KEY"; // From Settings → Bot API Key
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -387,7 +387,7 @@ async function logAction(action, user, details) {
 // ─── API Helper ───
 async function apiRequest(endpoint, payload, auth = true) {
   const headers = { "Content-Type": "application/json" };
-  if (auth) headers["Authorization"] = \`Bearer \${ADMIN_AUTH_TOKEN}\`;
+  if (auth) headers["X-API-Key"] = BOT_API_KEY;
   const res = await fetch(\`\${API_BASE}/\${endpoint}\`, {
     method: "POST", headers, body: JSON.stringify(payload),
   });
@@ -771,7 +771,7 @@ export default function BotGuide() {
           <li>A Discord server where you have <strong className="text-foreground">Manage Server</strong> permission</li>
           <li>A Discord bot created via the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord Developer Portal</a></li>
           <li>Python 3.8+ or Node.js 18+ installed on the machine running the bot</li>
-          <li>Your <strong className="text-foreground">Admin Auth Token</strong> (see Step 3 below)</li>
+          <li>Your <strong className="text-foreground">Bot API Key</strong> from Settings page (click Generate)</li>
           <li><span className="text-foreground font-medium">(Node.js only)</span> Your bot's <strong className="text-foreground">Application/Client ID</strong> from the Developer Portal</li>
         </ol>
       </div>
@@ -804,20 +804,20 @@ export default function BotGuide() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-5">
-          <h3 className="font-semibold text-foreground mb-2">Step 3 — Get Your Admin Auth Token</h3>
+          <h3 className="font-semibold text-foreground mb-2">Step 3 — Get Your Bot API Key</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p>The <code className="text-foreground bg-secondary/50 px-1 rounded">/reset-hwid</code> endpoint requires admin authentication. To get your token:</p>
+            <p>The <code className="text-foreground bg-secondary/50 px-1 rounded">/reset-hwid</code> endpoint requires authentication. Generate a simple API key:</p>
             <ol className="list-decimal list-inside space-y-1.5">
-              <li>Log into the Galactic Boosts dashboard</li>
-              <li>Open your browser's <strong className="text-foreground">Developer Tools</strong> (F12)</li>
-              <li>Go to <strong className="text-foreground">Application</strong> → <strong className="text-foreground">Local Storage</strong></li>
-              <li>Find the key containing <code className="text-foreground bg-secondary/50 px-1 rounded">access_token</code> — copy its value</li>
-              <li>This is your <code className="text-foreground bg-secondary/50 px-1 rounded">ADMIN_AUTH_TOKEN</code></li>
+              <li>Go to <strong className="text-foreground">Settings</strong> in the sidebar</li>
+              <li>Find the <strong className="text-foreground">Bot API Key</strong> field under Discord Notifications</li>
+              <li>Click <strong className="text-foreground">Generate</strong> to create a new key</li>
+              <li>Click <strong className="text-foreground">Save Changes</strong></li>
+              <li>Copy the key — this is your <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_API_KEY</code></li>
             </ol>
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <p className="text-xs text-destructive">
-                <strong>Security:</strong> Auth tokens expire. For a production bot, implement a login flow that signs in with your admin email/password using the Auth API and refreshes the token automatically.
+            <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
+              <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
+                <strong>No token expiry!</strong> Unlike auth tokens, the Bot API Key never expires. Send it as the <code className="bg-secondary/50 px-1 rounded">X-API-Key</code> header — no JWT or login flow needed.
               </p>
             </div>
           </div>
@@ -837,7 +837,7 @@ export default function BotGuide() {
           <h3 className="font-semibold text-foreground mb-2">Step 5 — Configure & Run the Bot</h3>
           <ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
             <li>Copy the bot code below (Python or Node.js)</li>
-            <li>Replace the config values: <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">ADMIN_AUTH_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">LOG_CHANNEL_ID</code></li>
+            <li>Replace the config values: <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_TOKEN</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">BOT_API_KEY</code>, <code className="text-foreground bg-secondary/50 px-1 rounded">LOG_CHANNEL_ID</code></li>
             <li><span className="text-foreground font-medium">(Node.js only)</span> Also set <code className="text-foreground bg-secondary/50 px-1 rounded">CLIENT_ID</code></li>
             <li>Install dependencies and run:
               <div className="mt-2 space-y-2">
@@ -863,10 +863,10 @@ export default function BotGuide() {
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-b border-border px-4 py-3">
           <span className="rounded bg-primary/15 px-2 py-0.5 font-mono text-xs font-bold text-primary">POST</span>
           <span className="font-mono text-sm text-foreground">/reset-hwid</span>
-          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">Bearer token (admin only)</span>
+          <span className="rounded bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">X-API-Key (Bot API Key)</span>
         </div>
         <div className="px-4 py-3 border-b border-border">
-          <p className="text-sm text-muted-foreground">Reset HWID binding for a license key. Requires admin authentication.</p>
+          <p className="text-sm text-muted-foreground">Reset HWID binding for a license key. Authenticate with Bot API Key or admin Bearer token.</p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
           <div className="p-4">
@@ -900,12 +900,12 @@ export default function BotGuide() {
               </thead>
               <tbody>
                 <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 font-mono text-foreground">Authorization</td>
-                  <td className="py-2 text-muted-foreground">Bearer &lt;admin_access_token&gt;</td>
+                  <td className="py-2 pr-4 font-mono text-foreground">X-API-Key</td>
+                  <td className="py-2 text-muted-foreground">&lt;your_bot_api_key&gt; (preferred for bots)</td>
                 </tr>
                 <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 font-mono text-foreground">Content-Type</td>
-                  <td className="py-2 text-muted-foreground">application/json</td>
+                  <td className="py-2 pr-4 font-mono text-foreground">Authorization</td>
+                  <td className="py-2 text-muted-foreground">Bearer &lt;admin_access_token&gt; (alternative)</td>
                 </tr>
               </tbody>
             </table>
@@ -1001,9 +1001,30 @@ export default function BotGuide() {
           <li><strong className="text-foreground">Ephemeral responses:</strong> All results are sent as ephemeral messages — only the user who clicked sees them</li>
           <li><strong className="text-foreground">Rate limit:</strong> Add a cooldown to prevent spam (e.g. 1 reset per user per 5 minutes)</li>
           <li><strong className="text-foreground">Guild commands:</strong> For instant slash command sync, register commands per-guild instead of globally during development</li>
-          <li><strong className="text-foreground">Token refresh:</strong> For production, automate login via Auth API instead of using a static token</li>
+          <li><strong className="text-foreground">API Key auth:</strong> The Bot API Key never expires — no need for token refresh or login flows</li>
           <li><strong className="text-foreground">Hosting:</strong> Run the bot on a VPS, Railway, or Replit to keep it online 24/7</li>
         </ul>
+
+        <h3 className="font-semibold text-foreground mt-6 mb-3 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" /> Heartbeat Endpoint — Instant Kill on Ban
+        </h3>
+        <div className="text-sm text-muted-foreground space-y-2">
+          <p>
+            Use the <code className="text-foreground bg-secondary/50 px-1 rounded">/heartbeat</code> endpoint in your client software to check if a license is still active every 30–60 seconds.
+            If you ban a key, suspend an app, or flip the kill switch, the client will detect it on the next heartbeat and <strong className="text-foreground">exit immediately</strong>.
+          </p>
+          <pre className="rounded bg-secondary/50 p-3 font-mono text-xs text-foreground overflow-x-auto">{`POST /heartbeat
+{ "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX" }
+
+// Response when active:
+{ "active": true }
+
+// Response when banned/expired/disabled:
+{ "active": false, "reason": "License is banned" }`}</pre>
+          <p className="text-xs text-muted-foreground">
+            Add this to your client code as a background thread/timer. See the API Docs code examples — they include a heartbeat loop that calls <code className="text-foreground bg-secondary/50 px-1 rounded">sys.exit()</code> / <code className="text-foreground bg-secondary/50 px-1 rounded">process.exit()</code> when the license becomes invalid.
+          </p>
+        </div>
       </div>
     </DashboardLayout>
   );
