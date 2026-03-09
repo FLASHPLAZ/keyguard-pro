@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
 
   try {
     const rawBody = await req.text();
-    const { license_key, hwid, device_name } = JSON.parse(rawBody);
+    const { license_key, hwid, device_name, application_id } = JSON.parse(rawBody);
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return new Response(JSON.stringify({ valid: false, error: "Invalid license_key" }), {
