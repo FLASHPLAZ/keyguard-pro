@@ -142,6 +142,7 @@ class LicenseValidator
     private static readonly HttpClient client = new HttpClient();
     private static readonly string LICENSE_FILE = "license.dat";
     private static readonly string SIGNING_SECRET = ""; // Set your app's signing secret here
+    private static readonly string APPLICATION_ID = ""; // Set your application UUID here
 
     static string GetHWID()
     {
