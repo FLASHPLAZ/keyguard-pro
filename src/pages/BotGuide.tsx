@@ -265,7 +265,7 @@ async def reset_cmd(interaction: discord.Interaction, license_key: str):
 async def check_cmd(interaction: discord.Interaction, license_key: str):
     await interaction.response.defer(ephemeral=True)
     try:
-        status, data = await api_request("validate", {"license_key": license_key}, auth=False)
+        status, data = await api_request("validate", {"license_key": license_key, "application_id": APPLICATION_ID}, auth=False)
 
         if data.get("valid"):
             embed = discord.Embed(title="✅ License Valid", color=0x00ff00)
