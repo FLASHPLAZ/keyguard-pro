@@ -584,6 +584,7 @@ import (
 const apiURL = "${API_BASE}/validate"
 const licenseFile = "license.dat"
 const signingSecret = "" // Set your app's signing secret here
+const applicationID = "" // Set your application UUID here
 
 func getHWID() string {
 	out, err := exec.Command("wmic", "csproduct", "get", "uuid").Output()
