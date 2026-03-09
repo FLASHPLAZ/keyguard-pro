@@ -16,6 +16,7 @@ HEARTBEAT_URL = "${API_BASE}/heartbeat"
 HEARTBEAT_INTERVAL = 30  # seconds — check every 30s for instant kill
 LICENSE_FILE = "license.dat"
 SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
+APPLICATION_ID = ""  # Set your application UUID here (from dashboard)
 
 def get_hwid():
     """Get a unique hardware ID (Windows)"""
