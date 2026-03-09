@@ -84,6 +84,54 @@ const endpoints = [
       { code: 500, message: "Internal server error", desc: "Unexpected server error" },
     ],
   },
+  {
+    method: "POST",
+    path: "/heartbeat",
+    auth: "None (public)",
+    description: "Lightweight status check for running clients. Call every 30-60 seconds to detect bans, suspensions, or kill switch instantly. No side effects — no logging, no HWID binding, no IP tracking.",
+    request: `{
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"
+}`,
+    response: `{
+  "active": true
+}`,
+    fields: [
+      { name: "license_key", type: "string", required: true, desc: "The license key to check (max 50 chars)" },
+    ],
+    errors: [
+      { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
+      { code: 404, message: "License not found", desc: "No license matches the provided key" },
+      { code: 500, message: "Internal server error", desc: "Unexpected server error" },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/reset-hwid",
+    auth: "X-API-Key or Bearer token",
+    description: "Reset HWID binding for a license key. Authenticate with a Bot API Key (from Settings) or admin Bearer token.",
+    request: `{
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"
+}`,
+    response: `{
+  "success": true,
+  "message": "HWID reset successfully",
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+  "previous_hwid": "abc123def456"
+}`,
+    fields: [
+      { name: "license_key", type: "string", required: true, desc: "The license key to reset HWID for (max 50 chars)" },
+    ],
+    headers: [
+      { name: "X-API-Key", required: "Yes (preferred)", desc: "Bot API Key from Settings page — never expires, ideal for bots" },
+      { name: "Authorization", required: "Alternative", desc: "Bearer <admin_access_token> — JWT-based, expires" },
+    ],
+    errors: [
+      { code: 400, message: "Invalid license_key", desc: "Missing or malformed key" },
+      { code: 400, message: "No HWID bound", desc: "License has no HWID to reset" },
+      { code: 401, message: "Unauthorized", desc: "Missing or invalid API key / token" },
+      { code: 404, message: "License not found", desc: "No license matches the key" },
+    ],
+  },
 ];
 
 export default function ApiDocs() {
