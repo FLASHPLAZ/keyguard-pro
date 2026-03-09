@@ -5,6 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const RATE_LIMIT_MAX = 10;       // 10 resets per window
+const RATE_LIMIT_WINDOW_MIN = 5; // 5 minute window
+
+async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MIN * 60 * 1000).toISOString();
+  const { data } = await supabase
+    .from("rate_limits")
+    .select("id, attempt_count")
+    .eq("ip", ip)
+    .eq("endpoint", "reset-hwid")
+    .gte("window_start", windowStart)
+    .single();
+
+  if (data) {
+    if (data.attempt_count >= RATE_LIMIT_MAX) return true;
+    await supabase.from("rate_limits").update({ attempt_count: data.attempt_count + 1 }).eq("id", data.id);
+  } else {
+    await supabase.from("rate_limits").delete().eq("ip", ip).eq("endpoint", "reset-hwid").lt("window_start", windowStart);
+    await supabase.from("rate_limits").insert({ ip, endpoint: "reset-hwid", attempt_count: 1, window_start: new Date().toISOString() });
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,25 +47,31 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Rate limit check
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
+    const isRateLimited = await checkRateLimit(supabase, clientIp);
+    if (isRateLimited) {
+      return new Response(JSON.stringify({ success: false, error: "Too many requests. Try again later." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(RATE_LIMIT_WINDOW_MIN * 60) },
+      });
+    }
+
     // ── Authentication: API Key OR Bearer Token ──
     const apiKey = req.headers.get("x-api-key");
     const authHeader = req.headers.get("authorization");
     let authenticatedUserId: string | null = null;
 
     if (apiKey) {
-      // API Key auth — look up bot_api_key from settings
-      const { data: settingsData } = await supabase.from("settings").select("key, value");
+      const { data: settingsData } = await supabase.from("settings").select("key, value, user_id");
       const storedKey = settingsData?.find((s: any) => s.key === "bot_api_key" && s.value)?.value;
       if (!storedKey || storedKey !== apiKey) {
         return new Response(JSON.stringify({ success: false, error: "Invalid API key" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // API key is valid — find the admin user_id from settings owner
       const adminSetting = settingsData?.find((s: any) => s.key === "bot_api_key");
       authenticatedUserId = (adminSetting as any)?.user_id || null;
     } else if (authHeader?.startsWith("Bearer ")) {
-      // JWT Bearer token auth
       const token = authHeader.replace("Bearer ", "");
       const supabaseAuth = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -54,7 +83,6 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Check admin role
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
