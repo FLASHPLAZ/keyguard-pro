@@ -362,7 +362,7 @@ const nodejsBot = `const {
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || "YOUR_BOT_TOKEN";
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || "YOUR_CLIENT_ID";
 const API_BASE = "${API_BASE}";
-const ADMIN_AUTH_TOKEN = process.env.ADMIN_AUTH_TOKEN || "YOUR_SUPABASE_AUTH_TOKEN";
+const BOT_API_KEY = process.env.BOT_API_KEY || "YOUR_BOT_API_KEY"; // From Settings → Bot API Key
 const LOG_CHANNEL_ID = process.env.LOG_CHANNEL_ID || "";
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
