@@ -942,6 +942,8 @@ struct ValidateRequest {
     license_key: String,
     hwid: String,
     device_name: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    application_id: String,
 }
 
 #[derive(Deserialize)]
