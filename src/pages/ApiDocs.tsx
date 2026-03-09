@@ -32,6 +32,7 @@ const endpoints = [
       { name: "license_key", type: "string", required: true, desc: "The license key to validate (max 50 chars)" },
       { name: "hwid", type: "string", required: false, desc: "Hardware ID for binding (max 100 chars). If omitted, no HWID binding occurs." },
       { name: "device_name", type: "string", required: false, desc: "Device hostname (max 100 chars). Logged for tracking and shown in Discord alerts." },
+      { name: "application_id", type: "string", required: false, desc: "Application UUID. If provided, verifies the license belongs to this app. Prevents cross-app key abuse." },
     ],
     headers: [
       { name: "X-Signature", required: "If signing enabled", desc: "HMAC-SHA256 hex signature of timestamp.body using app signing secret" },
