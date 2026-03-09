@@ -334,9 +334,9 @@ Deno.serve(async (req) => {
 
     if (new Date(license.expires_at) < new Date()) {
       await supabase.from("licenses").update({ status: "expired" }).eq("id", license.id);
-      await supabase.from("activity_logs").insert({ ...logBase, action: "Expired license - rejected", hwid: hwid || license.hwid });
-      await sendDiscordWebhook(settings.discordWebhookUrl, "Expired license - rejected", {
-        ...embedBase, HWID: hwid || license.hwid, Expires: formatExpiry(license.expires_at),
+      await supabase.from("activity_logs").insert({ ...logBase, action: "Expired License — Rejected", hwid: hwid || license.hwid });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "⏰ Expired License — Rejected", {
+        ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at),
       });
       return new Response(JSON.stringify({ valid: false, error: "License expired" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
