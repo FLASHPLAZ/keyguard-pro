@@ -504,7 +504,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.customId === "check_license_modal") {
       await interaction.deferReply({ ephemeral: true });
       try {
-        const { data } = await apiRequest("validate", { license_key: key }, false);
+        const { data } = await apiRequest("validate", { license_key: key, application_id: APPLICATION_ID }, false);
         let embed;
         if (data.valid) {
           embed = new EmbedBuilder()
