@@ -64,22 +64,22 @@ async function lookupCountry(ip: string): Promise<string> {
 async function sendDiscordWebhook(webhookUrl: string, action: string, details: Record<string, any>) {
   if (!webhookUrl) return;
   const colorMap: Record<string, number> = {
-    "License validated": 0x00ff00,
-    "HWID bound + validated": 0x00ff00,
-    "Unknown key - rejected": 0xff0000,
-    "Banned license - rejected": 0xff0000,
-    "App disabled - rejected": 0xff6600,
-    "Expired license - rejected": 0xffaa00,
-    "HWID mismatch - rejected": 0xff0000,
-    "Rate limited": 0xff0000,
-    "Auto-banned (IP sharing)": 0xff0000,
-    "Blacklisted IP - rejected": 0xff0000,
-    "Blacklisted HWID - rejected": 0xff0000,
-    "Invalid signature - rejected": 0xff0000,
-    "Expired request - rejected": 0xff0000,
+    "✅ License Login Successful": 0x00ff00,
+    "✅ First Login — HWID Bound": 0x00cc88,
+    "❌ Unknown Key — Rejected": 0xff0000,
+    "🚫 Banned License — Rejected": 0xff0000,
+    "⛔ App Disabled — Rejected": 0xff6600,
+    "⏰ Expired License — Rejected": 0xffaa00,
+    "🔒 HWID Mismatch — Rejected": 0xff0000,
+    "🚦 Rate Limited": 0xff0000,
+    "🔨 Auto-Banned (IP Sharing)": 0xff0000,
+    "🛑 Blacklisted IP — Rejected": 0xff0000,
+    "🛑 Blacklisted HWID — Rejected": 0xff0000,
+    "⚠️ Invalid Signature — Rejected": 0xff0000,
+    "⏳ Expired Request — Rejected": 0xff0000,
   };
   const embed = {
-    title: `🔑 ${action}`,
+    title: action,
     color: colorMap[action] || 0x808080,
     fields: Object.entries(details)
       .filter(([_, v]) => v != null)
