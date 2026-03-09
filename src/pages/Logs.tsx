@@ -116,9 +116,9 @@ export default function Logs() {
         </div>
       </div>
 
-      {totalPages > 1 && (
+      {filtered.length > PAGE_SIZE && (
         <div className="mt-4">
-          <TablePagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <TablePagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       )}
     </DashboardLayout>
