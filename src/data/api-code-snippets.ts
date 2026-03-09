@@ -415,6 +415,7 @@ using json = nlohmann::json;
 const std::string API_URL = "${API_BASE}/validate";
 const std::string LICENSE_FILE = "license.dat";
 const std::string SIGNING_SECRET = ""; // Set your app's signing secret here
+const std::string APPLICATION_ID = ""; // Set your application UUID here
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
     s->append((char*)contents, size * nmemb);
