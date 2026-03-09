@@ -16,6 +16,7 @@ import datetime
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "YOUR_BOT_TOKEN")
 API_BASE = "${API_BASE}"
 BOT_API_KEY = os.getenv("BOT_API_KEY", "YOUR_BOT_API_KEY")  # From Settings → Bot API Key
+APPLICATION_ID = os.getenv("APPLICATION_ID", "YOUR_APP_UUID")  # From Applications page
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", "0"))  # Channel ID for logging
 
 intents = discord.Intents.default()
