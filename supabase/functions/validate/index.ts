@@ -286,9 +286,9 @@ Deno.serve(async (req) => {
       const requestTime = parseInt(providedTimestamp);
       const now = Math.floor(Date.now() / 1000);
       if (isNaN(requestTime) || Math.abs(now - requestTime) > SIGNATURE_MAX_AGE_SECONDS) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Expired request - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Expired request - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "Request timestamp expired (>60s)",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Expired Request — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⏳ Expired Request — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Request timestamp expired (>60s)",
         });
         return new Response(JSON.stringify({ valid: false, error: "Request expired" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -298,9 +298,9 @@ Deno.serve(async (req) => {
       // Verify HMAC
       const isValid = await verifyHmacSignature(rawBody, providedSignature, providedTimestamp, app.signing_secret);
       if (!isValid) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "HMAC signature mismatch - possible tampering",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⚠️ Invalid Signature — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "HMAC signature mismatch — possible tampering",
         });
         return new Response(JSON.stringify({ valid: false, error: "Invalid signature" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
