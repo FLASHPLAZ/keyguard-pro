@@ -273,9 +273,9 @@ Deno.serve(async (req) => {
       };
 
       if (!providedSignature || !providedTimestamp) {
-        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid signature - rejected", hwid: hwid || null });
-        await sendDiscordWebhook(settings.discordWebhookUrl, "Invalid signature - rejected", {
-          ...embedBase, HWID: hwid || "N/A", Reason: "Missing signature or timestamp header",
+        await supabase.from("activity_logs").insert({ ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null });
+        await sendDiscordWebhook(settings.discordWebhookUrl, "⚠️ Invalid Signature — Rejected", {
+          ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Missing signature or timestamp header",
         });
         return new Response(JSON.stringify({ valid: false, error: "Signature required" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
