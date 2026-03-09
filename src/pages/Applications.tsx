@@ -105,8 +105,7 @@ export default function Applications() {
     toast.success(`${label} copied`);
   };
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-  const validateEndpoint = `${supabaseUrl}/functions/v1/validate`;
+  const validateEndpoint = "https://license.galacticboosts.online/api/validate";
 
   return (
     <DashboardLayout>
