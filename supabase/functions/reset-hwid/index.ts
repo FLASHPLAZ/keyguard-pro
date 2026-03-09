@@ -21,6 +21,25 @@ async function getResetHwidSettings(supabase: any) {
   return { rateLimitMax, rateLimitWindow };
 }
 
+async function lookupCountry(ip: string): Promise<string> {
+  if (!ip || ip === "unknown") return "Unknown";
+  try {
+    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=country`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country && data.country !== "") return data.country;
+    }
+  } catch { /* fall through */ }
+  try {
+    const resp = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country_name) return data.country_name;
+    }
+  } catch { /* ignore */ }
+  return "Unknown";
+}
+
 async function checkRateLimit(supabase: any, ip: string, max: number, windowMinutes: number): Promise<boolean> {
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
   const { data } = await supabase
@@ -70,6 +89,8 @@ Deno.serve(async (req) => {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(settings.rateLimitWindow * 60) },
       });
     }
+
+    const country = await lookupCountry(clientIp);
 
     // ── Authentication: API Key OR Bearer Token ──
     const apiKey = req.headers.get("x-api-key");
@@ -124,6 +145,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (findError || !license) {
+      await supabase.from("activity_logs").insert({
+        user_id: authenticatedUserId, action: "HWID Reset — License Not Found",
+        license_key, ip: clientIp, country,
+      });
       return new Response(JSON.stringify({ success: false, error: "License not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -141,10 +166,13 @@ Deno.serve(async (req) => {
     // Log the action
     await supabase.from("activity_logs").insert({
       user_id: authenticatedUserId,
-      action: "HWID reset via API",
+      action: "HWID Reset via API",
       license_key,
       application_id: license.application_id,
       application_name: (license as any).applications?.name,
+      ip: clientIp,
+      hwid: previousHwid,
+      country,
     });
 
     // Discord notification
@@ -165,9 +193,11 @@ Deno.serve(async (req) => {
               title: "🔄 HWID Reset via API",
               color: 0xffaa00,
               fields: [
-                { name: "License Key", value: license_key, inline: true },
-                { name: "Previous HWID", value: previousHwid, inline: true },
-                { name: "App", value: (license as any).applications?.name || "Unknown", inline: true },
+                { name: "🔑 License Key", value: license_key, inline: true },
+                { name: "🖥️ Previous HWID", value: previousHwid, inline: true },
+                { name: "📱 App", value: (license as any).applications?.name || "Unknown", inline: true },
+                { name: "🌐 IP", value: clientIp, inline: true },
+                { name: "🌍 Country", value: country, inline: true },
               ],
               timestamp: new Date().toISOString(),
               footer: { text: "Galactic Boosts License System" },

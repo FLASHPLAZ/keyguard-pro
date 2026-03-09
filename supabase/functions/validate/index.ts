@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
 
   try {
     const rawBody = await req.text();
-    const { license_key, hwid, device_name } = JSON.parse(rawBody);
+    const { license_key, hwid, device_name, application_id } = JSON.parse(rawBody);
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return new Response(JSON.stringify({ valid: false, error: "Invalid license_key" }), {
@@ -271,7 +271,22 @@ Deno.serve(async (req) => {
 
     const app = license.applications;
 
-    // ── Signature verification (after we know the app) ──
+    // ── Application ID mismatch check ──
+    if (application_id && license.application_id !== application_id) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "App Mismatch — Rejected", ip: clientIp, hwid: hwid || null,
+        device_name: sanitizedDeviceName, country,
+        application_id: license.application_id, application_name: app?.name,
+      });
+      await sendDiscordWebhook(settings.discordWebhookUrl, "🚫 App Mismatch — Rejected", {
+        "🔑 Key": license_key, "📱 License App": app?.name || license.application_id,
+        "❌ Requested App": application_id, "🌐 IP": clientIp, "🌍 Country": country,
+        "💻 Device": sanitizedDeviceName || "N/A", "🖥️ HWID": hwid || "N/A",
+      });
+      return new Response(JSON.stringify({ valid: false, error: "License does not belong to this application" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (app?.signature_required && app?.signing_secret) {
       const logBase = {
         license_key, application_id: license.application_id, application_name: app?.name,

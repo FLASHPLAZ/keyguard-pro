@@ -21,6 +21,25 @@ async function getHeartbeatSettings(supabase: any) {
   return { rateLimitMax, rateLimitWindow };
 }
 
+async function lookupCountry(ip: string): Promise<string> {
+  if (!ip || ip === "unknown") return "Unknown";
+  try {
+    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=country`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country && data.country !== "") return data.country;
+    }
+  } catch { /* fall through */ }
+  try {
+    const resp = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.country_name) return data.country_name;
+    }
+  } catch { /* ignore */ }
+  return "Unknown";
+}
+
 async function checkRateLimit(supabase: any, ip: string, max: number, windowMinutes: number): Promise<boolean> {
   const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString();
   const { data } = await supabase
@@ -47,7 +66,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { license_key } = await req.json();
+    const { license_key, application_id } = await req.json();
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return new Response(JSON.stringify({ active: false, reason: "Invalid license_key" }), {
@@ -71,13 +90,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    const country = await lookupCountry(clientIp);
+
     const { data: license, error } = await supabase
       .from("licenses")
-      .select("id, banned, status, expires_at, application_id, applications(suspended, kill_switch)")
+      .select("id, banned, status, expires_at, application_id, applications(name, suspended, kill_switch)")
       .eq("license_key", license_key)
       .single();
 
     if (error || !license) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — License Not Found", ip: clientIp, country,
+      });
       return new Response(JSON.stringify({ active: false, reason: "License not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -85,25 +109,48 @@ Deno.serve(async (req) => {
 
     const app = (license as any).applications;
 
+    // Application ID check — license must belong to the requesting app
+    if (application_id && license.application_id !== application_id) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — App Mismatch", ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+      });
+      return new Response(JSON.stringify({ active: false, reason: "License does not belong to this application" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (license.banned) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — Banned", ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+      });
       return new Response(JSON.stringify({ active: false, reason: "License is banned" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (app?.suspended || app?.kill_switch) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — App Disabled", ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+      });
       return new Response(JSON.stringify({ active: false, reason: "Application is disabled" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (new Date(license.expires_at) < new Date()) {
+      await supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — Expired", ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+      });
       return new Response(JSON.stringify({ active: false, reason: "License expired" }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ active: true }), {
+    return new Response(JSON.stringify({ active: true, app: app?.name, country }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
