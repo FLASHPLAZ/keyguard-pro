@@ -6,12 +6,12 @@ import {
   Users,
   ScrollText,
   Shield,
+  ShieldCheck,
   Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
   Bot,
-  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
