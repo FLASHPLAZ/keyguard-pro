@@ -16,7 +16,8 @@ export default function Login() {
 
   useEffect(() => {
     if (user && role) {
-      navigate(role === "admin" ? "/" : "/reseller", { replace: true });
+      const dest = role === "admin" ? "/" : role === "manager" ? "/manager" : "/reseller";
+      navigate(dest, { replace: true });
     }
   }, [user, role, navigate]);
 
