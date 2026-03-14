@@ -23,7 +23,7 @@ const navItems = [
   { icon: AppWindow, label: "Applications", path: "/apps" },
   { icon: Key, label: "Licenses", path: "/licenses" },
   { icon: Users, label: "Resellers", path: "/resellers" },
-  { icon: Shield, label: "Managers", path: "/managers" },
+  { icon: ShieldCheck, label: "Managers", path: "/managers" },
   { icon: ScrollText, label: "Logs", path: "/logs" },
   { icon: Shield, label: "API Docs", path: "/api-docs" },
   { icon: Bot, label: "Bot Guide", path: "/bot-guide" },
