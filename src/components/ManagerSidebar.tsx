@@ -1,36 +1,26 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   AppWindow,
   Key,
-  Users,
   ScrollText,
-  Shield,
-  ShieldCheck,
-  Settings,
+  LogOut,
   ChevronLeft,
   ChevronRight,
-  LogOut,
-  Bot,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: AppWindow, label: "Applications", path: "/apps" },
-  { icon: Key, label: "Licenses", path: "/licenses" },
-  { icon: Users, label: "Resellers", path: "/resellers" },
-  { icon: ShieldCheck, label: "Managers", path: "/managers" },
-  { icon: ScrollText, label: "Logs", path: "/logs" },
-  { icon: Shield, label: "API Docs", path: "/api-docs" },
-  { icon: Bot, label: "Bot Guide", path: "/bot-guide" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/manager" },
+  { icon: AppWindow, label: "Applications", path: "/manager/apps" },
+  { icon: Key, label: "Licenses", path: "/manager/licenses" },
+  { icon: ScrollText, label: "Logs", path: "/manager/logs" },
 ];
 
-export function DashboardSidebar() {
+export function ManagerSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -50,10 +40,13 @@ export function DashboardSidebar() {
     >
       <div className="flex h-16 items-center gap-3 border-b border-border px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary">
-          <Key className="h-4 w-4 text-primary-foreground" />
+          <Shield className="h-4 w-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-foreground">Galactic Boosts</span>
+          <div>
+            <span className="text-lg font-bold tracking-tight text-foreground">Galactic Boosts</span>
+            <p className="text-[10px] text-muted-foreground -mt-0.5">Manager Panel</p>
+          </div>
         )}
       </div>
 
@@ -61,7 +54,7 @@ export function DashboardSidebar() {
         {navItems.map((item) => {
           const isActive =
             location.pathname === item.path ||
-            (item.path !== "/" && location.pathname.startsWith(item.path));
+            (item.path !== "/manager" && location.pathname.startsWith(item.path));
           return (
             <Link
               key={item.path}
@@ -80,7 +73,6 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      {/* User info + logout */}
       <div className="border-t border-border p-2">
         {!collapsed && user && (
           <div className="mb-2 px-3 py-1">

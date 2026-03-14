@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole?: "admin" | "reseller";
+  requiredRole?: "admin" | "reseller" | "manager";
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
@@ -26,6 +26,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   // Role-based redirect
   if (requiredRole && role !== requiredRole) {
     if (role === "reseller") return <Navigate to="/reseller" replace />;
+    if (role === "manager") return <Navigate to="/manager" replace />;
     if (role === "admin") return <Navigate to="/" replace />;
     return <Navigate to="/login" replace />;
   }
