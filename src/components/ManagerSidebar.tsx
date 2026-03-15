@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   AppWindow,
   Key,
-  ScrollText,
   LogOut,
   ChevronLeft,
   ChevronRight,

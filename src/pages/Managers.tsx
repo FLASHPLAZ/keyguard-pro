@@ -3,12 +3,27 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Trash2, Eye, EyeOff, Shield } from "lucide-react";
+import { Plus, Search, Trash2, Eye, EyeOff, Shield, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+
+interface ManagerPerms {
+  can_create_apps: boolean;
+  can_edit_apps: boolean;
+  can_delete_apps: boolean;
+  can_view_licenses: boolean;
+}
+
+const DEFAULT_PERMS: ManagerPerms = {
+  can_create_apps: true,
+  can_edit_apps: true,
+  can_delete_apps: true,
+  can_view_licenses: true,
+};
 
 export default function Managers() {
   const { user } = useAuth();
@@ -20,15 +35,31 @@ export default function Managers() {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [permDialogManager, setPermDialogManager] = useState<any>(null);
+  const [editPerms, setEditPerms] = useState<ManagerPerms>(DEFAULT_PERMS);
+  const [savingPerms, setSavingPerms] = useState(false);
+  const [managerPermsMap, setManagerPermsMap] = useState<Record<string, ManagerPerms>>({});
 
   const fetchManagers = async () => {
     if (!user) return;
-    // Get all manager user_ids from user_roles, then fetch profiles
     const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "manager");
     if (!roles || roles.length === 0) { setManagers([]); return; }
     const userIds = roles.map(r => r.user_id);
-    const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", userIds);
+    const [{ data: profiles }, { data: perms }] = await Promise.all([
+      supabase.from("profiles").select("*").in("user_id", userIds),
+      supabase.from("manager_permissions").select("*").in("user_id", userIds),
+    ]);
     setManagers(profiles || []);
+    const permsMap: Record<string, ManagerPerms> = {};
+    (perms || []).forEach((p: any) => {
+      permsMap[p.user_id] = {
+        can_create_apps: p.can_create_apps,
+        can_edit_apps: p.can_edit_apps,
+        can_delete_apps: p.can_delete_apps,
+        can_view_licenses: p.can_view_licenses,
+      };
+    });
+    setManagerPermsMap(permsMap);
   };
 
   useEffect(() => { fetchManagers(); }, [user]);
@@ -45,11 +76,7 @@ export default function Managers() {
     setCreating(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-manager", {
-        body: {
-          username: newUsername.trim(),
-          email: newEmail.trim(),
-          password: newPassword,
-        },
+        body: { username: newUsername.trim(), email: newEmail.trim(), password: newPassword },
       });
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
@@ -58,6 +85,11 @@ export default function Managers() {
         user_id: user.id,
         action: `Manager "${newUsername.trim()}" created`,
       });
+
+      // Create default permissions row
+      if (data?.userId) {
+        await supabase.from("manager_permissions").insert({ user_id: data.userId });
+      }
 
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setDialogOpen(false);
@@ -72,13 +104,62 @@ export default function Managers() {
   };
 
   const deleteManager = async (userId: string, username: string) => {
-    // Delete user_roles entry (profile will remain)
+    await supabase.from("manager_permissions").delete().eq("user_id", userId);
     await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "manager");
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Manager "${username}" removed` });
     toast.success("Manager removed");
     notifyDiscord("Manager removed", { Username: username });
     fetchManagers();
   };
+
+  const openPermissions = (manager: any) => {
+    setPermDialogManager(manager);
+    setEditPerms(managerPermsMap[manager.user_id] || DEFAULT_PERMS);
+  };
+
+  const savePermissions = async () => {
+    if (!permDialogManager || !user) return;
+    setSavingPerms(true);
+    try {
+      const { data: existing } = await supabase
+        .from("manager_permissions")
+        .select("id")
+        .eq("user_id", permDialogManager.user_id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("manager_permissions").update({
+          ...editPerms,
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", permDialogManager.user_id);
+      } else {
+        await supabase.from("manager_permissions").insert({
+          user_id: permDialogManager.user_id,
+          ...editPerms,
+        });
+      }
+
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: `Permissions updated for manager "${permDialogManager.username}"`,
+      });
+
+      toast.success("Permissions updated");
+      setPermDialogManager(null);
+      fetchManagers();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update permissions");
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
+  const permissionLabels: { key: keyof ManagerPerms; label: string; description: string }[] = [
+    { key: "can_create_apps", label: "Create Applications", description: "Can create new applications" },
+    { key: "can_edit_apps", label: "Edit Applications", description: "Can suspend, toggle kill switch, and edit app settings" },
+    { key: "can_delete_apps", label: "Delete Applications", description: "Can permanently delete applications" },
+    { key: "can_view_licenses", label: "View Licenses", description: "Can view all licenses (read-only)" },
+  ];
 
   return (
     <DashboardLayout>
@@ -119,6 +200,35 @@ export default function Managers() {
         </Dialog>
       </div>
 
+      {/* Permissions Dialog */}
+      <Dialog open={!!permDialogManager} onOpenChange={() => setPermDialogManager(null)}>
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-primary" />
+              Permissions — {permDialogManager?.username}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {permissionLabels.map(({ key, label, description }) => (
+              <div key={key} className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">{label}</p>
+                  <p className="text-xs text-muted-foreground">{description}</p>
+                </div>
+                <Switch
+                  checked={editPerms[key]}
+                  onCheckedChange={(checked) => setEditPerms({ ...editPerms, [key]: checked })}
+                />
+              </div>
+            ))}
+            <Button onClick={savePermissions} className="w-full btn-glow" disabled={savingPerms}>
+              {savingPerms ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> : "Save Permissions"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -127,34 +237,49 @@ export default function Managers() {
       </div>
 
       <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[500px]">
+        <div className="rounded-lg border border-border overflow-hidden min-w-[600px]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Username</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Permissions</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((m, i) => (
-                <tr key={m.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-foreground">{m.username}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{m.email}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(m.created_at)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => deleteManager(m.user_id, m.username)} title="Remove Manager" className="hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((m, i) => {
+                const perms = managerPermsMap[m.user_id] || DEFAULT_PERMS;
+                const activeCount = [perms.can_create_apps, perms.can_edit_apps, perms.can_delete_apps, perms.can_view_licenses].filter(Boolean).length;
+                return (
+                  <tr key={m.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-foreground">{m.username}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{m.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${activeCount === 4 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20"}`}>
+                        {activeCount}/4 active
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(m.created_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openPermissions(m)} title="Edit Permissions" className="hover:bg-primary/10">
+                          <Settings2 className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteManager(m.user_id, m.username)} title="Remove Manager" className="hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {filtered.length === 0 && (
