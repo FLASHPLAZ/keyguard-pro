@@ -71,8 +71,11 @@ Deno.serve(async (req) => {
     await supabase.from("user_roles").delete().eq("user_id", newUser.user.id);
     await supabase.from("user_roles").insert({ user_id: newUser.user.id, role: "manager" });
 
+    // Create default permissions row
+    await supabase.from("manager_permissions").insert({ user_id: newUser.user.id });
+
     return new Response(
-      JSON.stringify({ success: true, manager_id: newUser.user.id, message: `Manager "${username}" created` }),
+      JSON.stringify({ success: true, userId: newUser.user.id, manager_id: newUser.user.id, message: `Manager "${username}" created` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

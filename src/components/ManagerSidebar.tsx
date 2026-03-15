@@ -11,18 +11,20 @@ import {
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/manager" },
-  { icon: AppWindow, label: "Applications", path: "/manager/apps" },
-  { icon: Key, label: "Licenses", path: "/manager/licenses" },
-];
+import { useManagerPermissions } from "@/hooks/useManagerPermissions";
 
 export function ManagerSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
+  const { permissions } = useManagerPermissions();
+
+  const navItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/manager", show: true },
+    { icon: AppWindow, label: "Applications", path: "/manager/apps", show: true },
+    { icon: Key, label: "Licenses", path: "/manager/licenses", show: permissions.can_view_licenses },
+  ].filter(item => item.show);
 
   const handleSignOut = async () => {
     await signOut();
