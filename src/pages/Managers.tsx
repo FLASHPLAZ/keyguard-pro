@@ -104,12 +104,20 @@ export default function Managers() {
   };
 
   const deleteManager = async (userId: string, username: string) => {
-    await supabase.from("manager_permissions").delete().eq("user_id", userId);
-    await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "manager");
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Manager "${username}" removed` });
-    toast.success("Manager removed");
-    notifyDiscord("Manager removed", { Username: username });
-    fetchManagers();
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-manager", {
+        body: { userId },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+
+      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Manager "${username}" removed` });
+      toast.success("Manager permanently deleted");
+      notifyDiscord("Manager removed", { Username: username });
+      fetchManagers();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete manager");
+    }
   };
 
   const openPermissions = (manager: any) => {
