@@ -17,7 +17,6 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/manager" },
   { icon: AppWindow, label: "Applications", path: "/manager/apps" },
   { icon: Key, label: "Licenses", path: "/manager/licenses" },
-  { icon: ScrollText, label: "Logs", path: "/manager/logs" },
 ];
 
 export function ManagerSidebar() {
