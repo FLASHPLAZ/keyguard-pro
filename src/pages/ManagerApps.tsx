@@ -11,9 +11,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { useManagerPermissions } from "@/hooks/useManagerPermissions";
 
 export default function ManagerApps() {
   const { user } = useAuth();
+  const { permissions } = useManagerPermissions();
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [newAppName, setNewAppName] = useState("");
@@ -103,19 +105,21 @@ export default function ManagerApps() {
           <h1 className="text-2xl font-bold text-foreground">Applications</h1>
           <p className="text-sm text-muted-foreground">Manage software applications</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
-            <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-4">
-              <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
-              <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
-              <Button onClick={createApp} className="w-full btn-glow">Create</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {permissions.can_create_apps && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+              <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-4">
+                <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
+                <Button onClick={createApp} className="w-full btn-glow">Create</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Dialog open={!!detailApp} onOpenChange={() => setDetailApp(null)}>
@@ -145,32 +149,34 @@ export default function ManagerApps() {
                   </Button>
                 </div>
               </div>
-              <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <label className="text-sm font-semibold text-foreground">Request Signing (HMAC)</label>
+              {permissions.can_edit_apps && (
+                <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      <label className="text-sm font-semibold text-foreground">Request Signing (HMAC)</label>
+                    </div>
+                    <Switch checked={detailApp.signature_required || false} onCheckedChange={() => toggleSignatureRequired(detailApp.id, detailApp.signature_required)} />
                   </div>
-                  <Switch checked={detailApp.signature_required || false} onCheckedChange={() => toggleSignatureRequired(detailApp.id, detailApp.signature_required)} />
+                  <p className="text-xs text-muted-foreground">When enabled, all validation requests must include a valid HMAC-SHA256 signature.</p>
+                  {detailApp.signing_secret && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Signing Secret</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="flex-1 rounded bg-secondary px-3 py-2 text-xs font-mono text-primary break-all select-all">{detailApp.signing_secret}</code>
+                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(detailApp.signing_secret, "Signing secret")} className="hover:bg-primary/10 shrink-0">
+                          <Copy className="h-4 w-4 text-primary" />
+                        </Button>
+                      </div>
+                      <div className="mt-2">
+                        <Button variant="outline" size="sm" onClick={() => setRegenerateAppId(detailApp.id)} className="text-xs">
+                          <RefreshCw className="h-3 w-3 mr-1" /> Regenerate Secret
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">When enabled, all validation requests must include a valid HMAC-SHA256 signature.</p>
-                {detailApp.signing_secret && (
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Signing Secret</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="flex-1 rounded bg-secondary px-3 py-2 text-xs font-mono text-primary break-all select-all">{detailApp.signing_secret}</code>
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(detailApp.signing_secret, "Signing secret")} className="hover:bg-primary/10 shrink-0">
-                        <Copy className="h-4 w-4 text-primary" />
-                      </Button>
-                    </div>
-                    <div className="mt-2">
-                      <Button variant="outline" size="sm" onClick={() => setRegenerateAppId(detailApp.id)} className="text-xs">
-                        <RefreshCw className="h-3 w-3 mr-1" /> Regenerate Secret
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Created</label>
                 <p className="text-sm text-muted-foreground">{formatDate(detailApp.created_at)}</p>
@@ -252,15 +258,21 @@ export default function ManagerApps() {
                       <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
                         <Eye className="h-4 w-4 text-primary" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} title={app.suspended ? "Resume" : "Suspend"} className="hover:bg-warning/10">
-                        {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} title="Kill Switch" className="hover:bg-destructive/10">
-                        <Power className="h-4 w-4 text-destructive" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {permissions.can_edit_apps && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} title={app.suspended ? "Resume" : "Suspend"} className="hover:bg-warning/10">
+                            {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} title="Kill Switch" className="hover:bg-destructive/10">
+                            <Power className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                      {permissions.can_delete_apps && (
+                        <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

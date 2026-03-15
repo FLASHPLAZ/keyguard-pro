@@ -21,7 +21,7 @@ import ResellerLogs from "./pages/ResellerLogs";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManagerApps from "./pages/ManagerApps";
 import ManagerLicenses from "./pages/ManagerLicenses";
-import ManagerLogs from "./pages/ManagerLogs";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,7 +53,7 @@ const App = () => (
             <Route path="/manager" element={<ProtectedRoute requiredRole="manager"><ManagerDashboard /></ProtectedRoute>} />
             <Route path="/manager/apps" element={<ProtectedRoute requiredRole="manager"><ManagerApps /></ProtectedRoute>} />
             <Route path="/manager/licenses" element={<ProtectedRoute requiredRole="manager"><ManagerLicenses /></ProtectedRoute>} />
-            <Route path="/manager/logs" element={<ProtectedRoute requiredRole="manager"><ManagerLogs /></ProtectedRoute>} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
