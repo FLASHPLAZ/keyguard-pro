@@ -21,7 +21,7 @@ import ResellerLogs from "./pages/ResellerLogs";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import ManagerApps from "./pages/ManagerApps";
 import ManagerLicenses from "./pages/ManagerLicenses";
-import ManagerLogs from "./pages/ManagerLogs";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
