@@ -469,6 +469,6 @@ export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout
           <li>(Optional) Create <strong className="text-foreground">Resellers</strong> to let others distribute keys on your behalf.</li>
         </ol>
       </div>
-    </DashboardLayout>
+    </Layout>
   );
 }
