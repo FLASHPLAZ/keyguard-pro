@@ -81,10 +81,11 @@ export default function Licenses() {
   const bulkBan = async () => {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
+    const keys = selectedLicenses.map(l => l.license_key).join(", ");
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).in("id", ids);
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk banned ${ids.length} license(s)` });
     toast.success(`Banned ${ids.length} license(s)`);
-    notifyDiscord("Bulk ban", { Count: ids.length });
+    notifyDiscord("License banned", { Action: "Bulk ban", Count: ids.length, Keys: keys.slice(0, 200) });
     clearSelection();
     fetchData();
   };
@@ -92,10 +93,11 @@ export default function Licenses() {
   const bulkDelete = async () => {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
+    const keys = selectedLicenses.map(l => l.license_key).join(", ");
     await supabase.from("licenses").delete().in("id", ids);
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` });
     toast.success(`Deleted ${ids.length} license(s)`);
-    notifyDiscord("Bulk delete", { Count: ids.length });
+    notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.slice(0, 200) });
     clearSelection();
     fetchData();
   };
@@ -103,13 +105,14 @@ export default function Licenses() {
   const bulkExtend = async () => {
     if (!user || selectedIds.size === 0) return;
     const toUpdate = selectedLicenses;
+    const keys = toUpdate.map(l => l.license_key).join(", ");
     for (const lic of toUpdate) {
       const newExpiry = new Date(new Date(lic.expires_at).getTime() + 30 * 86400000).toISOString();
       await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", lic.id);
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk extended ${toUpdate.length} license(s) +30 days` });
     toast.success(`Extended ${toUpdate.length} license(s) by 30 days`);
-    notifyDiscord("Bulk extend", { Count: toUpdate.length, Added: "+30 days" });
+    notifyDiscord("License extended", { Action: "Bulk extend", Count: toUpdate.length, Added: "+30 days", Keys: keys.slice(0, 200) });
     clearSelection();
     fetchData();
   };
@@ -130,57 +133,67 @@ export default function Licenses() {
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
     await supabase.from("activity_logs").insert({
       user_id: user.id,
-      action: `Generated ${keyCount} license key(s) (${getDurationLabel(days)})`,
+      action: "License keys generated",
       application_id: selectedApp,
       application_name: appName,
     });
 
     setDialogOpen(false);
     toast.success(`Generated ${keyCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
+    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
     fetchData();
   };
 
   const banKey = async (id: string, licenseKey: string) => {
+    const lic = licenses.find(l => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
     toast.success("License banned");
-    notifyDiscord("License banned", { Key: licenseKey });
+    notifyDiscord("License banned", { Key: licenseKey, App: appName, HWID: lic?.hwid || "N/A", IP: lic?.ip || "N/A" });
     fetchData();
   };
 
   const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
+    const lic = licenses.find(l => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
     await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
     toast.success("License unbanned");
-    notifyDiscord("License unbanned", { Key: licenseKey });
+    notifyDiscord("License unbanned", { Key: licenseKey, App: appName, HWID: hwid || "N/A" });
     fetchData();
   };
 
   const resetHwid = async (id: string, licenseKey: string) => {
+    const lic = licenses.find(l => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
     await supabase.from("licenses").update({ hwid: null }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
     toast.success("HWID reset");
-    notifyDiscord("HWID reset", { Key: licenseKey });
+    notifyDiscord("HWID reset", { Key: licenseKey, App: appName, "Old HWID": lic?.hwid || "N/A" });
     fetchData();
   };
 
   const extendKey = async (id: string, currentExpiry: string, licenseKey: string) => {
+    const lic = licenses.find(l => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
     const newExpiry = new Date(new Date(currentExpiry).getTime() + 30 * 86400000).toISOString();
     await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended +30 days", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
     toast.success("License extended by 30 days");
-    notifyDiscord("License extended", { Key: licenseKey, Added: "+30 days" });
+    notifyDiscord("License extended", { Key: licenseKey, App: appName, Added: "+30 days", "New Expiry": formatDate(newExpiry) });
     fetchData();
   };
 
   const deleteKey = async (id: string, licenseKey: string) => {
+    const lic = licenses.find(l => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
     toast.success("License deleted");
-    notifyDiscord("License deleted", { Key: licenseKey });
+    notifyDiscord("License deleted", { Key: licenseKey, App: appName });
     fetchData();
   };
 
@@ -374,7 +387,7 @@ export default function Licenses() {
                   />
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
@@ -385,21 +398,24 @@ export default function Licenses() {
             </thead>
             <tbody>
               {paged.map((lic, i) => (
-                <tr key={lic.id} className={`table-row-hover border-b border-border animate-fade-in ${selectedIds.has(lic.id) ? 'bg-primary/5' : ''}`} style={{ animationDelay: `${i * 30}ms` }}>
+                <tr key={lic.id} className={`table-row-hover border-b border-border animate-fade-in ${selectedIds.has(lic.id) ? 'bg-primary/5' : ''}`} style={{ animationDelay: `${i * 20}ms` }}>
                   <td className="px-3 py-3">
-                    <Checkbox checked={selectedIds.has(lic.id)} onCheckedChange={() => toggleSelect(lic.id)} />
+                    <Checkbox
+                      checked={selectedIds.has(lic.id)}
+                      onCheckedChange={() => toggleSelect(lic.id)}
+                    />
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-2 hover:opacity-80 transition-opacity">
-                      <span className="truncate max-w-[180px]">{lic.license_key}</span>
+                    <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                      <span className="text-xs">{lic.license_key}</span>
                       {copiedKey === lic.license_key ? (
-                        <span className="text-xs text-emerald-400 font-sans font-medium shrink-0">Copied!</span>
+                        <span className="text-xs text-emerald-400 font-sans font-medium">✓</span>
                       ) : (
-                        <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <Copy className="h-3 w-3 text-muted-foreground" />
                       )}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-foreground">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
@@ -410,13 +426,13 @@ export default function Licenses() {
                       {lic.hwid ? "Yes" : "No"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{lic.hwid || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{lic.resellers?.username || "—"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
+                    {lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <ActionButtons lic={lic} />
-                    </div>
+                    <ActionButtons lic={lic} />
                   </td>
                 </tr>
               ))}
@@ -425,6 +441,8 @@ export default function Licenses() {
           {filtered.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">No licenses found</div>
           )}
+        </div>
+        <div className="mt-4">
           <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>

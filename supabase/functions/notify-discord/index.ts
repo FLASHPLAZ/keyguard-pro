@@ -25,7 +25,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify the user is authenticated
     const token = authHeader.replace("Bearer ", "");
     const {
       data: { user },
@@ -61,7 +60,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Color map for admin actions
+    // Color map for admin/manager/reseller actions
     const colorMap: Record<string, number> = {
       // License actions
       "License keys generated": 0x00cc88,
@@ -86,13 +85,32 @@ Deno.serve(async (req) => {
       "IP/HWID blacklisted": 0xff0000,
       "Blacklist entry removed": 0xffaa00,
       "Settings updated": 0x00aaff,
+      // Manager actions
+      "Manager created": 0x00cc88,
+      "Manager removed": 0xff4444,
+      "Manager permissions updated": 0x00aaff,
       // Reseller actions
+      "Reseller created": 0x00cc88,
+      "Reseller updated": 0x00aaff,
+      "Reseller deleted": 0xff4444,
       "Reseller generated keys": 0x00cc88,
       "Reseller banned license": 0xff0000,
       "Reseller unbanned license": 0x00ff00,
       "Reseller HWID reset": 0xffaa00,
       "Reseller deleted license": 0xff4444,
+      "Reseller bulk ban": 0xff0000,
+      "Reseller bulk delete": 0xff4444,
     };
+
+    // Get username from profile for footer
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const actorName = profile?.username || user.email || "Unknown";
+    const actorRole = profile?.role || "user";
 
     const embed = {
       title: `🛠️ ${action}`,
@@ -101,7 +119,7 @@ Deno.serve(async (req) => {
         .filter(([_, v]) => v != null && v !== "")
         .map(([k, v]) => ({ name: k, value: String(v), inline: true })),
       timestamp: new Date().toISOString(),
-      footer: { text: "Galactic Boosts Admin Panel" },
+      footer: { text: `${actorName} (${actorRole}) • Galactic Boosts` },
     };
 
     await fetch(webhookUrl, {
