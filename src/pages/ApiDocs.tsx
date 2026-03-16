@@ -145,7 +145,7 @@ const endpoints = [
   },
 ];
 
-export default function ApiDocs() {
+export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout?: boolean } = {}) {
   const [activeLang, setActiveLang] = useState("python");
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
