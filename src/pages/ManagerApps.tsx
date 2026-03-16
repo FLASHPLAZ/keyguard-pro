@@ -42,50 +42,63 @@ export default function ManagerApps() {
       user_id: user.id,
     }).select().single();
     if (error) { toast.error(error.message); return; }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${newAppName.trim()}" created` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application created", application_id: data?.id, application_name: newAppName.trim() });
     setNewAppName(""); setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
-    notifyDiscord("Application created", { Name: newAppName.trim() });
+    notifyDiscord("Application created", { Name: newAppName.trim(), "App ID": data?.id, "Created by": "Manager" });
     if (data) setDetailApp(data);
     fetchApps();
   };
 
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
     await supabase.from("applications").update({ suspended: !current }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" ${!current ? "suspended" : "resumed"}` });
+    const action = !current ? "Application suspended" : "Application resumed";
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name });
     toast.success("Application status updated");
+    notifyDiscord(action, { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
   };
 
   const toggleKillSwitch = async (id: string, current: boolean, name: string) => {
     await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Kill switch ${!current ? "enabled" : "disabled"} for "${name}"` });
+    const action = !current ? "Kill switch enabled" : "Kill switch disabled";
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name });
     toast.success("Kill switch toggled");
+    notifyDiscord(action, { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
   };
 
   const deleteApp = async (id: string, name: string) => {
     await supabase.from("applications").delete().eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Application "${name}" deleted` });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name });
     toast.success("Application deleted");
+    notifyDiscord("Application deleted", { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
   };
 
   const toggleSignatureRequired = async (id: string, current: boolean) => {
+    const app = apps.find(a => a.id === id);
+    const appName = app?.name || "Unknown";
     await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    const action = !current ? "Request signing enabled" : "Request signing disabled";
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName });
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
+    notifyDiscord(action, { App: appName, "App ID": id, "Action by": "Manager" });
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
   };
 
   const regenerateSecret = async (id: string) => {
+    const app = apps.find(a => a.id === id);
+    const appName = app?.name || "Unknown";
     const bytes = new Uint8Array(32);
     crypto.getRandomValues(bytes);
     const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
     await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Signing secret regenerated for app ${id}` });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName });
     toast.success("Signing secret regenerated");
+    notifyDiscord("Signing secret regenerated", { App: appName, "App ID": id, "Action by": "Manager" });
     setRegenerateAppId(null);
     fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });

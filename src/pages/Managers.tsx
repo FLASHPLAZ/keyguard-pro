@@ -83,10 +83,9 @@ export default function Managers() {
 
       await supabase.from("activity_logs").insert({
         user_id: user.id,
-        action: `Manager "${newUsername.trim()}" created`,
+        action: "Manager created",
       });
 
-      // Create default permissions row
       if (data?.userId) {
         await supabase.from("manager_permissions").insert({ user_id: data.userId });
       }
@@ -111,7 +110,7 @@ export default function Managers() {
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
 
-      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Manager "${username}" removed` });
+      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Manager removed" });
       toast.success("Manager permanently deleted");
       notifyDiscord("Manager removed", { Username: username });
       fetchManagers();
@@ -149,7 +148,19 @@ export default function Managers() {
 
       await supabase.from("activity_logs").insert({
         user_id: user.id,
-        action: `Permissions updated for manager "${permDialogManager.username}"`,
+        action: "Manager permissions updated",
+      });
+
+      const permSummary = Object.entries(editPerms)
+        .map(([k, v]) => `${k.replace("can_", "").replace("_", " ")}: ${v ? "✅" : "❌"}`)
+        .join(", ");
+
+      notifyDiscord("Manager permissions updated", {
+        Manager: permDialogManager.username,
+        "Create Apps": editPerms.can_create_apps ? "Yes" : "No",
+        "Edit Apps": editPerms.can_edit_apps ? "Yes" : "No",
+        "Delete Apps": editPerms.can_delete_apps ? "Yes" : "No",
+        "View Licenses": editPerms.can_view_licenses ? "Yes" : "No",
       });
 
       toast.success("Permissions updated");
