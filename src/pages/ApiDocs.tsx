@@ -156,8 +156,10 @@ export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout
     setTimeout(() => setCopiedText(null), 1500);
   };
 
+  const Layout = useManagerLayout ? ManagerLayout : DashboardLayout;
+
   return (
-    <DashboardLayout>
+    <Layout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
         <p className="text-sm text-muted-foreground">Complete guide to integrate Galactic Boosts into your software</p>
