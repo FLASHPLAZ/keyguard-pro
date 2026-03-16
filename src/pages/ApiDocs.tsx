@@ -1,4 +1,6 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ManagerLayout } from "@/components/ManagerLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
