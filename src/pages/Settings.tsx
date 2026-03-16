@@ -154,33 +154,40 @@ export default function SettingsPage() {
   }
 
   async function removeBlacklistEntry(id: string) {
+    const entry = blacklist.find(b => b.id === id);
     await supabase.from("blacklist").delete().eq("id", id);
     toast.success("Removed from blacklist");
-    notifyDiscord("Blacklist entry removed", {});
+    notifyDiscord("Blacklist entry removed", { Type: entry?.type?.toUpperCase() || "Unknown", Value: entry?.value || "Unknown", Key: entry?.license_key || "N/A" });
     loadBlacklist();
   }
 
   async function adminBanKey(id: string, licenseKey: string) {
+    const lic = resellerKeys.find((l: any) => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
+    const resellerName = lic?.resellers?.username || "Unknown";
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
     if (user) {
       await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Admin banned license", license_key: licenseKey,
+        user_id: user.id, action: "Admin banned license", license_key: licenseKey, application_name: appName,
       });
     }
     toast.success("License banned by admin (reseller cannot unban)");
-    notifyDiscord("Admin banned license", { Key: licenseKey });
+    notifyDiscord("Admin banned license", { Key: licenseKey, App: appName, Reseller: resellerName, HWID: lic?.hwid || "N/A", IP: lic?.ip || "N/A" });
     loadResellerKeys();
   }
 
   async function adminUnbanKey(id: string, licenseKey: string) {
+    const lic = resellerKeys.find((l: any) => l.id === id);
+    const appName = lic?.applications?.name || "Unknown";
+    const resellerName = lic?.resellers?.username || "Unknown";
     await supabase.from("licenses").update({ banned: false, status: "active", banned_by_admin: false }).eq("id", id);
     if (user) {
       await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Admin unbanned license", license_key: licenseKey,
+        user_id: user.id, action: "Admin unbanned license", license_key: licenseKey, application_name: appName,
       });
     }
     toast.success("License unbanned");
-    notifyDiscord("Admin unbanned license", { Key: licenseKey });
+    notifyDiscord("Admin unbanned license", { Key: licenseKey, App: appName, Reseller: resellerName });
     loadResellerKeys();
   }
 
@@ -194,6 +201,7 @@ export default function SettingsPage() {
       await supabase.from("blacklist").upsert(entry, { onConflict: "type,value" });
     }
     toast.success("IP/HWID blacklisted from this key");
+    notifyDiscord("IP/HWID blacklisted", { Key: licenseKey, IP: ip || "N/A", HWID: hwid || "N/A" });
     loadBlacklist();
   }
 
