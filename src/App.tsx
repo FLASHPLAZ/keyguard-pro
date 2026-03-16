@@ -53,7 +53,7 @@ const App = () => (
             <Route path="/manager" element={<ProtectedRoute requiredRole="manager"><ManagerDashboard /></ProtectedRoute>} />
             <Route path="/manager/apps" element={<ProtectedRoute requiredRole="manager"><ManagerApps /></ProtectedRoute>} />
             <Route path="/manager/licenses" element={<ProtectedRoute requiredRole="manager"><ManagerLicenses /></ProtectedRoute>} />
-            <Route path="/manager/api-docs" element={<ProtectedRoute requiredRole="manager"><ApiDocs /></ProtectedRoute>} />
+            <Route path="/manager/api-docs" element={<ProtectedRoute requiredRole="manager"><ApiDocs useManagerLayout /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
