@@ -25,6 +25,7 @@ export function ManagerSidebar() {
     { icon: LayoutDashboard, label: "Dashboard", path: "/manager", show: true },
     { icon: AppWindow, label: "Applications", path: "/manager/apps", show: true },
     { icon: Key, label: "Licenses", path: "/manager/licenses", show: permissions.can_view_licenses },
+    { icon: FileText, label: "API Docs", path: "/manager/api-docs", show: true },
   ].filter(item => item.show);
 
   const handleSignOut = async () => {
