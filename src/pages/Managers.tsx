@@ -297,7 +297,7 @@ export default function Managers() {
                     <td className="px-4 py-3 text-muted-foreground">{m.email}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${activeCount === 7 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20"}`}>
-                        {activeCount}/4 active
+                        {activeCount}/7 active
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(m.created_at)}</td>
