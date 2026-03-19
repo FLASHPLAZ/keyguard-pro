@@ -100,6 +100,11 @@ Deno.serve(async (req) => {
       "Reseller deleted license": 0xff4444,
       "Reseller bulk ban": 0xff0000,
       "Reseller bulk delete": 0xff4444,
+      // Manager license actions
+      "Manager created licenses": 0x00cc88,
+      "Manager banned license": 0xff0000,
+      "Manager unbanned license": 0x00ff00,
+      "Manager reset HWID": 0xffaa00,
     };
 
     // Get username from profile for footer
