@@ -95,10 +95,6 @@ export default function Managers() {
         action: "Manager created",
       });
 
-      if (data?.userId) {
-        await supabase.from("manager_permissions").insert({ user_id: data.userId });
-      }
-
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setDialogOpen(false);
       notifyDiscord("Manager created", { Username: newUsername.trim(), Email: newEmail.trim() });
