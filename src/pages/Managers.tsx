@@ -16,6 +16,9 @@ interface ManagerPerms {
   can_edit_apps: boolean;
   can_delete_apps: boolean;
   can_view_licenses: boolean;
+  can_create_licenses: boolean;
+  can_ban_licenses: boolean;
+  can_reset_hwid: boolean;
 }
 
 const DEFAULT_PERMS: ManagerPerms = {
@@ -23,6 +26,9 @@ const DEFAULT_PERMS: ManagerPerms = {
   can_edit_apps: true,
   can_delete_apps: true,
   can_view_licenses: true,
+  can_create_licenses: false,
+  can_ban_licenses: false,
+  can_reset_hwid: false,
 };
 
 export default function Managers() {
