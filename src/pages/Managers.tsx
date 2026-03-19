@@ -285,7 +285,7 @@ export default function Managers() {
             <tbody>
               {filtered.map((m, i) => {
                 const perms = managerPermsMap[m.user_id] || DEFAULT_PERMS;
-                const activeCount = [perms.can_create_apps, perms.can_edit_apps, perms.can_delete_apps, perms.can_view_licenses].filter(Boolean).length;
+                const activeCount = [perms.can_create_apps, perms.can_edit_apps, perms.can_delete_apps, perms.can_view_licenses, perms.can_create_licenses, perms.can_ban_licenses, perms.can_reset_hwid].filter(Boolean).length;
                 return (
                   <tr key={m.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                     <td className="px-4 py-3">
