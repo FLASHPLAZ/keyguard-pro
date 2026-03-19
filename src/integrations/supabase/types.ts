@@ -230,9 +230,12 @@ export type Database = {
       }
       manager_permissions: {
         Row: {
+          can_ban_licenses: boolean
           can_create_apps: boolean
+          can_create_licenses: boolean
           can_delete_apps: boolean
           can_edit_apps: boolean
+          can_reset_hwid: boolean
           can_view_licenses: boolean
           created_at: string
           id: string
@@ -240,9 +243,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_ban_licenses?: boolean
           can_create_apps?: boolean
+          can_create_licenses?: boolean
           can_delete_apps?: boolean
           can_edit_apps?: boolean
+          can_reset_hwid?: boolean
           can_view_licenses?: boolean
           created_at?: string
           id?: string
@@ -250,9 +256,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_ban_licenses?: boolean
           can_create_apps?: boolean
+          can_create_licenses?: boolean
           can_delete_apps?: boolean
           can_edit_apps?: boolean
+          can_reset_hwid?: boolean
           can_view_licenses?: boolean
           created_at?: string
           id?: string
