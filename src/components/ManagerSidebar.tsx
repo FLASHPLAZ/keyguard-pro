@@ -24,7 +24,7 @@ export function ManagerSidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/manager", show: true },
     { icon: AppWindow, label: "Applications", path: "/manager/apps", show: true },
-    { icon: Key, label: "Licenses", path: "/manager/licenses", show: permissions.can_view_licenses },
+    { icon: Key, label: "Licenses", path: "/manager/licenses", show: permissions.can_view_licenses || permissions.can_create_licenses || permissions.can_ban_licenses || permissions.can_reset_hwid },
     { icon: FileText, label: "API Docs", path: "/manager/api-docs", show: true },
   ].filter(item => item.show);
 
