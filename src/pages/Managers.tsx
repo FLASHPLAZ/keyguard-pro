@@ -189,7 +189,10 @@ export default function Managers() {
     { key: "can_create_apps", label: "Create Applications", description: "Can create new applications" },
     { key: "can_edit_apps", label: "Edit Applications", description: "Can suspend, toggle kill switch, and edit app settings" },
     { key: "can_delete_apps", label: "Delete Applications", description: "Can permanently delete applications" },
-    { key: "can_view_licenses", label: "View Licenses", description: "Can view all licenses (read-only)" },
+    { key: "can_view_licenses", label: "View Licenses", description: "Can view all licenses" },
+    { key: "can_create_licenses", label: "Create Licenses", description: "Can generate new license keys" },
+    { key: "can_ban_licenses", label: "Ban / Unban Licenses", description: "Can ban and unban license keys" },
+    { key: "can_reset_hwid", label: "Reset HWID", description: "Can reset hardware IDs on licenses" },
   ];
 
   return (
