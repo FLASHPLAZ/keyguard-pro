@@ -45,6 +45,9 @@ export function useManagerPermissions() {
             can_edit_apps: data.can_edit_apps,
             can_delete_apps: data.can_delete_apps,
             can_view_licenses: data.can_view_licenses,
+            can_create_licenses: data.can_create_licenses,
+            can_ban_licenses: data.can_ban_licenses,
+            can_reset_hwid: data.can_reset_hwid,
           });
         }
         setLoading(false);
