@@ -16,6 +16,9 @@ interface ManagerPerms {
   can_edit_apps: boolean;
   can_delete_apps: boolean;
   can_view_licenses: boolean;
+  can_create_licenses: boolean;
+  can_ban_licenses: boolean;
+  can_reset_hwid: boolean;
 }
 
 const DEFAULT_PERMS: ManagerPerms = {
@@ -23,6 +26,9 @@ const DEFAULT_PERMS: ManagerPerms = {
   can_edit_apps: true,
   can_delete_apps: true,
   can_view_licenses: true,
+  can_create_licenses: false,
+  can_ban_licenses: false,
+  can_reset_hwid: false,
 };
 
 export default function Managers() {
@@ -57,6 +63,9 @@ export default function Managers() {
         can_edit_apps: p.can_edit_apps,
         can_delete_apps: p.can_delete_apps,
         can_view_licenses: p.can_view_licenses,
+        can_create_licenses: p.can_create_licenses,
+        can_ban_licenses: p.can_ban_licenses,
+        can_reset_hwid: p.can_reset_hwid,
       };
     });
     setManagerPermsMap(permsMap);
@@ -161,6 +170,9 @@ export default function Managers() {
         "Edit Apps": editPerms.can_edit_apps ? "Yes" : "No",
         "Delete Apps": editPerms.can_delete_apps ? "Yes" : "No",
         "View Licenses": editPerms.can_view_licenses ? "Yes" : "No",
+        "Create Licenses": editPerms.can_create_licenses ? "Yes" : "No",
+        "Ban/Unban Licenses": editPerms.can_ban_licenses ? "Yes" : "No",
+        "Reset HWID": editPerms.can_reset_hwid ? "Yes" : "No",
       });
 
       toast.success("Permissions updated");
@@ -177,7 +189,10 @@ export default function Managers() {
     { key: "can_create_apps", label: "Create Applications", description: "Can create new applications" },
     { key: "can_edit_apps", label: "Edit Applications", description: "Can suspend, toggle kill switch, and edit app settings" },
     { key: "can_delete_apps", label: "Delete Applications", description: "Can permanently delete applications" },
-    { key: "can_view_licenses", label: "View Licenses", description: "Can view all licenses (read-only)" },
+    { key: "can_view_licenses", label: "View Licenses", description: "Can view all licenses" },
+    { key: "can_create_licenses", label: "Create Licenses", description: "Can generate new license keys" },
+    { key: "can_ban_licenses", label: "Ban / Unban Licenses", description: "Can ban and unban license keys" },
+    { key: "can_reset_hwid", label: "Reset HWID", description: "Can reset hardware IDs on licenses" },
   ];
 
   return (
@@ -270,7 +285,7 @@ export default function Managers() {
             <tbody>
               {filtered.map((m, i) => {
                 const perms = managerPermsMap[m.user_id] || DEFAULT_PERMS;
-                const activeCount = [perms.can_create_apps, perms.can_edit_apps, perms.can_delete_apps, perms.can_view_licenses].filter(Boolean).length;
+                const activeCount = [perms.can_create_apps, perms.can_edit_apps, perms.can_delete_apps, perms.can_view_licenses, perms.can_create_licenses, perms.can_ban_licenses, perms.can_reset_hwid].filter(Boolean).length;
                 return (
                   <tr key={m.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                     <td className="px-4 py-3">
@@ -281,8 +296,8 @@ export default function Managers() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{m.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${activeCount === 4 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20"}`}>
-                        {activeCount}/4 active
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${activeCount === 7 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" : "bg-amber-500/15 text-amber-400 border-amber-500/20"}`}>
+                        {activeCount}/7 active
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(m.created_at)}</td>

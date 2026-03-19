@@ -1,28 +1,45 @@
 import { useState, useEffect } from "react";
 import { ManagerLayout } from "@/components/ManagerLayout";
-import { getLicenseStatusColor, formatDate } from "@/lib/license";
+import { generateLicenseKey, getLicenseStatusColor, formatDate, DURATION_OPTIONS } from "@/lib/license";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Copy } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Copy, Plus, Ban, ShieldCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerPermissions } from "@/hooks/useManagerPermissions";
+import { notifyDiscord } from "@/lib/discord-notify";
 
 export default function ManagerLicenses() {
   const { user } = useAuth();
+  const { permissions } = useManagerPermissions();
   const [licenses, setLicenses] = useState<any[]>([]);
+  const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  useEffect(() => {
+  // Create dialog state
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedApp, setSelectedApp] = useState("");
+  const [keyCount, setKeyCount] = useState(1);
+  const [duration, setDuration] = useState("30");
+
+  const fetchData = async () => {
     if (!user) return;
-    supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false })
-      .then(({ data }) => setLicenses(data || []));
-  }, [user]);
+    const [licRes, appRes] = await Promise.all([
+      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }),
+      supabase.from("applications").select("*").eq("suspended", false),
+    ]);
+    setLicenses(licRes.data || []);
+    setApps(appRes.data || []);
+  };
+
+  useEffect(() => { fetchData(); }, [user]);
 
   const filtered = licenses.filter((l) => {
     const matchSearch = l.license_key.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,11 +55,141 @@ export default function ManagerLicenses() {
     toast.success("Copied to clipboard");
   };
 
+  const createLicenses = async () => {
+    if (!selectedApp || !user) return;
+    const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
+    const durationDays = parseInt(duration);
+    const keys: string[] = [];
+
+    for (let i = 0; i < keyCount; i++) {
+      const key = generateLicenseKey();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
+      keys.push(key);
+
+      await supabase.from("licenses").insert({
+        license_key: key,
+        application_id: selectedApp,
+        user_id: user.id,
+        expires_at: expiresAt.toISOString(),
+        status: "unused",
+      });
+    }
+
+    await supabase.from("activity_logs").insert({
+      user_id: user.id,
+      action: `Manager created ${keyCount} license(s)`,
+      application_id: selectedApp,
+      application_name: appName,
+    });
+
+    notifyDiscord("Manager created licenses", {
+      App: appName,
+      Count: keyCount,
+      Duration: `${durationDays} days`,
+      "Created by": user.email || "Manager",
+    });
+
+    toast.success(`${keyCount} license key(s) created!`);
+    setDialogOpen(false);
+    setSelectedApp("");
+    setKeyCount(1);
+    fetchData();
+  };
+
+  const banLicense = async (lic: any) => {
+    await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", lic.id);
+    const appName = lic.applications?.name || "Unknown";
+    await supabase.from("activity_logs").insert({
+      user_id: user!.id,
+      action: "Manager banned license",
+      license_key: lic.license_key,
+      application_id: lic.application_id,
+      application_name: appName,
+      hwid: lic.hwid,
+      ip: lic.ip,
+    });
+    notifyDiscord("Manager banned license", { Key: lic.license_key, App: appName, HWID: lic.hwid, IP: lic.ip });
+    toast.success("License banned");
+    fetchData();
+  };
+
+  const unbanLicense = async (lic: any) => {
+    const newStatus = lic.hwid ? "active" : "unused";
+    await supabase.from("licenses").update({ banned: false, status: newStatus }).eq("id", lic.id);
+    const appName = lic.applications?.name || "Unknown";
+    await supabase.from("activity_logs").insert({
+      user_id: user!.id,
+      action: "Manager unbanned license",
+      license_key: lic.license_key,
+      application_id: lic.application_id,
+      application_name: appName,
+    });
+    notifyDiscord("Manager unbanned license", { Key: lic.license_key, App: appName });
+    toast.success("License unbanned");
+    fetchData();
+  };
+
+  const resetHwid = async (lic: any) => {
+    const previousHwid = lic.hwid;
+    await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    const appName = lic.applications?.name || "Unknown";
+    await supabase.from("activity_logs").insert({
+      user_id: user!.id,
+      action: "Manager reset HWID",
+      license_key: lic.license_key,
+      application_id: lic.application_id,
+      application_name: appName,
+      hwid: previousHwid,
+      ip: lic.ip,
+    });
+    notifyDiscord("Manager reset HWID", { Key: lic.license_key, App: appName, "Previous HWID": previousHwid });
+    toast.success("HWID reset");
+    fetchData();
+  };
+
   return (
     <ManagerLayout>
-      <div className="mb-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
-        <p className="text-sm text-muted-foreground">View all license keys (read-only)</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
+          <p className="text-sm text-muted-foreground">Manage license keys</p>
+        </div>
+        {permissions.can_create_licenses && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create License</Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+              <DialogHeader><DialogTitle>Create License Keys</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Application</label>
+                  <Select value={selectedApp} onValueChange={setSelectedApp}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue placeholder="Select app" /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {apps.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Duration</label>
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {DURATION_OPTIONS.map(d => <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Number of Keys</label>
+                  <Input type="number" min={1} max={50} value={keyCount} onChange={e => setKeyCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))} className="bg-secondary border-border" />
+                </div>
+                <Button onClick={createLicenses} className="w-full btn-glow" disabled={!selectedApp}>Create Keys</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -72,7 +219,7 @@ export default function ManagerLicenses() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Copy</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -86,9 +233,27 @@ export default function ManagerLicenses() {
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>{lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} className="hover:bg-primary/10 h-8 w-8">
-                      <Copy className="h-4 w-4 text-primary" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} className="hover:bg-primary/10 h-8 w-8" title="Copy key">
+                        <Copy className="h-4 w-4 text-primary" />
+                      </Button>
+                      {permissions.can_ban_licenses && (
+                        lic.status === "banned" ? (
+                          <Button variant="ghost" size="icon" onClick={() => unbanLicense(lic)} className="hover:bg-emerald-500/10 h-8 w-8" title="Unban">
+                            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" onClick={() => banLicense(lic)} className="hover:bg-destructive/10 h-8 w-8" title="Ban">
+                            <Ban className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )
+                      )}
+                      {permissions.can_reset_hwid && lic.hwid && (
+                        <Button variant="ghost" size="icon" onClick={() => resetHwid(lic)} className="hover:bg-amber-500/10 h-8 w-8" title="Reset HWID">
+                          <RotateCcw className="h-4 w-4 text-amber-400" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
