@@ -63,6 +63,9 @@ export default function Managers() {
         can_edit_apps: p.can_edit_apps,
         can_delete_apps: p.can_delete_apps,
         can_view_licenses: p.can_view_licenses,
+        can_create_licenses: p.can_create_licenses,
+        can_ban_licenses: p.can_ban_licenses,
+        can_reset_hwid: p.can_reset_hwid,
       };
     });
     setManagerPermsMap(permsMap);
