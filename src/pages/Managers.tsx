@@ -170,6 +170,9 @@ export default function Managers() {
         "Edit Apps": editPerms.can_edit_apps ? "Yes" : "No",
         "Delete Apps": editPerms.can_delete_apps ? "Yes" : "No",
         "View Licenses": editPerms.can_view_licenses ? "Yes" : "No",
+        "Create Licenses": editPerms.can_create_licenses ? "Yes" : "No",
+        "Ban/Unban Licenses": editPerms.can_ban_licenses ? "Yes" : "No",
+        "Reset HWID": editPerms.can_reset_hwid ? "Yes" : "No",
       });
 
       toast.success("Permissions updated");
