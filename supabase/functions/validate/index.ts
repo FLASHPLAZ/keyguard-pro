@@ -202,11 +202,12 @@ async function verifyHmacSignature(
 // ── Helper: log + webhook fire-and-forget ──
 function logAndNotify(
   supabase: any, webhookUrl: string, logData: Record<string, any>, discordAction: string, embedData: Record<string, any>,
-  startTime?: number
+  startTime?: number, isError = false
 ) {
   if (startTime) logData.response_time_ms = Date.now() - startTime;
   supabase.from("activity_logs").insert(logData).then(() => {});
   fireDiscordWebhook(webhookUrl, discordAction, embedData);
+  if (isError) trackError(webhookUrl, discordAction);
 }
 
 // ── Reusable JSON response ──
