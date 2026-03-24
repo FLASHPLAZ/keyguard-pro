@@ -6,10 +6,11 @@ import { CountryHeatmap } from "@/components/CountryHeatmap";
 import { SystemHealthWidget } from "@/components/SystemHealthWidget";
 import { HourlyTrendsChart } from "@/components/HourlyTrendsChart";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
-import { AppWindow, Key, CheckCircle, XCircle, Ban, Users } from "lucide-react";
+import { AppWindow, Key, CheckCircle, XCircle, Ban, Users, TrendingUp, Clock } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function getLast7DaysLabels(): { label: string; dateStr: string }[] {
   const days: { label: string; dateStr: string }[] = [];
@@ -24,6 +25,15 @@ function getLast7DaysLabels(): { label: string; dateStr: string }[] {
   return days;
 }
 
+function CardSkeleton() {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-[200px] w-full rounded-lg" />
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({ totalApps: 0, totalLicenses: 0, activeLicenses: 0, expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0 });
@@ -31,6 +41,7 @@ export default function Dashboard() {
   const [recentLicenses, setRecentLicenses] = useState<any[]>([]);
   const [resellerStats, setResellerStats] = useState<any[]>([]);
   const [barData, setBarData] = useState<{ name: string; validations: number }[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -65,7 +76,6 @@ export default function Dashboard() {
       setRecentLicenses(latestLicRes.data || []);
       setResellerStats(resellerDetailRes.data || []);
 
-      // Build bar chart from real data
       const days = getLast7DaysLabels();
       const countsByDate = new Map<string, number>();
       for (const row of validationLogsRes.data || []) {
@@ -76,6 +86,7 @@ export default function Dashboard() {
         name: d.label,
         validations: countsByDate.get(d.dateStr) || 0,
       })));
+      setLoading(false);
     };
     fetchData();
   }, [user]);
@@ -88,57 +99,108 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
+      {/* Header */}
       <div className="mb-8 animate-fade-in">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of your license management system</p>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Overview of your license management system</p>
       </div>
 
+      {/* Stat Cards */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <StatCard title="Total Apps" value={stats.totalApps} icon={AppWindow} />
-        <StatCard title="Total Licenses" value={stats.totalLicenses} icon={Key} />
-        <StatCard title="Active" value={stats.activeLicenses} icon={CheckCircle} />
-        <StatCard title="Expired" value={stats.expiredLicenses} icon={XCircle} />
-        <StatCard title="Banned" value={stats.bannedLicenses} icon={Ban} />
-        <StatCard title="Resellers" value={stats.totalResellers} icon={Users} />
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/60 bg-card p-5 space-y-3">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-8 w-12" />
+            </div>
+          ))
+        ) : (
+          <>
+            <StatCard title="Total Apps" value={stats.totalApps} icon={AppWindow} />
+            <StatCard title="Total Licenses" value={stats.totalLicenses} icon={Key} />
+            <StatCard title="Active" value={stats.activeLicenses} icon={CheckCircle} />
+            <StatCard title="Expired" value={stats.expiredLicenses} icon={XCircle} />
+            <StatCard title="Banned" value={stats.bannedLicenses} icon={Ban} />
+            <StatCard title="Resellers" value={stats.totalResellers} icon={Users} />
+          </>
+        )}
       </div>
 
+      {/* Charts Row */}
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">License Validations (7 days)</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={barData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
-              <XAxis dataKey="name" stroke="hsl(215, 12%, 50%)" fontSize={12} />
-              <YAxis stroke="hsl(215, 12%, 50%)" fontSize={12} allowDecimals={false} />
-              <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 12%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "6px", color: "hsl(210, 20%, 92%)" }} />
-              <Bar dataKey="validations" fill="hsl(174, 72%, 52%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">License Distribution</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value">
-                {pieData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 12%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "6px", color: "hsl(210, 20%, 92%)" }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-4 flex flex-wrap justify-center gap-4 sm:gap-6">
-            {pieData.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-xs text-muted-foreground">{entry.name}: {entry.value}</span>
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <div className="rounded-xl border border-border/60 bg-card p-5 sm:p-6 glow-hover animate-fade-in" style={{ animationDelay: "100ms" }}>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="rounded-lg bg-primary/10 p-1.5">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">License Validations (7 days)</h3>
               </div>
-            ))}
-          </div>
-        </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
+                  <XAxis dataKey="name" stroke="hsl(215, 12%, 50%)" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(215, 12%, 50%)" fontSize={12} allowDecimals={false} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(220, 18%, 10%)",
+                      border: "1px solid hsl(220, 14%, 18%)",
+                      borderRadius: "10px",
+                      color: "hsl(210, 20%, 92%)",
+                      boxShadow: "0 10px 30px -10px hsl(220, 20%, 5% / 0.5)",
+                    }}
+                    cursor={{ fill: "hsl(220, 14%, 14% / 0.5)" }}
+                  />
+                  <Bar dataKey="validations" fill="hsl(174, 72%, 52%)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-card p-5 sm:p-6 glow-hover animate-fade-in" style={{ animationDelay: "200ms" }}>
+              <div className="flex items-center gap-2 mb-5">
+                <div className="rounded-lg bg-primary/10 p-1.5">
+                  <Key className="h-4 w-4 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">License Distribution</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                    {pieData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(220, 18%, 10%)",
+                      border: "1px solid hsl(220, 14%, 18%)",
+                      borderRadius: "10px",
+                      color: "hsl(210, 20%, 92%)",
+                      boxShadow: "0 10px 30px -10px hsl(220, 20%, 5% / 0.5)",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-4 flex flex-wrap justify-center gap-4">
+                {pieData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                    <span className="text-xs text-muted-foreground">{entry.name}: {entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
+      {/* Widgets Row */}
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ActiveSessionsWidget />
         <CountryHeatmap />
@@ -149,35 +211,56 @@ export default function Dashboard() {
         <HourlyTrendsChart />
       </div>
 
+      {/* Recent Activity & Licenses */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Recent Activity</h3>
-          <div className="space-y-3">
-            {recentLogs.length === 0 && <p className="text-sm text-muted-foreground">No activity yet</p>}
-            {recentLogs.map((log: any) => (
-              <div key={log.id} className="flex items-start gap-3 rounded-md bg-secondary/30 px-3 py-2.5 transition-all duration-200 hover:bg-secondary/50">
-                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary animate-glow-pulse" />
+        <div className="rounded-xl border border-border/60 bg-card p-5 sm:p-6 glow-hover animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+          </div>
+          <div className="space-y-2">
+            {loading && Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+            {!loading && recentLogs.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No activity yet</p>
+            )}
+            {!loading && recentLogs.map((log: any, i: number) => (
+              <div
+                key={log.id}
+                className="flex items-start gap-3 rounded-lg bg-secondary/20 px-3 py-3 transition-all duration-200 hover:bg-secondary/40 border border-transparent hover:border-border/30"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary animate-pulse" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-foreground">{log.action}</p>
-                  <p className="font-mono text-xs text-muted-foreground truncate">{log.license_key}</p>
-                  <p className="text-xs text-muted-foreground">{log.application_name} · {formatDate(log.created_at)}</p>
+                  <p className="text-sm font-medium text-foreground">{log.action}</p>
+                  <p className="font-mono text-xs text-muted-foreground truncate mt-0.5">{log.license_key}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{log.application_name} · {formatDate(log.created_at)}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Latest Licenses</h3>
-          <div className="space-y-3">
-            {recentLicenses.length === 0 && <p className="text-sm text-muted-foreground">No licenses yet</p>}
-            {recentLicenses.map((lic: any) => (
-              <div key={lic.id} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2.5 transition-all duration-200 hover:bg-secondary/50">
+        <div className="rounded-xl border border-border/60 bg-card p-5 sm:p-6 glow-hover animate-fade-in" style={{ animationDelay: "400ms" }}>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <Key className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Latest Licenses</h3>
+          </div>
+          <div className="space-y-2">
+            {loading && Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}
+            {!loading && recentLicenses.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No licenses yet</p>
+            )}
+            {!loading && recentLicenses.map((lic: any) => (
+              <div key={lic.id} className="flex items-center justify-between rounded-lg bg-secondary/20 px-3 py-3 transition-all duration-200 hover:bg-secondary/40 border border-transparent hover:border-border/30">
                 <div className="min-w-0">
                   <p className="license-key truncate">{lic.license_key}</p>
-                  <p className="text-xs text-muted-foreground">{lic.applications?.name || "Unknown"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{lic.applications?.name || "Unknown"}</p>
                 </div>
-                <span className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
+                <span className={`ml-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                   {lic.status}
                 </span>
               </div>
@@ -186,24 +269,30 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Reseller Stats */}
       {resellerStats.length > 0 && (
-        <div className="mt-8 rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Reseller Statistics</h3>
+        <div className="mt-8 rounded-xl border border-border/60 bg-card p-5 sm:p-6 glow-hover animate-fade-in" style={{ animationDelay: "500ms" }}>
+          <div className="flex items-center gap-2 mb-5">
+            <div className="rounded-lg bg-primary/10 p-1.5">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Reseller Statistics</h3>
+          </div>
           <div className="table-responsive">
-            <div className="rounded-lg border border-border overflow-hidden min-w-[500px]">
+            <div className="rounded-lg border border-border/50 overflow-hidden min-w-[500px]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-secondary/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Username</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Credits</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
+                  <tr className="border-b border-border bg-secondary/30">
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Username</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Credits</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Generated</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Joined</th>
                   </tr>
                 </thead>
                 <tbody>
                   {resellerStats.map((r: any, i: number) => (
-                    <tr key={r.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                    <tr key={r.id} className="table-row-hover border-b border-border/50 animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                       <td className="px-4 py-3 font-medium text-foreground">{r.username}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.email}</td>
                       <td className="px-4 py-3"><span className="font-mono text-primary font-semibold">{r.credits}</span></td>
