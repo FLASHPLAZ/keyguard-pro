@@ -456,6 +456,10 @@ export default function Licenses() {
                 </span>
               </div>
               <div>
+                <span className="text-muted-foreground">Owner: </span>
+                <span className="text-foreground">{lic.owner_name || "—"}</span>
+              </div>
+              <div>
                 <span className="text-muted-foreground">Reseller: </span>
                 <span className="text-foreground">{lic.resellers?.username || "—"}</span>
               </div>
@@ -499,6 +503,7 @@ export default function Licenses() {
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
@@ -527,6 +532,7 @@ export default function Licenses() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
