@@ -308,6 +308,47 @@ export default function ManagerLicenses() {
           <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       )}
+
+      {/* Notes & Tags Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> License Details</DialogTitle></DialogHeader>
+          {editingLicense && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">License Key</label>
+                <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Notes</label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Add notes about this license..."
+                  className="bg-secondary border-border min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Tags (comma separated)</label>
+                <Input
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="vip, premium, test..."
+                  className="bg-secondary border-border"
+                />
+                {editTags && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {editTags.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
+                      <Badge key={tag} variant="outline" className="text-xs border-primary/30 text-primary">{tag}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button onClick={saveDetails} className="w-full btn-glow">Save Details</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </ManagerLayout>
   );
 }
