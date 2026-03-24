@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { generateLicenseKey, getLicenseStatusColor, formatDate, DURATION_OPTIONS, getDurationLabel } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,7 @@ export default function Licenses() {
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [ownerName, setOwnerName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     if (!user) return;
@@ -43,6 +47,7 @@ export default function Licenses() {
     ]);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [user]);
@@ -353,7 +358,7 @@ export default function Licenses() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageTransition>
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
           <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
