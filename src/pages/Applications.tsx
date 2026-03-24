@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { TableSkeleton, CardSkeleton } from "@/components/TableSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +18,7 @@ import { notifyDiscord } from "@/lib/discord-notify";
 export default function Applications() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [newAppName, setNewAppName] = useState("");
   const [newAppDesc, setNewAppDesc] = useState("");
@@ -26,6 +30,7 @@ export default function Applications() {
     if (!user) return;
     const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
     setApps(data || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchApps(); }, [user]);
@@ -118,8 +123,9 @@ export default function Applications() {
 
   return (
     <DashboardLayout>
+      <PageTransition>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="animate-fade-in">
+        <div>
           <h1 className="text-2xl font-bold text-foreground">Applications</h1>
           <p className="text-sm text-muted-foreground">Manage your software applications</p>
         </div>
@@ -263,35 +269,22 @@ export default function Applications() {
         </div>
       </div>
 
-      <div className="table-responsive">
-        <div className="rounded-lg border border-border overflow-hidden min-w-[600px]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Signing</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((app, i) => (
-                <tr key={app.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                  <td className="px-4 py-3">
+      {loading ? (
+        <TableSkeleton columns={6} rows={4} />
+      ) : (
+        <>
+          {/* Mobile card view */}
+          <div className="block sm:hidden space-y-3">
+            {filtered.length === 0 ? (
+              <EmptyState icon={Search} title="No applications found" description="Try a different search or create a new app" />
+            ) : (
+              filtered.map((app, i) => (
+                <div key={app.id} className="mobile-card animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                  <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="font-medium text-foreground">{app.name}</p>
                       <p className="text-xs text-muted-foreground">{app.description}</p>
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1 max-w-[140px] truncate" title={app.id}>
-                      {app.id.slice(0, 8)}…
-                      <Copy className="h-3 w-3 shrink-0" />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
                     {app.kill_switch ? (
                       <span className="badge-banned inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">KILLED</span>
                     ) : app.suspended ? (
@@ -299,42 +292,99 @@ export default function Applications() {
                     ) : (
                       <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {app.signature_required ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        <ShieldCheck className="h-3 w-3" /> On
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Off</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
-                        <Eye className="h-4 w-4 text-primary" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} title={app.suspended ? "Resume" : "Suspend"} className="hover:bg-warning/10">
-                        {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} title="Kill Switch" className="hover:bg-destructive/10">
-                        <Power className="h-4 w-4 text-destructive" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">No applications found</div>
-          )}
-        </div>
-      </div>
+                  </div>
+                  <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary mb-3 flex items-center gap-1">
+                    {app.id.slice(0, 16)}… <Copy className="h-3 w-3" />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} className="hover:bg-primary/10 h-8 w-8"><Eye className="h-4 w-4 text-primary" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} className="hover:bg-warning/10 h-8 w-8">
+                      {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} className="hover:bg-destructive/10 h-8 w-8"><Power className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} className="hover:bg-destructive/10 h-8 w-8"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="table-responsive hidden sm:block">
+            <div className="rounded-lg border border-border overflow-hidden min-w-[600px]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-secondary/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Signing</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((app, i) => (
+                    <tr key={app.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-medium text-foreground">{app.name}</p>
+                          <p className="text-xs text-muted-foreground">{app.description}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1 max-w-[140px] truncate" title={app.id}>
+                          {app.id.slice(0, 8)}…
+                          <Copy className="h-3 w-3 shrink-0" />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        {app.kill_switch ? (
+                          <span className="badge-banned inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">KILLED</span>
+                        ) : app.suspended ? (
+                          <span className="badge-suspended inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Suspended</span>
+                        ) : (
+                          <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {app.signature_required ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            <ShieldCheck className="h-3 w-3" /> On
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Off</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
+                            <Eye className="h-4 w-4 text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleSuspend(app.id, app.suspended, app.name)} title={app.suspended ? "Resume" : "Suspend"} className="hover:bg-warning/10">
+                            {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} title="Kill Switch" className="hover:bg-destructive/10">
+                            <Power className="h-4 w-4 text-destructive" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filtered.length === 0 && (
+                <EmptyState icon={Search} title="No applications found" description="Try a different search or create a new app" />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+      </PageTransition>
     </DashboardLayout>
   );
 }

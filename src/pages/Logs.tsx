@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { formatDate } from "@/lib/license";
 import { Input } from "@/components/ui/input";
-import { Search, Globe, Monitor, MapPin, Download } from "lucide-react";
+import { Search, Globe, Monitor, MapPin, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,11 +36,12 @@ export default function Logs() {
   const [logs, setLogs] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000)
-      .then(({ data }) => setLogs(data || []));
+      .then(({ data }) => { setLogs(data || []); setLoading(false); });
   }, [user]);
 
   const filtered = logs.filter(
@@ -78,7 +82,8 @@ export default function Logs() {
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
+      <PageTransition>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
           <p className="text-sm text-muted-foreground">Track all license activity — {filtered.length} entries</p>
@@ -95,7 +100,37 @@ export default function Logs() {
         </div>
       </div>
 
-      <div className="table-responsive">
+      {loading ? (
+        <TableSkeleton columns={8} rows={8} />
+      ) : (
+        <>
+          {/* Mobile card view */}
+          <div className="block sm:hidden space-y-3">
+            {paginated.length === 0 ? (
+              <EmptyState icon={FileText} title="No logs found" description="Activity will appear here" />
+            ) : paginated.map((log, i) => {
+              const badge = getActionBadge(log.action);
+              return (
+                <div key={log.id} className="mobile-card animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge.color}`}>
+                      {badge.label}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{formatDate(log.created_at)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div><span className="text-muted-foreground">Key: </span><span className="font-mono text-primary">{log.license_key ? log.license_key.slice(0, 20) + "…" : "—"}</span></div>
+                    <div><span className="text-muted-foreground">App: </span><span className="text-foreground">{log.application_name || "—"}</span></div>
+                    <div><span className="text-muted-foreground">IP: </span><span className="font-mono text-muted-foreground">{log.ip || "—"}</span></div>
+                    <div><span className="text-muted-foreground">Country: </span><span className="text-foreground">{log.country || "—"}</span></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="table-responsive hidden sm:block">
         <div className="rounded-lg border border-border overflow-hidden min-w-[900px]">
           <table className="w-full text-sm">
             <thead>
@@ -139,16 +174,19 @@ export default function Logs() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">No logs found</div>
+            <EmptyState icon={FileText} title="No logs found" description="Activity will appear here" />
           )}
         </div>
       </div>
+        </>
+      )}
 
       {filtered.length > PAGE_SIZE && (
         <div className="mt-4">
           <TablePagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       )}
+      </PageTransition>
     </DashboardLayout>
   );
 }

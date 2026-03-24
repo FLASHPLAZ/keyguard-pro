@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition, StaggerChildren } from "@/components/PageTransition";
 import { StatCard } from "@/components/StatCard";
 import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
 import { CountryHeatmap } from "@/components/CountryHeatmap";
@@ -99,14 +100,15 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
+      <PageTransition>
       {/* Header */}
-      <div className="mb-8 animate-fade-in">
+      <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">Overview of your license management system</p>
       </div>
 
       {/* Stat Cards */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <StaggerChildren className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/60 bg-card p-5 space-y-3">
@@ -124,7 +126,7 @@ export default function Dashboard() {
             <StatCard title="Resellers" value={stats.totalResellers} icon={Users} />
           </>
         )}
-      </div>
+      </StaggerChildren>
 
       {/* Charts Row */}
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -306,6 +308,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      </PageTransition>
     </DashboardLayout>
   );
 }

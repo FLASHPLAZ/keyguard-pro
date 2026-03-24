@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -193,6 +195,7 @@ export default function Managers() {
 
   return (
     <DashboardLayout>
+      <PageTransition>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Managers</h1>
@@ -317,6 +320,7 @@ export default function Managers() {
           )}
         </div>
       </div>
+      </PageTransition>
     </DashboardLayout>
   );
 }

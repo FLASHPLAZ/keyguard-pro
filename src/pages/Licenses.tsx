@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 import { generateLicenseKey, getLicenseStatusColor, formatDate, DURATION_OPTIONS, getDurationLabel } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,7 @@ export default function Licenses() {
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [ownerName, setOwnerName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     if (!user) return;
@@ -43,6 +47,7 @@ export default function Licenses() {
     ]);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [user]);
