@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { formatDate } from "@/lib/license";
 import { Input } from "@/components/ui/input";
-import { Search, Globe, Monitor, MapPin } from "lucide-react";
+import { Search, Globe, Monitor, MapPin, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { TablePagination } from "@/components/TablePagination";
@@ -53,11 +54,38 @@ export default function Logs() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const exportCsv = () => {
+    const headers = ["Timestamp", "Action", "License Key", "Application", "IP", "Country", "Device", "HWID"];
+    const rows = filtered.map(l => [
+      l.created_at,
+      l.action,
+      l.license_key || "",
+      l.application_name || "",
+      l.ip || "",
+      l.country || "",
+      l.device_name || "",
+      l.hwid || "",
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity_logs_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <DashboardLayout>
-      <div className="mb-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
-        <p className="text-sm text-muted-foreground">Track all license activity and system events — {filtered.length} entries</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
+          <p className="text-sm text-muted-foreground">Track all license activity — {filtered.length} entries</p>
+        </div>
+        <Button variant="outline" onClick={exportCsv} className="w-full sm:w-auto h-9 text-xs">
+          <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+        </Button>
       </div>
 
       <div className="mb-4">
