@@ -33,6 +33,7 @@ export default function Licenses() {
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
 
   const fetchData = async () => {
     if (!user) return;
@@ -51,6 +52,7 @@ export default function Licenses() {
     const matchSearch = l.license_key.toLowerCase().includes(s) ||
       (l.applications?.name || "").toLowerCase().includes(s) ||
       (l.notes || "").toLowerCase().includes(s) ||
+      (l.owner_name || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
@@ -157,10 +159,11 @@ export default function Licenses() {
   };
 
   const exportCsv = () => {
-    const headers = ["License Key", "Application", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
+    const headers = ["License Key", "Application", "Owner", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
     const rows = filtered.map(l => [
       l.license_key,
       l.applications?.name || "",
+      l.owner_name || "",
       l.status,
       l.hwid || "",
       l.ip || "",
@@ -190,6 +193,7 @@ export default function Licenses() {
       user_id: user.id,
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
+      owner_name: ownerName.trim() || null,
     }));
     const { error } = await supabase.from("licenses").insert(inserts);
     if (error) { toast.error(error.message); return; }
@@ -203,8 +207,9 @@ export default function Licenses() {
     });
 
     setDialogOpen(false);
+    setOwnerName("");
     toast.success(`Generated ${keyCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
+    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
   };
 
