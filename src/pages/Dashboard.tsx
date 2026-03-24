@@ -44,52 +44,72 @@ export default function Dashboard() {
   const [barData, setBarData] = useState<{ name: string; validations: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = async () => {
+    if (!user) return;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes, validationLogsRes] = await Promise.all([
+      supabase.from("applications").select("id", { count: "exact", head: true }),
+      supabase.from("licenses").select("id, status", { count: "exact" }),
+      supabase.from("resellers").select("id", { count: "exact", head: true }),
+      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
+      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
+      supabase.from("resellers").select("*").order("created_at", { ascending: false }),
+      supabase.from("activity_logs")
+        .select("created_at")
+        .in("action", ["License Login", "First Login — HWID Bound"])
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const licenses = licensesRes.data || [];
+    setStats({
+      totalApps: appsRes.count || 0,
+      totalLicenses: licensesRes.count || 0,
+      activeLicenses: licenses.filter(l => l.status === "active").length,
+      expiredLicenses: licenses.filter(l => l.status === "expired").length,
+      bannedLicenses: licenses.filter(l => l.status === "banned").length,
+      totalResellers: resellersRes.count || 0,
+    });
+    setRecentLogs(logsRes.data || []);
+    setRecentLicenses(latestLicRes.data || []);
+    setResellerStats(resellerDetailRes.data || []);
+
+    const days = getLast7DaysLabels();
+    const countsByDate = new Map<string, number>();
+    for (const row of validationLogsRes.data || []) {
+      const dateKey = new Date(row.created_at).toISOString().split("T")[0];
+      countsByDate.set(dateKey, (countsByDate.get(dateKey) || 0) + 1);
+    }
+    setBarData(days.map(d => ({
+      name: d.label,
+      validations: countsByDate.get(d.dateStr) || 0,
+    })));
+    setLoading(false);
+  };
+
+  // Initial fetch
   useEffect(() => {
     if (!user) return;
-    const fetchData = async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes, validationLogsRes] = await Promise.all([
-        supabase.from("applications").select("id", { count: "exact", head: true }),
-        supabase.from("licenses").select("id, status", { count: "exact" }),
-        supabase.from("resellers").select("id", { count: "exact", head: true }),
-        supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
-        supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
-        supabase.from("resellers").select("*").order("created_at", { ascending: false }),
-        supabase.from("activity_logs")
-          .select("created_at")
-          .in("action", ["License Login", "First Login — HWID Bound"])
-          .gte("created_at", sevenDaysAgo.toISOString())
-          .order("created_at", { ascending: true }),
-      ]);
-
-      const licenses = licensesRes.data || [];
-      setStats({
-        totalApps: appsRes.count || 0,
-        totalLicenses: licensesRes.count || 0,
-        activeLicenses: licenses.filter(l => l.status === "active").length,
-        expiredLicenses: licenses.filter(l => l.status === "expired").length,
-        bannedLicenses: licenses.filter(l => l.status === "banned").length,
-        totalResellers: resellersRes.count || 0,
-      });
-      setRecentLogs(logsRes.data || []);
-      setRecentLicenses(latestLicRes.data || []);
-      setResellerStats(resellerDetailRes.data || []);
-
-      const days = getLast7DaysLabels();
-      const countsByDate = new Map<string, number>();
-      for (const row of validationLogsRes.data || []) {
-        const dateKey = new Date(row.created_at).toISOString().split("T")[0];
-        countsByDate.set(dateKey, (countsByDate.get(dateKey) || 0) + 1);
-      }
-      setBarData(days.map(d => ({
-        name: d.label,
-        validations: countsByDate.get(d.dateStr) || 0,
-      })));
-      setLoading(false);
-    };
     fetchData();
+  }, [user]);
+
+  // Real-time subscriptions — auto-refresh dashboard on new data
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "resellers" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const pieData = [
