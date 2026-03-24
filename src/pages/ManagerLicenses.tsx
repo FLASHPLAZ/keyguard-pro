@@ -34,6 +34,8 @@ export default function ManagerLicenses() {
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
+  const [editOwnerName, setEditOwnerName] = useState("");
 
   const fetchData = async () => {
     if (!user) return;
@@ -52,6 +54,7 @@ export default function ManagerLicenses() {
     const matchSearch = l.license_key.toLowerCase().includes(s) ||
       (l.applications?.name || "").toLowerCase().includes(s) ||
       (l.notes || "").toLowerCase().includes(s) ||
+      (l.owner_name || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
@@ -82,6 +85,7 @@ export default function ManagerLicenses() {
         user_id: user.id,
         expires_at: expiresAt.toISOString(),
         status: "unused",
+        owner_name: ownerName.trim() || null,
       });
     }
 
@@ -96,6 +100,7 @@ export default function ManagerLicenses() {
       App: appName,
       Count: keyCount,
       Duration: `${durationDays} days`,
+      Owner: ownerName.trim() || "N/A",
       "Created by": user.email || "Manager",
     });
 
@@ -103,6 +108,7 @@ export default function ManagerLicenses() {
     setDialogOpen(false);
     setSelectedApp("");
     setKeyCount(1);
+    setOwnerName("");
     fetchData();
   };
 
@@ -161,13 +167,14 @@ export default function ManagerLicenses() {
     setEditingLicense(lic);
     setEditNotes(lic.notes || "");
     setEditTags((lic.tags || []).join(", "));
+    setEditOwnerName(lic.owner_name || "");
     setDetailsDialogOpen(true);
   };
 
   const saveDetails = async () => {
     if (!editingLicense) return;
     const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
-    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray }).eq("id", editingLicense.id);
+    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
     toast.success("License details saved");
     setDetailsDialogOpen(false);
     fetchData();
@@ -210,6 +217,10 @@ export default function ManagerLicenses() {
                   <label className="mb-1 block text-xs text-muted-foreground">Number of Keys</label>
                   <Input type="number" min={1} max={50} value={keyCount} onChange={e => setKeyCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))} className="bg-secondary border-border" />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
+                  <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
+                </div>
                 <Button onClick={createLicenses} className="w-full btn-glow" disabled={!selectedApp}>Create Keys</Button>
               </div>
             </DialogContent>
@@ -241,6 +252,7 @@ export default function ManagerLicenses() {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
@@ -253,6 +265,7 @@ export default function ManagerLicenses() {
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3 license-key text-xs">{lic.license_key}</td>
                   <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>{lic.status}</span>
                   </td>
@@ -318,6 +331,15 @@ export default function ManagerLicenses() {
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">License Key</label>
                 <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name</label>
+                <Input
+                  value={editOwnerName}
+                  onChange={(e) => setEditOwnerName(e.target.value)}
+                  placeholder="e.g. John, Discord#1234..."
+                  className="bg-secondary border-border"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Notes</label>

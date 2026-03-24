@@ -1,0 +1,1 @@
+ALTER TABLE public.licenses ADD COLUMN owner_name text DEFAULT NULL;

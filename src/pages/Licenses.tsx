@@ -33,6 +33,7 @@ export default function Licenses() {
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
 
   const fetchData = async () => {
     if (!user) return;
@@ -51,6 +52,7 @@ export default function Licenses() {
     const matchSearch = l.license_key.toLowerCase().includes(s) ||
       (l.applications?.name || "").toLowerCase().includes(s) ||
       (l.notes || "").toLowerCase().includes(s) ||
+      (l.owner_name || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
@@ -157,10 +159,11 @@ export default function Licenses() {
   };
 
   const exportCsv = () => {
-    const headers = ["License Key", "Application", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
+    const headers = ["License Key", "Application", "Owner", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
     const rows = filtered.map(l => [
       l.license_key,
       l.applications?.name || "",
+      l.owner_name || "",
       l.status,
       l.hwid || "",
       l.ip || "",
@@ -190,6 +193,7 @@ export default function Licenses() {
       user_id: user.id,
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
+      owner_name: ownerName.trim() || null,
     }));
     const { error } = await supabase.from("licenses").insert(inserts);
     if (error) { toast.error(error.message); return; }
@@ -203,8 +207,9 @@ export default function Licenses() {
     });
 
     setDialogOpen(false);
+    setOwnerName("");
     toast.success(`Generated ${keyCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)) });
+    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
   };
 
@@ -268,17 +273,20 @@ export default function Licenses() {
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
+  const [editOwnerName, setEditOwnerName] = useState("");
+
   const openDetails = (lic: any) => {
     setEditingLicense(lic);
     setEditNotes(lic.notes || "");
     setEditTags((lic.tags || []).join(", "));
+    setEditOwnerName(lic.owner_name || "");
     setDetailsDialogOpen(true);
   };
 
   const saveDetails = async () => {
     if (!editingLicense) return;
     const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
-    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray }).eq("id", editingLicense.id);
+    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
     toast.success("License details saved");
     setDetailsDialogOpen(false);
     fetchData();
@@ -384,6 +392,10 @@ export default function Licenses() {
                 <label className="mb-1 block text-xs text-muted-foreground">Quantity</label>
                 <Input type="number" min={1} max={100} value={keyCount} onChange={(e) => setKeyCount(Number(e.target.value))} className="bg-secondary border-border" />
               </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
+                <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
+              </div>
               <Button onClick={generateKeys} className="w-full btn-glow">Generate</Button>
             </div>
           </DialogContent>
@@ -394,7 +406,7 @@ export default function Licenses() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys or apps..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search keys, apps, owners..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-full sm:w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
@@ -447,6 +459,10 @@ export default function Licenses() {
                 </span>
               </div>
               <div>
+                <span className="text-muted-foreground">Owner: </span>
+                <span className="text-foreground">{lic.owner_name || "—"}</span>
+              </div>
+              <div>
                 <span className="text-muted-foreground">Reseller: </span>
                 <span className="text-foreground">{lic.resellers?.username || "—"}</span>
               </div>
@@ -490,6 +506,7 @@ export default function Licenses() {
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
@@ -518,6 +535,7 @@ export default function Licenses() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
@@ -562,6 +580,15 @@ export default function Licenses() {
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">License Key</label>
                 <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name</label>
+                <Input
+                  value={editOwnerName}
+                  onChange={(e) => setEditOwnerName(e.target.value)}
+                  placeholder="e.g. John, Discord#1234..."
+                  className="bg-secondary border-border"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Notes</label>
