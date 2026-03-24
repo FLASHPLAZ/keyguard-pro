@@ -47,8 +47,11 @@ export default function Licenses() {
   useEffect(() => { fetchData(); }, [user]);
 
   const filtered = licenses.filter((l) => {
-    const matchSearch = l.license_key.toLowerCase().includes(search.toLowerCase()) ||
-      (l.applications?.name || "").toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    const matchSearch = l.license_key.toLowerCase().includes(s) ||
+      (l.applications?.name || "").toLowerCase().includes(s) ||
+      (l.notes || "").toLowerCase().includes(s) ||
+      (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -389,6 +392,14 @@ export default function Licenses() {
                 <span className="text-muted-foreground">Expires: </span>
                 <span className="text-muted-foreground">{formatDate(lic.expires_at)}</span>
               </div>
+              {(lic.tags?.length > 0 || lic.notes) && (
+                <div className="col-span-2 flex flex-wrap gap-1 mt-1">
+                  {lic.notes && <span className="text-xs text-muted-foreground italic truncate max-w-full">📝 {lic.notes.slice(0, 50)}</span>}
+                  {(lic.tags || []).map((tag: string) => (
+                    <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <ActionButtons lic={lic} />
           </div>
@@ -414,7 +425,7 @@ export default function Licenses() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
@@ -447,9 +458,13 @@ export default function Licenses() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
-                      {lic.hwid ? "Yes" : "No"}
-                    </span>
+                    <div className="flex flex-wrap gap-1 max-w-[150px]">
+                      {(lic.tags || []).slice(0, 3).map((tag: string) => (
+                        <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+                      ))}
+                      {(lic.tags || []).length > 3 && <span className="text-[10px] text-muted-foreground">+{lic.tags.length - 3}</span>}
+                      {lic.notes && <StickyNote className="h-3 w-3 text-muted-foreground" title={lic.notes} />}
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
                     {lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}
