@@ -354,8 +354,7 @@ export default function Licenses() {
           <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
             <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
           </Button>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
           </DialogTrigger>
