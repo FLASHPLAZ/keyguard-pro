@@ -179,9 +179,10 @@ async function verifyHmacSignature(
 
 // ── Helper: log + webhook fire-and-forget ──
 function logAndNotify(
-  supabase: any, webhookUrl: string, logData: Record<string, any>, discordAction: string, embedData: Record<string, any>
+  supabase: any, webhookUrl: string, logData: Record<string, any>, discordAction: string, embedData: Record<string, any>,
+  startTime?: number
 ) {
-  // Both are fire-and-forget to not block response
+  if (startTime) logData.response_time_ms = Date.now() - startTime;
   supabase.from("activity_logs").insert(logData).then(() => {});
   fireDiscordWebhook(webhookUrl, discordAction, embedData);
 }
@@ -200,6 +201,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const startTime = Date.now();
     const rawBody = await req.text();
     let parsed: any;
     try {
