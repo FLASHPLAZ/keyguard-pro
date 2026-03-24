@@ -388,6 +388,7 @@ export default function Licenses() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
