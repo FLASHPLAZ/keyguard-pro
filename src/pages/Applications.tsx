@@ -124,6 +124,7 @@ export default function Applications() {
     <DashboardLayout>
       <PageTransition>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
           <h1 className="text-2xl font-bold text-foreground">Applications</h1>
           <p className="text-sm text-muted-foreground">Manage your software applications</p>
         </div>
