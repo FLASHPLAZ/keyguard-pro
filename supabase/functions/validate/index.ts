@@ -15,6 +15,28 @@ const SIGNATURE_MAX_AGE_SECONDS = 60;
 let settingsCache: { data: AdminSettings; expiry: number } | null = null;
 const SETTINGS_CACHE_TTL_MS = 60_000; // 1 minute
 
+// ── Error rate tracking for alerting ──
+let errorWindow: number[] = [];
+const ERROR_ALERT_THRESHOLD = 10; // errors in window
+const ERROR_ALERT_WINDOW_MS = 5 * 60_000; // 5 minutes
+let lastErrorAlert = 0;
+const ERROR_ALERT_COOLDOWN_MS = 15 * 60_000; // 15 min cooldown
+
+function trackError(webhookUrl: string, action: string) {
+  const now = Date.now();
+  errorWindow.push(now);
+  errorWindow = errorWindow.filter(t => now - t < ERROR_ALERT_WINDOW_MS);
+  if (errorWindow.length >= ERROR_ALERT_THRESHOLD && now - lastErrorAlert > ERROR_ALERT_COOLDOWN_MS) {
+    lastErrorAlert = now;
+    fireDiscordWebhook(webhookUrl, "🚨 High Error Rate Alert", {
+      "⚠️ Errors (5min)": errorWindow.length,
+      "📊 Threshold": ERROR_ALERT_THRESHOLD,
+      "🔥 Latest": action,
+      "⏰ Time": new Date().toISOString(),
+    });
+  }
+}
+
 interface AdminSettings {
   rateLimitMax: number;
   rateLimitWindow: number;
