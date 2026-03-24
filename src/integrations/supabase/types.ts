@@ -180,6 +180,7 @@ export type Database = {
           last_used: string | null
           license_key: string
           notes: string | null
+          owner_name: string | null
           status: string
           tags: string[] | null
           user_id: string
@@ -198,6 +199,7 @@ export type Database = {
           last_used?: string | null
           license_key: string
           notes?: string | null
+          owner_name?: string | null
           status?: string
           tags?: string[] | null
           user_id: string
@@ -216,6 +218,7 @@ export type Database = {
           last_used?: string | null
           license_key?: string
           notes?: string | null
+          owner_name?: string | null
           status?: string
           tags?: string[] | null
           user_id?: string
