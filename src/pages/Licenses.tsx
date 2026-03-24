@@ -389,6 +389,10 @@ export default function Licenses() {
                 <label className="mb-1 block text-xs text-muted-foreground">Quantity</label>
                 <Input type="number" min={1} max={100} value={keyCount} onChange={(e) => setKeyCount(Number(e.target.value))} className="bg-secondary border-border" />
               </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
+                <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
+              </div>
               <Button onClick={generateKeys} className="w-full btn-glow">Generate</Button>
             </div>
           </DialogContent>
@@ -399,7 +403,7 @@ export default function Licenses() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys or apps..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search keys, apps, owners..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
           <SelectTrigger className="w-full sm:w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
