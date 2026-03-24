@@ -217,6 +217,10 @@ export default function ManagerLicenses() {
                   <label className="mb-1 block text-xs text-muted-foreground">Number of Keys</label>
                   <Input type="number" min={1} max={50} value={keyCount} onChange={e => setKeyCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))} className="bg-secondary border-border" />
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
+                  <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
+                </div>
                 <Button onClick={createLicenses} className="w-full btn-glow" disabled={!selectedApp}>Create Keys</Button>
               </div>
             </DialogContent>
