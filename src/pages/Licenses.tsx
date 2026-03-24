@@ -463,7 +463,7 @@ export default function Licenses() {
                         <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
                       ))}
                       {(lic.tags || []).length > 3 && <span className="text-[10px] text-muted-foreground">+{lic.tags.length - 3}</span>}
-                      {lic.notes && <StickyNote className="h-3 w-3 text-muted-foreground" title={lic.notes} />}
+                      {lic.notes && <span className="text-[10px] text-muted-foreground" title={lic.notes}>📝</span>}
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
