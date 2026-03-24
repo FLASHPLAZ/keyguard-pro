@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +29,10 @@ export default function Licenses() {
   const PAGE_SIZE = 20;
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingLicense, setEditingLicense] = useState<any>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -41,8 +47,11 @@ export default function Licenses() {
   useEffect(() => { fetchData(); }, [user]);
 
   const filtered = licenses.filter((l) => {
-    const matchSearch = l.license_key.toLowerCase().includes(search.toLowerCase()) ||
-      (l.applications?.name || "").toLowerCase().includes(search.toLowerCase());
+    const s = search.toLowerCase();
+    const matchSearch = l.license_key.toLowerCase().includes(s) ||
+      (l.applications?.name || "").toLowerCase().includes(s) ||
+      (l.notes || "").toLowerCase().includes(s) ||
+      (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -204,6 +213,22 @@ export default function Licenses() {
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
+  const openDetails = (lic: any) => {
+    setEditingLicense(lic);
+    setEditNotes(lic.notes || "");
+    setEditTags((lic.tags || []).join(", "));
+    setDetailsDialogOpen(true);
+  };
+
+  const saveDetails = async () => {
+    if (!editingLicense) return;
+    const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
+    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray }).eq("id", editingLicense.id);
+    toast.success("License details saved");
+    setDetailsDialogOpen(false);
+    fetchData();
+  };
+
   const ActionButtons = ({ lic }: { lic: any }) => (
     <div className="flex items-center gap-1 flex-wrap">
       <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10 h-8 w-8">
@@ -224,6 +249,9 @@ export default function Licenses() {
           <Ban className="h-4 w-4 text-destructive" />
         </Button>
       )}
+      <Button variant="ghost" size="icon" onClick={() => openDetails(lic)} title="Notes & Tags" className="hover:bg-accent/10 h-8 w-8">
+        <StickyNote className="h-4 w-4 text-accent-foreground" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>
@@ -364,6 +392,14 @@ export default function Licenses() {
                 <span className="text-muted-foreground">Expires: </span>
                 <span className="text-muted-foreground">{formatDate(lic.expires_at)}</span>
               </div>
+              {(lic.tags?.length > 0 || lic.notes) && (
+                <div className="col-span-2 flex flex-wrap gap-1 mt-1">
+                  {lic.notes && <span className="text-xs text-muted-foreground italic truncate max-w-full">📝 {lic.notes.slice(0, 50)}</span>}
+                  {(lic.tags || []).map((tag: string) => (
+                    <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <ActionButtons lic={lic} />
           </div>
@@ -389,7 +425,7 @@ export default function Licenses() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Used</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
@@ -422,9 +458,13 @@ export default function Licenses() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${lic.hwid ? 'badge-active' : 'badge-suspended'}`}>
-                      {lic.hwid ? "Yes" : "No"}
-                    </span>
+                    <div className="flex flex-wrap gap-1 max-w-[150px]">
+                      {(lic.tags || []).slice(0, 3).map((tag: string) => (
+                        <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+                      ))}
+                      {(lic.tags || []).length > 3 && <span className="text-[10px] text-muted-foreground">+{lic.tags.length - 3}</span>}
+                      {lic.notes && <span className="text-[10px] text-muted-foreground" title={lic.notes}>📝</span>}
+                    </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
                     {lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}
@@ -446,6 +486,47 @@ export default function Licenses() {
           <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
         </div>
       </div>
+
+      {/* Notes & Tags Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><StickyNote className="h-4 w-4" /> License Details</DialogTitle></DialogHeader>
+          {editingLicense && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">License Key</label>
+                <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Notes</label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Add notes about this license..."
+                  className="bg-secondary border-border min-h-[80px]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Tags (comma separated)</label>
+                <Input
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="vip, premium, test..."
+                  className="bg-secondary border-border"
+                />
+                {editTags && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {editTags.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
+                      <Badge key={tag} variant="outline" className="text-xs border-primary/30 text-primary">{tag}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button onClick={saveDetails} className="w-full btn-glow">Save Details</Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

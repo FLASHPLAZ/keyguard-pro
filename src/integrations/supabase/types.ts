@@ -176,7 +176,9 @@ export type Database = {
           ip: string | null
           last_used: string | null
           license_key: string
+          notes: string | null
           status: string
+          tags: string[] | null
           user_id: string
         }
         Insert: {
@@ -192,7 +194,9 @@ export type Database = {
           ip?: string | null
           last_used?: string | null
           license_key: string
+          notes?: string | null
           status?: string
+          tags?: string[] | null
           user_id: string
         }
         Update: {
@@ -208,7 +212,9 @@ export type Database = {
           ip?: string | null
           last_used?: string | null
           license_key?: string
+          notes?: string | null
           status?: string
+          tags?: string[] | null
           user_id?: string
         }
         Relationships: [
