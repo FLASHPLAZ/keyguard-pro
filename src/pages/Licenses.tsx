@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag } from "lucide-react";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag, Download } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,6 +124,61 @@ export default function Licenses() {
     notifyDiscord("License extended", { Action: "Bulk extend", Count: toUpdate.length, Added: "+30 days", Keys: keys.slice(0, 200) });
     clearSelection();
     fetchData();
+  };
+
+  const bulkUnban = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const toUnban = selectedLicenses.filter(l => l.banned);
+    if (toUnban.length === 0) { toast.error("No banned licenses selected"); return; }
+    for (const lic of toUnban) {
+      const restoredStatus = lic.hwid ? "active" : "unused";
+      await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", lic.id);
+    }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` });
+    toast.success(`Unbanned ${toUnban.length} license(s)`);
+    notifyDiscord("License unbanned", { Action: "Bulk unban", Count: toUnban.length });
+    clearSelection();
+    fetchData();
+  };
+
+  const bulkResetHwid = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const toReset = selectedLicenses.filter(l => l.hwid);
+    if (toReset.length === 0) { toast.error("No licenses with HWID selected"); return; }
+    for (const lic of toReset) {
+      await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` });
+    toast.success(`Reset HWID for ${toReset.length} license(s)`);
+    notifyDiscord("HWID reset", { Action: "Bulk reset", Count: toReset.length });
+    clearSelection();
+    fetchData();
+  };
+
+  const exportCsv = () => {
+    const headers = ["License Key", "Application", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
+    const rows = filtered.map(l => [
+      l.license_key,
+      l.applications?.name || "",
+      l.status,
+      l.hwid || "",
+      l.ip || "",
+      l.device_name || "",
+      l.expires_at,
+      l.created_at,
+      (l.notes || "").replace(/"/g, '""'),
+      (l.tags || []).join("; "),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `licenses_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} licenses`);
   };
 
   const generateKeys = async () => {
@@ -268,6 +323,12 @@ export default function Licenses() {
           <Button size="sm" variant="outline" onClick={bulkExtend} className="h-8 text-xs">
             <Clock className="h-3 w-3 mr-1" /> Extend +30d
           </Button>
+          <Button size="sm" variant="outline" onClick={bulkUnban} className="h-8 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+            <ShieldCheck className="h-3 w-3 mr-1" /> Unban
+          </Button>
+          <Button size="sm" variant="outline" onClick={bulkResetHwid} className="h-8 text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10">
+            <RotateCcw className="h-3 w-3 mr-1" /> Reset HWID
+          </Button>
           <Button size="sm" variant="outline" onClick={bulkBan} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
             <Ban className="h-3 w-3 mr-1" /> Ban
           </Button>
@@ -287,9 +348,13 @@ export default function Licenses() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
-          <p className="text-sm text-muted-foreground">Manage license keys for your applications</p>
+          <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
           </DialogTrigger>
@@ -323,6 +388,7 @@ export default function Licenses() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
