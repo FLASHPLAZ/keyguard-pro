@@ -15,6 +15,28 @@ const SIGNATURE_MAX_AGE_SECONDS = 60;
 let settingsCache: { data: AdminSettings; expiry: number } | null = null;
 const SETTINGS_CACHE_TTL_MS = 60_000; // 1 minute
 
+// ── Error rate tracking for alerting ──
+let errorWindow: number[] = [];
+const ERROR_ALERT_THRESHOLD = 10; // errors in window
+const ERROR_ALERT_WINDOW_MS = 5 * 60_000; // 5 minutes
+let lastErrorAlert = 0;
+const ERROR_ALERT_COOLDOWN_MS = 15 * 60_000; // 15 min cooldown
+
+function trackError(webhookUrl: string, action: string) {
+  const now = Date.now();
+  errorWindow.push(now);
+  errorWindow = errorWindow.filter(t => now - t < ERROR_ALERT_WINDOW_MS);
+  if (errorWindow.length >= ERROR_ALERT_THRESHOLD && now - lastErrorAlert > ERROR_ALERT_COOLDOWN_MS) {
+    lastErrorAlert = now;
+    fireDiscordWebhook(webhookUrl, "🚨 High Error Rate Alert", {
+      "⚠️ Errors (5min)": errorWindow.length,
+      "📊 Threshold": ERROR_ALERT_THRESHOLD,
+      "🔥 Latest": action,
+      "⏰ Time": new Date().toISOString(),
+    });
+  }
+}
+
 interface AdminSettings {
   rateLimitMax: number;
   rateLimitWindow: number;
@@ -179,11 +201,13 @@ async function verifyHmacSignature(
 
 // ── Helper: log + webhook fire-and-forget ──
 function logAndNotify(
-  supabase: any, webhookUrl: string, logData: Record<string, any>, discordAction: string, embedData: Record<string, any>
+  supabase: any, webhookUrl: string, logData: Record<string, any>, discordAction: string, embedData: Record<string, any>,
+  startTime?: number, isError = false
 ) {
-  // Both are fire-and-forget to not block response
+  if (startTime) logData.response_time_ms = Date.now() - startTime;
   supabase.from("activity_logs").insert(logData).then(() => {});
   fireDiscordWebhook(webhookUrl, discordAction, embedData);
+  if (isError) trackError(webhookUrl, discordAction);
 }
 
 // ── Reusable JSON response ──
@@ -200,6 +224,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const startTime = Date.now();
     const rawBody = await req.text();
     let parsed: any;
     try {
@@ -247,7 +272,7 @@ Deno.serve(async (req) => {
         { license_key, action: dbAction, ip: clientIp, hwid: hwid || null, device_name: sanitizedDeviceName, country },
         action,
         { "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A", "📝 Reason": blacklistResult.reason }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "Access denied" }, 403);
     }
 
@@ -270,7 +295,7 @@ Deno.serve(async (req) => {
         { license_key, action: "Unknown Key — Rejected", ip: clientIp, hwid: hwid || null, device_name: sanitizedDeviceName, country },
         "❌ Unknown Key — Rejected",
         { "🔑 Key": license_key, "🌐 IP": clientIp, "🖥️ HWID": hwid || "N/A", "🌍 Country": country, "💻 Device": sanitizedDeviceName || "N/A" }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "License not found" }, 404);
     }
 
@@ -289,7 +314,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "App Mismatch — Rejected", hwid: hwid || null },
         "🚫 App Mismatch — Rejected",
         { ...embedBase, "❌ Requested App": application_id, "🖥️ HWID": hwid || "N/A" }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "License does not belong to this application" }, 403);
     }
 
@@ -300,7 +325,7 @@ Deno.serve(async (req) => {
           { ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null },
           "⚠️ Invalid Signature — Rejected",
           { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Missing signature or timestamp header" }
-        );
+        , startTime, true);
         return jsonResponse({ valid: false, error: "Signature required" }, 403);
       }
 
@@ -311,7 +336,7 @@ Deno.serve(async (req) => {
           { ...logBase, action: "Expired Request — Rejected", hwid: hwid || null },
           "⏳ Expired Request — Rejected",
           { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Request timestamp expired (>60s)" }
-        );
+        , startTime, true);
         return jsonResponse({ valid: false, error: "Request expired" }, 403);
       }
 
@@ -321,7 +346,7 @@ Deno.serve(async (req) => {
           { ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null },
           "⚠️ Invalid Signature — Rejected",
           { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "HMAC signature mismatch" }
-        );
+        , startTime, true);
         return jsonResponse({ valid: false, error: "Invalid signature" }, 403);
       }
     }
@@ -332,7 +357,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "Banned License — Rejected", hwid: hwid || license.hwid },
         "🚫 Banned License — Rejected",
         { ...embedBase, "🖥️ HWID": hwid || license.hwid }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "License is banned" }, 403);
     }
 
@@ -342,7 +367,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "App Disabled — Rejected", hwid: hwid || license.hwid },
         "⛔ App Disabled — Rejected",
         { ...embedBase, "🖥️ HWID": hwid || license.hwid }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "Application is disabled" }, 403);
     }
 
@@ -354,7 +379,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "Expired License — Rejected", hwid: hwid || license.hwid },
         "⏰ Expired License — Rejected",
         { ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at) }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "License expired" }, 403);
     }
 
@@ -364,7 +389,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "HWID Mismatch — Rejected", hwid },
         "🔒 HWID Mismatch — Rejected",
         { ...embedBase, "🖥️ Sent HWID": hwid, "🔐 Bound HWID": license.hwid }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "HWID mismatch" }, 403);
     }
 
@@ -378,7 +403,7 @@ Deno.serve(async (req) => {
         { ...logBase, action: "Auto-Banned (IP Sharing)", hwid: hwid || license.hwid },
         "🔨 Auto-Banned (IP Sharing)",
         { ...embedBase, "🖥️ HWID": hwid || license.hwid, "🌐 Unique IPs": uniqueIpCount, "⚙️ Threshold": settings.ipChangeThreshold }
-      );
+      , startTime, true);
       return jsonResponse({ valid: false, error: "License banned for sharing" }, 403);
     }
 
@@ -397,12 +422,17 @@ Deno.serve(async (req) => {
       { ...logBase, action, hwid: hwid || license.hwid },
       discordAction,
       { ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at) }
-    );
+    , startTime);
 
-    return jsonResponse({
+    const responseTimeMs = Date.now() - startTime;
+    return new Response(JSON.stringify({
       valid: true, expires: license.expires_at, expires_readable: formatExpiry(license.expires_at),
       hwid: updates.hwid || license.hwid, app: app?.name, country, device_name: sanitizedDeviceName,
-    }, 200);
+      response_time_ms: responseTimeMs,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Response-Time": `${responseTimeMs}ms` },
+    });
 
   } catch (err) {
     console.error("Validate error:", err);

@@ -1,0 +1,1 @@
+ALTER TABLE public.activity_logs ADD COLUMN response_time_ms integer DEFAULT NULL;
