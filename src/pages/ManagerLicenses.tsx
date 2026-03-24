@@ -252,6 +252,7 @@ export default function ManagerLicenses() {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
@@ -264,6 +265,7 @@ export default function ManagerLicenses() {
                 <tr key={lic.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
                   <td className="px-4 py-3 license-key text-xs">{lic.license_key}</td>
                   <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>{lic.status}</span>
                   </td>
@@ -329,6 +331,15 @@ export default function ManagerLicenses() {
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">License Key</label>
                 <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name</label>
+                <Input
+                  value={editOwnerName}
+                  onChange={(e) => setEditOwnerName(e.target.value)}
+                  placeholder="e.g. John, Discord#1234..."
+                  className="bg-secondary border-border"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Notes</label>
