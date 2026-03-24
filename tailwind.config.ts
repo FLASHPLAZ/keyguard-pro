@@ -112,6 +112,15 @@ export default {
           from: { backgroundPosition: "200% 0" },
           to: { backgroundPosition: "-200% 0" },
         },
+        "bell-ring": {
+          "0%": { transform: "rotate(0deg)" },
+          "15%": { transform: "rotate(14deg)" },
+          "30%": { transform: "rotate(-12deg)" },
+          "45%": { transform: "rotate(10deg)" },
+          "60%": { transform: "rotate(-8deg)" },
+          "75%": { transform: "rotate(4deg)" },
+          "100%": { transform: "rotate(0deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
