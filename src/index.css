@@ -83,15 +83,16 @@
   }
 
   .glow-hover {
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
   }
 
   .glow-hover:hover {
-    box-shadow: 0 0 25px -5px hsl(var(--primary) / 0.4), 0 0 10px -5px hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 25px -5px hsl(var(--primary) / 0.15), 0 4px 20px -5px hsl(var(--background) / 0.5);
+    border-color: hsl(var(--primary) / 0.2);
   }
 
   .stat-card {
-    @apply relative overflow-hidden rounded-lg border bg-card p-6;
+    @apply relative overflow-hidden rounded-xl border border-border/60 bg-card p-6;
   }
 
   .stat-card::before {
@@ -101,7 +102,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent);
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent);
   }
 
   .stat-card::after {
@@ -110,7 +111,7 @@
     inset: 0;
     opacity: 0;
     transition: opacity 0.3s ease;
-    background: radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.05), transparent 70%);
+    background: radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.04), transparent 70%);
   }
 
   .stat-card:hover::after {
@@ -146,6 +147,16 @@
     @apply bg-yellow-500/15 text-yellow-400 border-yellow-500/20;
   }
 
+  /* Card with subtle glass effect */
+  .glass-card {
+    @apply rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm;
+  }
+
+  /* Section header */
+  .section-header {
+    @apply text-sm font-semibold text-foreground flex items-center gap-2;
+  }
+
   /* Mobile table scroll */
   .table-responsive {
     @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
@@ -154,6 +165,18 @@
   /* Sidebar mobile overlay */
   .sidebar-overlay {
     @apply fixed inset-0 z-30 bg-background/80 backdrop-blur-sm;
+  }
+
+  /* Scrollbar thin */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 2px;
   }
 
   /* Button glow on hover */
@@ -173,6 +196,15 @@
 
   .btn-glow:hover::after {
     opacity: 1;
+  }
+
+  /* Empty state */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+  }
+
+  .empty-state-icon {
+    @apply mb-3 rounded-xl bg-secondary/50 p-4 text-muted-foreground;
   }
 }
 

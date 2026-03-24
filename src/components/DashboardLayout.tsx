@@ -15,8 +15,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <MobileNav>
         <DashboardSidebar />
       </MobileNav>
-      <main className="min-h-screen md:ml-60">
-        <div className="p-4 pt-16 md:p-8 md:pt-8">{children}</div>
+      <main className="min-h-screen md:ml-60 transition-all duration-300">
+        <div className="p-4 pt-16 md:p-8 md:pt-8 max-w-[1600px] mx-auto">{children}</div>
       </main>
     </div>
   );
