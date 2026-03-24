@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag } from "lucide-react";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag, Download } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,6 +124,61 @@ export default function Licenses() {
     notifyDiscord("License extended", { Action: "Bulk extend", Count: toUpdate.length, Added: "+30 days", Keys: keys.slice(0, 200) });
     clearSelection();
     fetchData();
+  };
+
+  const bulkUnban = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const toUnban = selectedLicenses.filter(l => l.banned);
+    if (toUnban.length === 0) { toast.error("No banned licenses selected"); return; }
+    for (const lic of toUnban) {
+      const restoredStatus = lic.hwid ? "active" : "unused";
+      await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", lic.id);
+    }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` });
+    toast.success(`Unbanned ${toUnban.length} license(s)`);
+    notifyDiscord("License unbanned", { Action: "Bulk unban", Count: toUnban.length });
+    clearSelection();
+    fetchData();
+  };
+
+  const bulkResetHwid = async () => {
+    if (!user || selectedIds.size === 0) return;
+    const toReset = selectedLicenses.filter(l => l.hwid);
+    if (toReset.length === 0) { toast.error("No licenses with HWID selected"); return; }
+    for (const lic of toReset) {
+      await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` });
+    toast.success(`Reset HWID for ${toReset.length} license(s)`);
+    notifyDiscord("HWID reset", { Action: "Bulk reset", Count: toReset.length });
+    clearSelection();
+    fetchData();
+  };
+
+  const exportCsv = () => {
+    const headers = ["License Key", "Application", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
+    const rows = filtered.map(l => [
+      l.license_key,
+      l.applications?.name || "",
+      l.status,
+      l.hwid || "",
+      l.ip || "",
+      l.device_name || "",
+      l.expires_at,
+      l.created_at,
+      (l.notes || "").replace(/"/g, '""'),
+      (l.tags || []).join("; "),
+    ]);
+    const csv = [headers.join(","), ...rows.map(r => r.map(v => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `licenses_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} licenses`);
   };
 
   const generateKeys = async () => {
