@@ -323,6 +323,12 @@ export default function Licenses() {
           <Button size="sm" variant="outline" onClick={bulkExtend} className="h-8 text-xs">
             <Clock className="h-3 w-3 mr-1" /> Extend +30d
           </Button>
+          <Button size="sm" variant="outline" onClick={bulkUnban} className="h-8 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10">
+            <ShieldCheck className="h-3 w-3 mr-1" /> Unban
+          </Button>
+          <Button size="sm" variant="outline" onClick={bulkResetHwid} className="h-8 text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10">
+            <RotateCcw className="h-3 w-3 mr-1" /> Reset HWID
+          </Button>
           <Button size="sm" variant="outline" onClick={bulkBan} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
             <Ban className="h-3 w-3 mr-1" /> Ban
           </Button>
@@ -342,7 +348,12 @@ export default function Licenses() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
-          <p className="text-sm text-muted-foreground">Manage license keys for your applications</p>
+          <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+          </Button>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
