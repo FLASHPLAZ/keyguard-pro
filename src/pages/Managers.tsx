@@ -322,4 +322,5 @@ export default function Managers() {
       </div>
       </PageTransition>
     </DashboardLayout>
+  );
 }
