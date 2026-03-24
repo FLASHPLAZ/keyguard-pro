@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +29,10 @@ export default function Licenses() {
   const PAGE_SIZE = 20;
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingLicense, setEditingLicense] = useState<any>(null);
+  const [editNotes, setEditNotes] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -204,6 +210,22 @@ export default function Licenses() {
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
+  const openDetails = (lic: any) => {
+    setEditingLicense(lic);
+    setEditNotes(lic.notes || "");
+    setEditTags((lic.tags || []).join(", "));
+    setDetailsDialogOpen(true);
+  };
+
+  const saveDetails = async () => {
+    if (!editingLicense) return;
+    const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
+    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray }).eq("id", editingLicense.id);
+    toast.success("License details saved");
+    setDetailsDialogOpen(false);
+    fetchData();
+  };
+
   const ActionButtons = ({ lic }: { lic: any }) => (
     <div className="flex items-center gap-1 flex-wrap">
       <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10 h-8 w-8">
@@ -224,6 +246,9 @@ export default function Licenses() {
           <Ban className="h-4 w-4 text-destructive" />
         </Button>
       )}
+      <Button variant="ghost" size="icon" onClick={() => openDetails(lic)} title="Notes & Tags" className="hover:bg-accent/10 h-8 w-8">
+        <StickyNote className="h-4 w-4 text-accent-foreground" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>
