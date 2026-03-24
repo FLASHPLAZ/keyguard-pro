@@ -26,6 +26,7 @@ export type Database = {
           id: string
           ip: string | null
           license_key: string | null
+          response_time_ms: number | null
           user_id: string | null
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           id?: string
           ip?: string | null
           license_key?: string | null
+          response_time_ms?: number | null
           user_id?: string | null
         }
         Update: {
@@ -52,6 +54,7 @@ export type Database = {
           id?: string
           ip?: string | null
           license_key?: string | null
+          response_time_ms?: number | null
           user_id?: string | null
         }
         Relationships: [
