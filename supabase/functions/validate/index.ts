@@ -401,10 +401,15 @@ Deno.serve(async (req) => {
       { ...embedBase, "🖥️ HWID": hwid || license.hwid, "📅 Expires": formatExpiry(license.expires_at) }
     , startTime);
 
-    return jsonResponse({
+    const responseTimeMs = Date.now() - startTime;
+    return new Response(JSON.stringify({
       valid: true, expires: license.expires_at, expires_readable: formatExpiry(license.expires_at),
       hwid: updates.hwid || license.hwid, app: app?.name, country, device_name: sanitizedDeviceName,
-    }, 200);
+      response_time_ms: responseTimeMs,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Response-Time": `${responseTimeMs}ms` },
+    });
 
   } catch (err) {
     console.error("Validate error:", err);
