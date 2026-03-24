@@ -275,8 +275,6 @@ export default function ManagerLicenses() {
                       <Button variant="ghost" size="icon" onClick={() => openDetails(lic)} className="hover:bg-accent/10 h-8 w-8" title="Notes & Tags">
                         <StickyNote className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                        <Copy className="h-4 w-4 text-primary" />
-                      </Button>
                       {permissions.can_ban_licenses && (
                         lic.status === "banned" ? (
                           <Button variant="ghost" size="icon" onClick={() => unbanLicense(lic)} className="hover:bg-emerald-500/10 h-8 w-8" title="Unban">
