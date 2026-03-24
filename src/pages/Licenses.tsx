@@ -358,7 +358,7 @@ export default function Licenses() {
 
   return (
     <DashboardLayout>
-      <PageTransition>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
           <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
