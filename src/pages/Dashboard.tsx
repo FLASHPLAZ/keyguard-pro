@@ -3,6 +3,8 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
 import { CountryHeatmap } from "@/components/CountryHeatmap";
+import { SystemHealthWidget } from "@/components/SystemHealthWidget";
+import { HourlyTrendsChart } from "@/components/HourlyTrendsChart";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { AppWindow, Key, CheckCircle, XCircle, Ban, Users } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -140,6 +142,11 @@ export default function Dashboard() {
       <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ActiveSessionsWidget />
         <CountryHeatmap />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SystemHealthWidget />
+        <HourlyTrendsChart />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
