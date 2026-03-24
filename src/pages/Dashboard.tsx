@@ -7,7 +7,7 @@ import { CountryHeatmap } from "@/components/CountryHeatmap";
 import { SystemHealthWidget } from "@/components/SystemHealthWidget";
 import { HourlyTrendsChart } from "@/components/HourlyTrendsChart";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
-import { AppWindow, Key, CheckCircle, XCircle, Ban, Users, TrendingUp, Clock } from "lucide-react";
+import { AppWindow, Key, CheckCircle, XCircle, Ban, Users, TrendingUp, Clock, Bell } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,8 @@ export default function Dashboard() {
   const [resellerStats, setResellerStats] = useState<any[]>([]);
   const [barData, setBarData] = useState<{ name: string; validations: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newActivityCount, setNewActivityCount] = useState(0);
+  const [bellFlash, setBellFlash] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -99,10 +101,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
 
+    const handleNewActivity = () => {
+      setNewActivityCount(prev => prev + 1);
+      setBellFlash(true);
+      setTimeout(() => setBellFlash(false), 2000);
+      fetchData();
+    };
+
     const channel = supabase
       .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, handleNewActivity)
+      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, handleNewActivity)
       .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "resellers" }, () => fetchData())
       .subscribe();
@@ -122,9 +131,23 @@ export default function Dashboard() {
     <DashboardLayout>
       <PageTransition>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Overview of your license management system</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Overview of your license management system</p>
+        </div>
+        <button
+          onClick={() => setNewActivityCount(0)}
+          className={`relative rounded-xl border border-border/60 bg-card p-2.5 transition-all duration-300 hover:border-primary/40 hover:bg-secondary/40 ${bellFlash ? 'ring-2 ring-primary/50 border-primary/60' : ''}`}
+          title={newActivityCount > 0 ? `${newActivityCount} new events` : 'No new events'}
+        >
+          <Bell className={`h-5 w-5 transition-all duration-300 ${bellFlash ? 'text-primary animate-[bell-ring_0.6s_ease-in-out]' : 'text-muted-foreground'}`} />
+          {newActivityCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground animate-scale-in">
+              {newActivityCount > 99 ? '99+' : newActivityCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Stat Cards */}
