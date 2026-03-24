@@ -54,6 +54,7 @@ export default function ManagerLicenses() {
     const matchSearch = l.license_key.toLowerCase().includes(s) ||
       (l.applications?.name || "").toLowerCase().includes(s) ||
       (l.notes || "").toLowerCase().includes(s) ||
+      (l.owner_name || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
@@ -84,6 +85,7 @@ export default function ManagerLicenses() {
         user_id: user.id,
         expires_at: expiresAt.toISOString(),
         status: "unused",
+        owner_name: ownerName.trim() || null,
       });
     }
 
@@ -98,6 +100,7 @@ export default function ManagerLicenses() {
       App: appName,
       Count: keyCount,
       Duration: `${durationDays} days`,
+      Owner: ownerName.trim() || "N/A",
       "Created by": user.email || "Manager",
     });
 
@@ -105,6 +108,7 @@ export default function ManagerLicenses() {
     setDialogOpen(false);
     setSelectedApp("");
     setKeyCount(1);
+    setOwnerName("");
     fetchData();
   };
 
@@ -163,13 +167,14 @@ export default function ManagerLicenses() {
     setEditingLicense(lic);
     setEditNotes(lic.notes || "");
     setEditTags((lic.tags || []).join(", "));
+    setEditOwnerName(lic.owner_name || "");
     setDetailsDialogOpen(true);
   };
 
   const saveDetails = async () => {
     if (!editingLicense) return;
     const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
-    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray }).eq("id", editingLicense.id);
+    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
     toast.success("License details saved");
     setDetailsDialogOpen(false);
     fetchData();
