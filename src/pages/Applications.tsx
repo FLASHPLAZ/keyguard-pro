@@ -19,6 +19,7 @@ export default function Applications() {
   const { user } = useAuth();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [newAppName, setNewAppName] = useState("");
   const [newAppDesc, setNewAppDesc] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
