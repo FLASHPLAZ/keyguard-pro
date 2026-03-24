@@ -582,6 +582,15 @@ export default function Licenses() {
                 <p className="font-mono text-xs text-foreground break-all">{editingLicense.license_key}</p>
               </div>
               <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name</label>
+                <Input
+                  value={editOwnerName}
+                  onChange={(e) => setEditOwnerName(e.target.value)}
+                  placeholder="e.g. John, Discord#1234..."
+                  className="bg-secondary border-border"
+                />
+              </div>
+              <div>
                 <label className="mb-1 block text-xs text-muted-foreground">Notes</label>
                 <Textarea
                   value={editNotes}

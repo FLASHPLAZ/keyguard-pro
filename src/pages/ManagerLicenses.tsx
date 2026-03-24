@@ -34,6 +34,8 @@ export default function ManagerLicenses() {
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
+  const [editOwnerName, setEditOwnerName] = useState("");
 
   const fetchData = async () => {
     if (!user) return;
