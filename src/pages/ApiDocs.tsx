@@ -59,6 +59,38 @@ const endpoints = [
   },
   {
     method: "POST",
+    path: "/check-license",
+    auth: "None (public)",
+    description: "Lightweight read-only license lookup for client portal websites. Returns license validity, application name, expiry, and owner — without HWID binding, IP tracking, or activity logging.",
+    request: `{
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"
+}`,
+    response: `{
+  "valid": true,
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+  "application": "My Bot Name",
+  "status": "active",
+  "expires_at": "2026-12-31T00:00:00Z",
+  "expires_readable": "Dec 31, 2026 (265 days left)",
+  "owner_name": "John Doe",
+  "is_used": true,
+  "is_banned": false
+}`,
+    fields: [
+      { name: "license_key", type: "string", required: true, desc: "The license key to check (max 50 chars)" },
+    ],
+    errors: [
+      { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
+      { code: 404, message: "License not found", desc: "No license matches the provided key" },
+      { code: 403, message: "License is banned", desc: "License has been banned" },
+      { code: 403, message: "Application is disabled", desc: "App is suspended or kill-switch is active" },
+      { code: 410, message: "License expired", desc: "License expiration date has passed" },
+      { code: 429, message: "Too many requests", desc: "Rate limit exceeded" },
+      { code: 500, message: "Internal server error", desc: "Unexpected server error" },
+    ],
+  },
+  {
+    method: "POST",
     path: "/create-reseller",
     auth: "Bearer token (admin only)",
     description: "Create a new reseller account. Requires admin authentication via Authorization header.",
