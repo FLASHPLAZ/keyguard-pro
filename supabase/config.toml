@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.delete-manager]
 verify_jwt = false
+
+[functions.check-license]
+verify_jwt = false
