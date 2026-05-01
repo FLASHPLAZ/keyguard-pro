@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -157,8 +157,14 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground/60">
-          Contact your administrator for account access
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Don't have an account?{" "}
+          <Link to="/signup" className="font-medium text-primary hover:underline">
+            Create one for free
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-xs text-muted-foreground/60">
+          <Link to="/" className="hover:text-foreground transition-colors">← Back to home</Link>
         </p>
       </div>
     </div>
