@@ -95,7 +95,7 @@ export default function Managers() {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         action: "Manager created",
-      });
+      } as any);
 
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setDialogOpen(false);
@@ -117,7 +117,7 @@ export default function Managers() {
       if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
 
-      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Manager removed" });
+      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Manager removed" } as any);
       toast.success("Manager permanently deleted");
       notifyDiscord("Manager removed", { Username: username });
       fetchManagers();
@@ -150,13 +150,13 @@ export default function Managers() {
         await supabase.from("manager_permissions").insert({
           user_id: permDialogManager.user_id,
           ...editPerms,
-        });
+        } as any);
       }
 
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         action: "Manager permissions updated",
-      });
+      } as any);
 
       const permSummary = Object.entries(editPerms)
         .map(([k, v]) => `${k.replace("can_", "").replace("_", " ")}: ${v ? "✅" : "❌"}`)
