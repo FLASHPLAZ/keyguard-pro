@@ -27,6 +27,7 @@ export type Database = {
           ip: string | null
           license_key: string | null
           response_time_ms: number | null
+          tenant_id: string
           user_id: string | null
         }
         Insert: {
@@ -41,6 +42,7 @@ export type Database = {
           ip?: string | null
           license_key?: string | null
           response_time_ms?: number | null
+          tenant_id: string
           user_id?: string | null
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           ip?: string | null
           license_key?: string | null
           response_time_ms?: number | null
+          tenant_id?: string
           user_id?: string | null
         }
         Relationships: [
@@ -77,6 +80,7 @@ export type Database = {
           signature_required: boolean
           signing_secret: string | null
           suspended: boolean
+          tenant_id: string
           user_id: string
         }
         Insert: {
@@ -88,6 +92,7 @@ export type Database = {
           signature_required?: boolean
           signing_secret?: string | null
           suspended?: boolean
+          tenant_id: string
           user_id: string
         }
         Update: {
@@ -99,6 +104,7 @@ export type Database = {
           signature_required?: boolean
           signing_secret?: string | null
           suspended?: boolean
+          tenant_id?: string
           user_id?: string
         }
         Relationships: []
@@ -110,6 +116,7 @@ export type Database = {
           id: string
           license_key: string | null
           reason: string | null
+          tenant_id: string
           type: string
           value: string
         }
@@ -119,6 +126,7 @@ export type Database = {
           id?: string
           license_key?: string | null
           reason?: string | null
+          tenant_id: string
           type: string
           value: string
         }
@@ -128,6 +136,7 @@ export type Database = {
           id?: string
           license_key?: string | null
           reason?: string | null
+          tenant_id?: string
           type?: string
           value?: string
         }
@@ -183,6 +192,7 @@ export type Database = {
           owner_name: string | null
           status: string
           tags: string[] | null
+          tenant_id: string
           user_id: string
         }
         Insert: {
@@ -202,6 +212,7 @@ export type Database = {
           owner_name?: string | null
           status?: string
           tags?: string[] | null
+          tenant_id: string
           user_id: string
         }
         Update: {
@@ -221,6 +232,7 @@ export type Database = {
           owner_name?: string | null
           status?: string
           tags?: string[] | null
+          tenant_id?: string
           user_id?: string
         }
         Relationships: [
@@ -251,6 +263,7 @@ export type Database = {
           can_view_licenses: boolean
           created_at: string
           id: string
+          tenant_id: string
           updated_at: string
           user_id: string
         }
@@ -264,6 +277,7 @@ export type Database = {
           can_view_licenses?: boolean
           created_at?: string
           id?: string
+          tenant_id: string
           updated_at?: string
           user_id: string
         }
@@ -277,6 +291,7 @@ export type Database = {
           can_view_licenses?: boolean
           created_at?: string
           id?: string
+          tenant_id?: string
           updated_at?: string
           user_id?: string
         }
@@ -389,6 +404,7 @@ export type Database = {
           credits: number
           email: string
           id: string
+          tenant_id: string
           total_generated: number
           user_id: string | null
           username: string
@@ -400,6 +416,7 @@ export type Database = {
           credits?: number
           email: string
           id?: string
+          tenant_id: string
           total_generated?: number
           user_id?: string | null
           username: string
@@ -411,6 +428,7 @@ export type Database = {
           credits?: number
           email?: string
           id?: string
+          tenant_id?: string
           total_generated?: number
           user_id?: string | null
           username?: string
@@ -422,6 +440,7 @@ export type Database = {
           created_at: string
           id: string
           key: string
+          tenant_id: string
           updated_at: string
           user_id: string
           value: string
@@ -430,6 +449,7 @@ export type Database = {
           created_at?: string
           id?: string
           key: string
+          tenant_id: string
           updated_at?: string
           user_id: string
           value?: string
@@ -438,9 +458,40 @@ export type Database = {
           created_at?: string
           id?: string
           key?: string
+          tenant_id?: string
           updated_at?: string
           user_id?: string
           value?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          plan: string
+          suspended: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          plan?: string
+          suspended?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          plan?: string
+          suspended?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -467,11 +518,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_tenant_member: {
+        Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
     }
