@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Landing from "./pages/Landing";
+import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
@@ -34,9 +36,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public marketing */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            {/* Admin routes */}
-            <Route path="/" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />
+            {/* Admin routes (platform owner) */}
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />
             <Route path="/apps" element={<ProtectedRoute requiredRole="admin"><Applications /></ProtectedRoute>} />
             <Route path="/licenses" element={<ProtectedRoute requiredRole="admin"><Licenses /></ProtectedRoute>} />
             <Route path="/resellers" element={<ProtectedRoute requiredRole="admin"><Resellers /></ProtectedRoute>} />
@@ -45,6 +50,16 @@ const App = () => (
             <Route path="/api-docs" element={<ProtectedRoute requiredRole="admin"><ApiDocs /></ProtectedRoute>} />
             <Route path="/bot-guide" element={<ProtectedRoute requiredRole="admin"><BotGuide /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><SettingsPage /></ProtectedRoute>} />
+            {/* Seller routes — share the admin pages for now (Batch B will split) */}
+            <Route path="/dashboard" element={<ProtectedRoute requiredRole="seller"><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/apps" element={<ProtectedRoute requiredRole="seller"><Applications /></ProtectedRoute>} />
+            <Route path="/dashboard/licenses" element={<ProtectedRoute requiredRole="seller"><Licenses /></ProtectedRoute>} />
+            <Route path="/dashboard/logs" element={<ProtectedRoute requiredRole="seller"><Logs /></ProtectedRoute>} />
+            <Route path="/dashboard/api-docs" element={<ProtectedRoute requiredRole="seller"><ApiDocs /></ProtectedRoute>} />
+            <Route path="/dashboard/bot-guide" element={<ProtectedRoute requiredRole="seller"><BotGuide /></ProtectedRoute>} />
+            <Route path="/dashboard/settings" element={<ProtectedRoute requiredRole="seller"><SettingsPage /></ProtectedRoute>} />
+            <Route path="/dashboard/resellers" element={<ProtectedRoute requiredRole="seller"><Resellers /></ProtectedRoute>} />
+            <Route path="/dashboard/managers" element={<ProtectedRoute requiredRole="seller"><Managers /></ProtectedRoute>} />
             {/* Reseller routes */}
             <Route path="/reseller" element={<ProtectedRoute requiredRole="reseller"><ResellerDashboard /></ProtectedRoute>} />
             <Route path="/reseller/keys" element={<ProtectedRoute requiredRole="reseller"><ResellerKeys /></ProtectedRoute>} />
