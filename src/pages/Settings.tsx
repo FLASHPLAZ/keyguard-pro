@@ -114,7 +114,7 @@ export default function SettingsPage() {
       .upsert(
         { user_id: u.id, key, value, updated_at: new Date().toISOString() },
         { onConflict: "user_id,key" }
-       as any);
+      ) as any;
     if (error) throw error;
   }
 
