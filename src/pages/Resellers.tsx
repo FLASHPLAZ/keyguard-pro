@@ -121,7 +121,7 @@ export default function Resellers() {
           reseller_id: editingReseller.id,
           application_id: appId,
           credits,
-        }, { onConflict: "reseller_id,application_id" } as any);
+        } as any, { onConflict: "reseller_id,application_id" });
       }
 
       // Delete credits for removed apps

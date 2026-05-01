@@ -198,7 +198,7 @@ export default function SettingsPage() {
     if (hwid) entries.push({ type: "hwid", value: hwid, license_key: licenseKey, reason: `Blacklisted from key ${licenseKey}`, created_by: user.id });
     if (entries.length === 0) { toast.error("No IP or HWID to blacklist"); return; }
     for (const entry of entries) {
-      await supabase.from("blacklist").upsert(entry, { onConflict: "type,value" } as any);
+      await supabase.from("blacklist").upsert(entry as any, { onConflict: "type,value" });
     }
     toast.success("IP/HWID blacklisted from this key");
     notifyDiscord("IP/HWID blacklisted", { Key: licenseKey, IP: ip || "N/A", HWID: hwid || "N/A" });
