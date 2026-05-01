@@ -86,7 +86,7 @@ export default function ManagerLicenses() {
         expires_at: expiresAt.toISOString(),
         status: "unused",
         owner_name: ownerName.trim() || null,
-      });
+      } as any);
     }
 
     await supabase.from("activity_logs").insert({
@@ -94,7 +94,7 @@ export default function ManagerLicenses() {
       action: `Manager created ${keyCount} license(s)`,
       application_id: selectedApp,
       application_name: appName,
-    });
+    } as any);
 
     notifyDiscord("Manager created licenses", {
       App: appName,
@@ -123,7 +123,7 @@ export default function ManagerLicenses() {
       application_name: appName,
       hwid: lic.hwid,
       ip: lic.ip,
-    });
+    } as any);
     notifyDiscord("Manager banned license", { Key: lic.license_key, App: appName, HWID: lic.hwid, IP: lic.ip });
     toast.success("License banned");
     fetchData();
@@ -139,7 +139,7 @@ export default function ManagerLicenses() {
       license_key: lic.license_key,
       application_id: lic.application_id,
       application_name: appName,
-    });
+    } as any);
     notifyDiscord("Manager unbanned license", { Key: lic.license_key, App: appName });
     toast.success("License unbanned");
     fetchData();
@@ -157,7 +157,7 @@ export default function ManagerLicenses() {
       application_name: appName,
       hwid: previousHwid,
       ip: lic.ip,
-    });
+    } as any);
     notifyDiscord("Manager reset HWID", { Key: lic.license_key, App: appName, "Previous HWID": previousHwid });
     toast.success("HWID reset");
     fetchData();

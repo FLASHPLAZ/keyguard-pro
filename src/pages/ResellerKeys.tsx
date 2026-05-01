@@ -99,7 +99,7 @@ export default function ResellerKeys() {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     await supabase.from("licenses").update({ banned: true, status: "banned" }).in("id", ids);
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk banned ${ids.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk banned ${ids.length} license(s)` } as any);
     toast.success(`Banned ${ids.length} license(s)`);
     notifyDiscord("Reseller bulk ban", { Reseller: reseller?.username, Count: ids.length });
     clearSelection();
@@ -110,7 +110,7 @@ export default function ResellerKeys() {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     await supabase.from("licenses").delete().in("id", ids);
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk deleted ${ids.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk deleted ${ids.length} license(s)` } as any);
     toast.success(`Deleted ${ids.length} license(s)`);
     notifyDiscord("Reseller bulk delete", { Reseller: reseller?.username, Count: ids.length });
     clearSelection();
@@ -140,7 +140,7 @@ export default function ResellerKeys() {
         status: "unused",
       }));
 
-      const { error } = await supabase.from("licenses").insert(inserts);
+      const { error } = await supabase.from("licenses").insert(inserts as any);
       if (error) throw error;
 
       const creditRecord = appCredits.find(c => c.application_id === selectedApp);
@@ -161,7 +161,7 @@ export default function ResellerKeys() {
           action: `Reseller generated ${keyCount} key(s) for ${appData.name} (${getDurationLabel(days)})`,
           application_id: selectedApp,
           application_name: appData.name,
-        }),
+        } as any),
       ]);
 
       notifyDiscord("Reseller generated keys", { Reseller: reseller.username, Application: appData.name, Quantity: keyCount, Duration: getDurationLabel(days) });
@@ -185,7 +185,7 @@ export default function ResellerKeys() {
   const banKey = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller banned license", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller banned license", license_key: licenseKey } as any);
     notifyDiscord("Reseller banned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License banned");
     fetchData();
@@ -195,7 +195,7 @@ export default function ResellerKeys() {
     const restoredStatus = hwid ? "active" : "unused";
     const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey } as any);
     notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
     fetchData();
@@ -204,7 +204,7 @@ export default function ResellerKeys() {
   const resetHwid = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").update({ hwid: null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey } as any);
     notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
     fetchData();
@@ -213,7 +213,7 @@ export default function ResellerKeys() {
   const deleteKey = async (id: string, licenseKey: string) => {
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller deleted license", license_key: licenseKey });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller deleted license", license_key: licenseKey } as any);
     notifyDiscord("Reseller deleted license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License deleted");
     fetchData();

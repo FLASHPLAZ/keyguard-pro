@@ -121,7 +121,7 @@ export default function Resellers() {
           reseller_id: editingReseller.id,
           application_id: appId,
           credits,
-        }, { onConflict: "reseller_id,application_id" });
+        } as any, { onConflict: "reseller_id,application_id" });
       }
 
       // Delete credits for removed apps
@@ -142,7 +142,7 @@ export default function Resellers() {
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         action: `Updated reseller "${editingReseller.username}" — ${editSelectedApps.length} apps configured`,
-      });
+      } as any);
 
       notifyDiscord("Reseller updated", { Username: editingReseller.username, "Apps configured": editSelectedApps.length, "Total credits": editSelectedApps.reduce((sum: number, id: string) => sum + (editAppCredits[id] || 0), 0) });
       setEditDialogOpen(false);
@@ -187,13 +187,13 @@ export default function Resellers() {
           application_id: appId,
           credits: newAppCredits[appId] || 0,
         }));
-        await supabase.from("reseller_app_credits").insert(creditInserts);
+        await supabase.from("reseller_app_credits").insert(creditInserts as any);
       }
 
       await supabase.from("activity_logs").insert({
         user_id: user.id,
         action: `Reseller "${newUsername.trim()}" created with per-app credits`,
-      });
+      } as any);
 
       setNewUsername(""); setNewEmail(""); setNewPassword("");
       setNewAppCredits({}); setSelectedApps([]);
@@ -210,7 +210,7 @@ export default function Resellers() {
 
   const deleteReseller = async (id: string, username: string) => {
     await supabase.from("resellers").delete().eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller "${username}" deleted` });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller "${username}" deleted` } as any);
     toast.success("Reseller deleted");
     notifyDiscord("Reseller deleted", { Username: username });
     fetchData();

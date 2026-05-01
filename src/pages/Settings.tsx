@@ -112,7 +112,7 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from("settings")
       .upsert(
-        { user_id: u.id, key, value, updated_at: new Date().toISOString() },
+        { user_id: u.id, key, value, updated_at: new Date().toISOString() } as any,
         { onConflict: "user_id,key" }
       );
     if (error) throw error;
@@ -140,7 +140,7 @@ export default function SettingsPage() {
       license_key: blLicenseKey.trim() || null,
       reason: blReason.trim() || null,
       created_by: user.id,
-    });
+    } as any);
     if (error) {
       if (error.code === "23505") toast.error("This entry already exists in the blacklist");
       else toast.error(error.message);
@@ -169,7 +169,7 @@ export default function SettingsPage() {
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id, action: "Admin banned license", license_key: licenseKey, application_name: appName,
-      });
+      } as any);
     }
     toast.success("License banned by admin (reseller cannot unban)");
     notifyDiscord("Admin banned license", { Key: licenseKey, App: appName, Reseller: resellerName, HWID: lic?.hwid || "N/A", IP: lic?.ip || "N/A" });
@@ -184,7 +184,7 @@ export default function SettingsPage() {
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id, action: "Admin unbanned license", license_key: licenseKey, application_name: appName,
-      });
+      } as any);
     }
     toast.success("License unbanned");
     notifyDiscord("Admin unbanned license", { Key: licenseKey, App: appName, Reseller: resellerName });
@@ -198,7 +198,7 @@ export default function SettingsPage() {
     if (hwid) entries.push({ type: "hwid", value: hwid, license_key: licenseKey, reason: `Blacklisted from key ${licenseKey}`, created_by: user.id });
     if (entries.length === 0) { toast.error("No IP or HWID to blacklist"); return; }
     for (const entry of entries) {
-      await supabase.from("blacklist").upsert(entry, { onConflict: "type,value" });
+      await supabase.from("blacklist").upsert(entry as any, { onConflict: "type,value" });
     }
     toast.success("IP/HWID blacklisted from this key");
     notifyDiscord("IP/HWID blacklisted", { Key: licenseKey, IP: ip || "N/A", HWID: hwid || "N/A" });

@@ -99,7 +99,7 @@ export default function Licenses() {
     const ids = Array.from(selectedIds);
     const keys = selectedLicenses.map(l => l.license_key).join(", ");
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).in("id", ids);
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk banned ${ids.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk banned ${ids.length} license(s)` } as any);
     toast.success(`Banned ${ids.length} license(s)`);
     notifyDiscord("License banned", { Action: "Bulk ban", Count: ids.length, Keys: keys.slice(0, 200) });
     clearSelection();
@@ -111,7 +111,7 @@ export default function Licenses() {
     const ids = Array.from(selectedIds);
     const keys = selectedLicenses.map(l => l.license_key).join(", ");
     await supabase.from("licenses").delete().in("id", ids);
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` } as any);
     toast.success(`Deleted ${ids.length} license(s)`);
     notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.slice(0, 200) });
     clearSelection();
@@ -126,7 +126,7 @@ export default function Licenses() {
       const newExpiry = new Date(new Date(lic.expires_at).getTime() + 30 * 86400000).toISOString();
       await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", lic.id);
     }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk extended ${toUpdate.length} license(s) +30 days` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk extended ${toUpdate.length} license(s) +30 days` } as any);
     toast.success(`Extended ${toUpdate.length} license(s) by 30 days`);
     notifyDiscord("License extended", { Action: "Bulk extend", Count: toUpdate.length, Added: "+30 days", Keys: keys.slice(0, 200) });
     clearSelection();
@@ -142,7 +142,7 @@ export default function Licenses() {
       const restoredStatus = lic.hwid ? "active" : "unused";
       await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", lic.id);
     }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` } as any);
     toast.success(`Unbanned ${toUnban.length} license(s)`);
     notifyDiscord("License unbanned", { Action: "Bulk unban", Count: toUnban.length });
     clearSelection();
@@ -156,7 +156,7 @@ export default function Licenses() {
     for (const lic of toReset) {
       await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
     }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` } as any);
     toast.success(`Reset HWID for ${toReset.length} license(s)`);
     notifyDiscord("HWID reset", { Action: "Bulk reset", Count: toReset.length });
     clearSelection();
@@ -200,7 +200,7 @@ export default function Licenses() {
       status: "unused",
       owner_name: ownerName.trim() || null,
     }));
-    const { error } = await supabase.from("licenses").insert(inserts);
+    const { error } = await supabase.from("licenses").insert(inserts as any);
     if (error) { toast.error(error.message); return; }
 
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
@@ -209,7 +209,7 @@ export default function Licenses() {
       action: "License keys generated",
       application_id: selectedApp,
       application_name: appName,
-    });
+    } as any);
 
     setDialogOpen(false);
     setOwnerName("");
@@ -222,7 +222,7 @@ export default function Licenses() {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
     await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License banned");
     notifyDiscord("License banned", { Key: licenseKey, App: appName, HWID: lic?.hwid || "N/A", IP: lic?.ip || "N/A" });
     fetchData();
@@ -233,7 +233,7 @@ export default function Licenses() {
     const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
     await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License unbanned");
     notifyDiscord("License unbanned", { Key: licenseKey, App: appName, HWID: hwid || "N/A" });
     fetchData();
@@ -243,7 +243,7 @@ export default function Licenses() {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
     await supabase.from("licenses").update({ hwid: null }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("HWID reset");
     notifyDiscord("HWID reset", { Key: licenseKey, App: appName, "Old HWID": lic?.hwid || "N/A" });
     fetchData();
@@ -254,7 +254,7 @@ export default function Licenses() {
     const appName = lic?.applications?.name || "Unknown";
     const newExpiry = new Date(new Date(currentExpiry).getTime() + 30 * 86400000).toISOString();
     await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License extended by 30 days");
     notifyDiscord("License extended", { Key: licenseKey, App: appName, Added: "+30 days", "New Expiry": formatDate(newExpiry) });
     fetchData();
@@ -265,7 +265,7 @@ export default function Licenses() {
     const appName = lic?.applications?.name || "Unknown";
     const { error } = await supabase.from("licenses").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey, application_id: lic?.application_id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License deleted");
     notifyDiscord("License deleted", { Key: licenseKey, App: appName });
     fetchData();

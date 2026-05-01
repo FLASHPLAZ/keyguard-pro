@@ -40,9 +40,9 @@ export default function ManagerApps() {
       name: newAppName.trim(),
       description: newAppDesc.trim(),
       user_id: user.id,
-    }).select().single();
+    } as any).select().single();
     if (error) { toast.error(error.message); return; }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application created", application_id: data?.id, application_name: newAppName.trim() });
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application created", application_id: data?.id, application_name: newAppName.trim() } as any);
     setNewAppName(""); setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
@@ -54,7 +54,7 @@ export default function ManagerApps() {
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
     await supabase.from("applications").update({ suspended: !current }).eq("id", id);
     const action = !current ? "Application suspended" : "Application resumed";
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Application status updated");
     notifyDiscord(action, { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
@@ -63,7 +63,7 @@ export default function ManagerApps() {
   const toggleKillSwitch = async (id: string, current: boolean, name: string) => {
     await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
     const action = !current ? "Kill switch enabled" : "Kill switch disabled";
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Kill switch toggled");
     notifyDiscord(action, { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
@@ -71,7 +71,7 @@ export default function ManagerApps() {
 
   const deleteApp = async (id: string, name: string) => {
     await supabase.from("applications").delete().eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id, "Action by": "Manager" });
     fetchApps();
@@ -82,7 +82,7 @@ export default function ManagerApps() {
     const appName = app?.name || "Unknown";
     await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
     const action = !current ? "Request signing enabled" : "Request signing disabled";
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName } as any);
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
     notifyDiscord(action, { App: appName, "App ID": id, "Action by": "Manager" });
     fetchApps();
@@ -96,7 +96,7 @@ export default function ManagerApps() {
     crypto.getRandomValues(bytes);
     const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
     await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName });
+    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName } as any);
     toast.success("Signing secret regenerated");
     notifyDiscord("Signing secret regenerated", { App: appName, "App ID": id, "Action by": "Manager" });
     setRegenerateAppId(null);
