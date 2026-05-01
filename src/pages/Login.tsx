@@ -22,7 +22,11 @@ export default function Login() {
 
   useEffect(() => {
     if (user && role) {
-      const dest = role === "admin" ? "/" : role === "manager" ? "/manager" : "/reseller";
+      const dest =
+        role === "admin" ? "/admin" :
+        role === "manager" ? "/manager" :
+        role === "reseller" ? "/reseller" :
+        "/dashboard";
       navigate(dest, { replace: true });
     }
   }, [user, role, navigate]);
