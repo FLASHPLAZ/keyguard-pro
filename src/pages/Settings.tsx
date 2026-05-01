@@ -112,9 +112,9 @@ export default function SettingsPage() {
     const { error } = await supabase
       .from("settings")
       .upsert(
-        { user_id: u.id, key, value, updated_at: new Date().toISOString() },
+        { user_id: u.id, key, value, updated_at: new Date().toISOString() } as any,
         { onConflict: "user_id,key" }
-      ) as any;
+      );
     if (error) throw error;
   }
 
