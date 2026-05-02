@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: AppWindow, label: "Applications", path: "/apps" },
   { icon: Key, label: "Licenses", path: "/licenses" },
   { icon: Users, label: "Resellers", path: "/resellers" },
