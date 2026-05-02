@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield, Bell, Settings2, Save, Loader2, Lock, Ban, ShieldCheck, Plus, Trash2, Search, Copy, Clock, RotateCcw, ShieldBan, Key } from "lucide-react";
@@ -213,11 +213,11 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <RoleLayout>
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      </DashboardLayout>
+      </RoleLayout>
     );
   }
 
@@ -231,7 +231,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <div className="mb-8 flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
@@ -570,6 +570,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

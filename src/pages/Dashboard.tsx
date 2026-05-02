@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition, StaggerChildren } from "@/components/PageTransition";
 import { StatCard } from "@/components/StatCard";
 import { ActiveSessionsWidget } from "@/components/ActiveSessionsWidget";
@@ -128,7 +128,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <PageTransition>
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
@@ -352,6 +352,6 @@ export default function Dashboard() {
         </div>
       )}
       </PageTransition>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

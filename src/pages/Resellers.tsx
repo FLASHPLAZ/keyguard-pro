@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { formatDate } from "@/lib/license";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -226,7 +226,7 @@ export default function Resellers() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Resellers</h1>
@@ -441,6 +441,6 @@ export default function Resellers() {
       </div>
 
       <TablePagination currentPage={currentPage} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setCurrentPage} />
-    </DashboardLayout>
+    </RoleLayout>
   );
 }
