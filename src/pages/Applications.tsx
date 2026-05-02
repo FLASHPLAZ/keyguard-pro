@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton, CardSkeleton } from "@/components/TableSkeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -122,7 +122,7 @@ export default function Applications() {
   const validateEndpoint = "https://license.galacticboosts.online/api/validate";
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <PageTransition>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -385,6 +385,6 @@ export default function Applications() {
         </>
       )}
       </PageTransition>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

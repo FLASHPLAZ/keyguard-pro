@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -81,7 +81,7 @@ export default function Logs() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <PageTransition>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -187,6 +187,6 @@ export default function Logs() {
         </div>
       )}
       </PageTransition>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

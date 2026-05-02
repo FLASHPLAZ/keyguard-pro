@@ -1,4 +1,4 @@
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { Bot, Copy, CheckCircle, Terminal, Shield, Zap, MessageSquare, Code2, AlertTriangle, Hash } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -698,7 +698,7 @@ export default function BotGuide() {
   );
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Bot className="h-6 w-6 text-primary" /> Discord Bot Guide — Slash Commands
@@ -1028,6 +1028,6 @@ export default function BotGuide() {
           </p>
         </div>
       </div>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

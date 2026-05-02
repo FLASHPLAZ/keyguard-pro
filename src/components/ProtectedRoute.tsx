@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     if (role === "reseller") return <Navigate to="/reseller" replace />;
     if (role === "manager") return <Navigate to="/manager" replace />;
     if (role === "seller") return <Navigate to="/dashboard" replace />;
-    if (role === "admin") return <Navigate to="/" replace />;
+    if (role === "admin") return <Navigate to="/admin" replace />;
     return <Navigate to="/login" replace />;
   }
 

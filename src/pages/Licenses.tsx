@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
+import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -357,7 +357,7 @@ export default function Licenses() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
           <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
@@ -625,6 +625,6 @@ export default function Licenses() {
           )}
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </RoleLayout>
   );
 }

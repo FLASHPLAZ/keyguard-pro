@@ -1,6 +1,4 @@
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { ManagerLayout } from "@/components/ManagerLayout";
-import { useAuth } from "@/contexts/AuthContext";
+import { RoleLayout } from "@/components/RoleLayout";
 import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -177,7 +175,7 @@ const endpoints = [
   },
 ];
 
-export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout?: boolean } = {}) {
+export default function ApiDocs() {
   const [activeLang, setActiveLang] = useState("python");
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
@@ -188,10 +186,8 @@ export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout
     setTimeout(() => setCopiedText(null), 1500);
   };
 
-  const Layout = useManagerLayout ? ManagerLayout : DashboardLayout;
-
   return (
-    <Layout>
+    <RoleLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
         <p className="text-sm text-muted-foreground">Complete guide to integrate Galactic Boosts into your software</p>
@@ -501,6 +497,6 @@ export default function ApiDocs({ useManagerLayout = false }: { useManagerLayout
           <li>(Optional) Create <strong className="text-foreground">Resellers</strong> to let others distribute keys on your behalf.</li>
         </ol>
       </div>
-    </Layout>
+    </RoleLayout>
   );
 }
