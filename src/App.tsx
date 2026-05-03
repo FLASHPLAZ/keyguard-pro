@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
+import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
@@ -38,6 +39,7 @@ const App = () => (
           <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             {/* Admin routes (platform owner) */}
