@@ -17,9 +17,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Licenses() {
   const { user } = useAuth();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
   const [licenses, setLicenses] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -191,6 +193,10 @@ export default function Licenses() {
 
   const generateKeys = async () => {
     if (!selectedApp || !user) return;
+    if (!canCreate("keys")) {
+      toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan.`);
+      return;
+    }
     const days = Number(duration);
     const inserts = Array.from({ length: keyCount }, () => ({
       license_key: generateLicenseKey(),
@@ -213,6 +219,7 @@ export default function Licenses() {
 
     setDialogOpen(false);
     setOwnerName("");
+    refreshLimits();
     toast.success(`Generated ${keyCount} license key(s)`);
     notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
