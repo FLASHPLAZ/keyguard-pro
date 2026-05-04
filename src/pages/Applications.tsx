@@ -14,9 +14,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Applications() {
   const { user } = useAuth();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -39,6 +41,10 @@ export default function Applications() {
 
   const createApp = async () => {
     if (!newAppName.trim() || !user) return;
+    if (!canCreate("apps")) {
+      toast.error(`Plan limit reached (${getUsage("apps")}/${getLimit("apps")} apps). Upgrade your plan to create more.`);
+      return;
+    }
     const { data, error } = await supabase.from("applications").insert({
       name: newAppName.trim(),
       description: newAppDesc.trim(),
@@ -58,6 +64,7 @@ export default function Applications() {
     notifyDiscord("Application created", { Name: newAppName.trim(), "App ID": data?.id, Description: newAppDesc.trim() || "None" });
     if (data) setDetailApp(data);
     fetchApps();
+    refreshLimits();
   };
 
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
