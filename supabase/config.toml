@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.check-license]
 verify_jwt = false
+
+[functions.check-plan-limits]
+verify_jwt = false
