@@ -1,100 +1,157 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Key, CheckCircle2, ArrowRight, Sparkles, X } from "lucide-react";
+import { Key, CheckCircle2, ArrowRight, Sparkles, X, Minus } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 const PLANS = [
   {
     name: "Tester",
     monthlyPrice: 0,
     yearlyPrice: 0,
-    description: "Perfect for getting started and testing the platform.",
-    cta: "Get Started",
+    subtitle: "Perfect for testing and small projects",
+    cta: "Get Started Free",
     ctaLink: "/signup",
     highlight: false,
-    features: [
-      { name: "3 Applications", included: true },
-      { name: "50 License Keys", included: true },
-      { name: "HWID Binding", included: true },
-      { name: "All Auth Methods", included: true },
-      { name: "Token System", included: true },
-      { name: "Hash Checks", included: true },
-      { name: "Client Two Factor Auth", included: true },
-      { name: "Community Support", included: true },
-      { name: "Team Management", included: false },
-      { name: "Custom Webhooks", included: false },
-      { name: "Discord Bot API", included: false },
-      { name: "Reseller System", included: false },
-      { name: "Seller API", included: false },
-      { name: "Priority Support", included: false },
-    ],
+    color: "border-border/50",
   },
   {
     name: "Developer",
     monthlyPrice: 2.99,
     yearlyPrice: 14.99,
-    description: "For developers building real products with advanced needs.",
-    cta: "Choose Developer",
+    subtitle: "For serious developers and growing projects",
+    cta: "Start Developer Plan",
     ctaLink: "/signup",
     highlight: true,
-    features: [
-      { name: "10 Applications", included: true },
-      { name: "10,000 License Keys", included: true },
-      { name: "Everything in Tester +", included: true },
-      { name: "Team Management", included: true },
-      { name: "Customer Panel", included: true },
-      { name: "Function Management", included: true },
-      { name: "Custom Webhooks", included: true },
-      { name: "Variables API", included: true },
-      { name: "Anti-Sharing", included: true },
-      { name: "Live Analytics", included: true },
-      { name: "Email Support", included: true },
-      { name: "Discord Bot API", included: false },
-      { name: "Reseller System", included: false },
-      { name: "Seller API", included: false },
-    ],
+    color: "border-purple-500/50",
   },
   {
     name: "Seller",
     monthlyPrice: 4.99,
     yearlyPrice: 24.99,
-    description: "For power sellers who need the full platform capabilities.",
-    cta: "Choose Seller",
+    subtitle: "For businesses, resellers, and larger projects",
+    cta: "Start Seller Plan",
     ctaLink: "/signup",
     highlight: false,
-    features: [
-      { name: "Unlimited Applications", included: true },
-      { name: "Unlimited License Keys", included: true },
-      { name: "Everything in Developer +", included: true },
-      { name: "Chatrooms", included: true },
-      { name: "Discord Bot API", included: true },
-      { name: "Telegram Bot", included: true },
-      { name: "Reseller System", included: true },
-      { name: "Seller API", included: true },
-      { name: "Request Signing", included: true },
-      { name: "Global Blacklist", included: true },
-      { name: "Manager Delegation", included: true },
-      { name: "Priority Support", included: true },
-      { name: "Custom Branding", included: true },
-      { name: "SLA 99.99%", included: true },
+    color: "border-violet-500/40",
+  },
+];
+
+type CellVal = boolean | string | number;
+
+interface FeatureRow {
+  name: string;
+  tester: CellVal;
+  developer: CellVal;
+  seller: CellVal;
+}
+
+interface FeatureSection {
+  category: string;
+  rows: FeatureRow[];
+}
+
+const FEATURE_TABLE: FeatureSection[] = [
+  {
+    category: "Core Authentication",
+    rows: [
+      { name: "Applications", tester: 1, developer: 8, seller: "Unlimited" },
+      { name: "Users per App", tester: 10, developer: "10,000", seller: "Unlimited" },
+      { name: "All Authentication Methods", tester: true, developer: true, seller: true },
+      { name: "Token System", tester: true, developer: true, seller: true },
+      { name: "Hash Checks", tester: true, developer: true, seller: true },
+      { name: "HWID Protection", tester: true, developer: true, seller: true },
+    ],
+  },
+  {
+    category: "Management & Administration",
+    rows: [
+      { name: "App Creation & Management", tester: true, developer: true, seller: true },
+      { name: "User Management", tester: true, developer: true, seller: true },
+      { name: "License Management", tester: true, developer: true, seller: true },
+      { name: "Subscription Management", tester: true, developer: true, seller: true },
+      { name: "Session Management", tester: true, developer: true, seller: true },
+      { name: "File Management", tester: false, developer: true, seller: true },
+      { name: "Variables Management", tester: false, developer: true, seller: true },
+      { name: "User Variables", tester: false, developer: true, seller: true },
+    ],
+  },
+  {
+    category: "Security & Protection",
+    rows: [
+      { name: "Blacklists", tester: false, developer: true, seller: true },
+      { name: "Whitelists", tester: false, developer: true, seller: true },
+      { name: "Account 2FA", tester: true, developer: true, seller: true },
+      { name: "Client 2FA", tester: true, developer: true, seller: true },
+      { name: "FIDO Security Key", tester: true, developer: true, seller: true },
+      { name: "Anti-Sharing (IP)", tester: false, developer: true, seller: true },
+      { name: "Request Signing", tester: false, developer: false, seller: true },
+      { name: "Global Blacklist", tester: false, developer: false, seller: true },
+    ],
+  },
+  {
+    category: "Communication & Integration",
+    rows: [
+      { name: "Chat System", tester: false, developer: true, seller: true },
+      { name: "Webhooks", tester: false, developer: true, seller: true },
+      { name: "Webhook Testing", tester: false, developer: true, seller: true },
+      { name: "Discord Bot", tester: false, developer: false, seller: true },
+      { name: "Telegram Bot", tester: false, developer: false, seller: true },
+    ],
+  },
+  {
+    category: "Team & Business",
+    rows: [
+      { name: "Team Management", tester: false, developer: true, seller: true },
+      { name: "Resellers / Managers", tester: false, developer: true, seller: true },
+      { name: "Customer Panel", tester: false, developer: false, seller: true },
+    ],
+  },
+  {
+    category: "Logging & Analytics",
+    rows: [
+      { name: "Event Logs", tester: false, developer: true, seller: true },
+      { name: "Account Logs", tester: true, developer: true, seller: true },
+      { name: "Seller Logs", tester: false, developer: false, seller: true },
+      { name: "Live Analytics", tester: false, developer: true, seller: true },
+    ],
+  },
+  {
+    category: "Developer Tools",
+    rows: [
+      { name: "Web Loader", tester: false, developer: false, seller: true },
+      { name: "Premade Code Examples", tester: true, developer: true, seller: true },
+      { name: "Function Management", tester: true, developer: true, seller: true },
+      { name: "Seller API", tester: false, developer: false, seller: true },
+    ],
+  },
+  {
+    category: "Support",
+    rows: [
+      { name: "Support Level", tester: "Delayed", developer: "Priority", seller: "Priority" },
     ],
   },
 ];
+
+function CellDisplay({ value }: { value: CellVal }) {
+  if (value === true) return <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />;
+  if (value === false) return <Minus className="h-4 w-4 text-red-400/60 mx-auto" />;
+  return <span className="text-sm text-foreground/80 font-medium">{value}</span>;
+}
 
 export default function Pricing() {
   const [yearly, setYearly] = useState(false);
 
   return (
     <div className="relative min-h-screen bg-background overflow-x-hidden">
-      {/* Background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-32 top-32 h-[600px] w-[600px] rounded-full bg-purple-600/[0.1] blur-[120px]" />
         <div className="absolute -right-32 top-[400px] h-[500px] w-[500px] rounded-full bg-violet-500/[0.08] blur-[100px]" />
       </div>
 
       {/* Nav */}
-      <header className="relative z-20 border-b border-border/40 backdrop-blur-xl bg-background/60">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-4">
+      <header className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/70">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="relative">
               <div className="absolute -inset-1.5 rounded-lg bg-purple-500/30 blur-md" />
@@ -104,10 +161,12 @@ export default function Pricing() {
             </div>
             <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">GrazeXauth</span>
           </Link>
+          <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+            <Link to="/#features" className="hover:text-foreground transition-colors">Features</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          </nav>
           <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
+            <Link to="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
             <Link to="/signup">
               <Button size="sm" className="gap-1.5 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0">
                 Get started <ArrowRight className="h-3.5 w-3.5" />
@@ -119,21 +178,19 @@ export default function Pricing() {
 
       {/* Pricing Header */}
       <section className="relative z-10 px-4 sm:px-6 pt-16 pb-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4">
-          <Sparkles className="h-3 w-3 text-purple-400" /> Pricing
-        </div>
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-          Perfect plans for your needs.
-        </h1>
-        <p className="mt-3 text-muted-foreground">Flexible options for teams of all sizes.</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4">
+            <Sparkles className="h-3 w-3 text-purple-400" /> Pricing
+          </div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
+            Simple, transparent pricing.
+          </h1>
+          <p className="mt-3 text-muted-foreground max-w-lg mx-auto">Start free. Upgrade when you're ready. No hidden fees.</p>
+        </motion.div>
 
-        {/* Toggle */}
         <div className="mt-8 flex items-center justify-center gap-3">
           <span className={`text-sm ${!yearly ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
-          <button
-            onClick={() => setYearly(!yearly)}
-            className={`relative h-7 w-12 rounded-full transition-colors ${yearly ? "bg-purple-600" : "bg-secondary"}`}
-          >
+          <button onClick={() => setYearly(!yearly)} className={`relative h-7 w-12 rounded-full transition-colors ${yearly ? "bg-purple-600" : "bg-secondary"}`}>
             <div className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
           </button>
           <span className={`text-sm ${yearly ? "text-foreground" : "text-muted-foreground"}`}>Yearly</span>
@@ -141,27 +198,34 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Plans */}
-      <section className="relative z-10 px-4 sm:px-6 pb-12">
+      {/* Plan Cards */}
+      <section className="relative z-10 px-4 sm:px-6 pb-16">
         <div className="mx-auto max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PLANS.map((plan) => (
-            <div
+          {PLANS.map((plan, idx) => (
+            <motion.div
               key={plan.name}
-              className={`relative rounded-2xl border backdrop-blur p-6 flex flex-col transition-all ${
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1, duration: 0.5 }}
+              className={`relative rounded-2xl border backdrop-blur p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                 plan.highlight
-                  ? "border-purple-500/50 bg-purple-500/5 shadow-xl shadow-purple-500/10"
+                  ? "border-purple-500/50 bg-purple-500/5 shadow-xl shadow-purple-500/10 scale-[1.02]"
                   : "border-border/50 bg-card/40"
               }`}
             >
               {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-500 to-violet-500 px-3 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-500 to-violet-500 px-4 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
                   Most Popular
                 </div>
               )}
               <h3 className="text-lg font-semibold">{plan.name}</h3>
-              <div className="mt-3 flex items-baseline gap-1">
+              <p className="text-xs text-muted-foreground mt-1">{plan.subtitle}</p>
+              <div className="mt-4 flex items-baseline gap-1">
                 {plan.monthlyPrice === 0 ? (
-                  <span className="text-4xl font-bold">Free</span>
+                  <>
+                    <span className="text-4xl font-bold">Free</span>
+                    <span className="text-sm text-muted-foreground ml-1">Forever free</span>
+                  </>
                 ) : (
                   <>
                     <span className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent">
@@ -171,55 +235,75 @@ export default function Pricing() {
                   </>
                 )}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{plan.description}</p>
-
-              <ul className="mt-6 space-y-2.5 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f.name} className="flex items-center gap-2 text-sm">
-                    {f.included ? (
-                      <CheckCircle2 className="h-4 w-4 text-purple-400 shrink-0" />
-                    ) : (
-                      <X className="h-4 w-4 text-muted-foreground/30 shrink-0" />
-                    )}
-                    <span className={f.included ? "text-foreground/80" : "text-muted-foreground/40"}>
-                      {f.name}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
               <Link to={plan.ctaLink} className="mt-6">
-                <Button
-                  className={`w-full ${
-                    plan.highlight
-                      ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0"
-                      : "bg-secondary hover:bg-secondary/80"
-                  }`}
-                >
+                <Button className={`w-full ${
+                  plan.highlight
+                    ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0"
+                    : plan.name === "Seller"
+                    ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white border-0"
+                    : "bg-secondary hover:bg-secondary/80"
+                }`}>
                   {plan.cta}
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Full features link */}
-      <section className="relative z-10 px-4 sm:px-6 pb-8">
+      {/* Full Feature Comparison Table */}
+      <section className="relative z-10 px-4 sm:px-6 pb-20">
         <div className="mx-auto max-w-5xl">
-          <Link to="/#features">
-            <Button variant="outline" className="w-full border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50 text-purple-300">
-              See the full list of features
-            </Button>
-          </Link>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            All yearly plans include a 14-day money-back guarantee. No credit card required for free plan.
-          </p>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Complete Feature Comparison</h2>
+            <p className="mt-2 text-muted-foreground">See everything that's included in each plan</p>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: 0.1 }} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/50 bg-purple-500/5">
+                    <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[40%]">Features</th>
+                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[20%]">
+                      <div>Tester</div>
+                      <div className="text-[10px] font-normal mt-0.5 text-muted-foreground/60">Free</div>
+                    </th>
+                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-purple-400 w-[20%]">
+                      <div>Developer</div>
+                      <div className="text-[10px] font-normal mt-0.5 text-purple-400/60">${yearly ? "14.99/yr" : "2.99/mo"}</div>
+                    </th>
+                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-violet-400 w-[20%]">
+                      <div>Seller</div>
+                      <div className="text-[10px] font-normal mt-0.5 text-violet-400/60">${yearly ? "24.99/yr" : "4.99/mo"}</div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FEATURE_TABLE.map((section) => (
+                    <>
+                      <tr key={section.category} className="bg-purple-500/[0.03]">
+                        <td colSpan={4} className="px-5 py-2.5 text-xs font-semibold text-purple-400 uppercase tracking-wider">{section.category}</td>
+                      </tr>
+                      {section.rows.map((row, ri) => (
+                        <tr key={row.name} className={`border-b border-border/20 transition-colors hover:bg-purple-500/[0.04] ${ri % 2 === 0 ? "" : "bg-purple-500/[0.01]"}`}>
+                          <td className="px-5 py-3 text-foreground/80 font-medium">{row.name}</td>
+                          <td className="px-4 py-3 text-center"><CellDisplay value={row.tester} /></td>
+                          <td className="px-4 py-3 text-center"><CellDisplay value={row.developer} /></td>
+                          <td className="px-4 py-3 text-center"><CellDisplay value={row.seller} /></td>
+                        </tr>
+                      ))}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Disclaimer */}
-      <section className="relative z-10 px-4 sm:px-6 py-12">
+      <section className="relative z-10 px-4 sm:px-6 pb-12">
         <div className="mx-auto max-w-3xl rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6">
           <div className="flex items-start gap-3">
             <span className="text-yellow-500 text-lg">⚠</span>
@@ -228,17 +312,22 @@ export default function Pricing() {
               <ul className="space-y-1.5 text-muted-foreground text-xs">
                 <li><strong className="text-foreground/80">What we provide:</strong> License/key management, HWID binding, server-side validation, rate limiting, webhooks, and admin controls.</li>
                 <li><strong className="text-foreground/80">What we do not do:</strong> Code obfuscation, anti-debug/anti-tamper inside your binaries, or DRM for compiled code.</li>
-                <li><strong className="text-foreground/80">Your responsibilities:</strong> Integrate checks (don't rely on client-side alone). Use an obfuscator for your executables if needed.</li>
-                <li><strong className="text-foreground/80">How they complement:</strong> Obfuscation slows reverse-engineering; GrazeXauth enforces access and usage via server truth.</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
+      {/* CTA */}
+      <section className="relative z-10 px-4 sm:px-6 pb-12">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-xs text-muted-foreground">All yearly plans include a 14-day money-back guarantee. No credit card required for free plan.</p>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-purple-400" />
             <span>© {new Date().getFullYear()} GrazeXauth</span>
