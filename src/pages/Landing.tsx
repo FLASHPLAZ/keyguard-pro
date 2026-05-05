@@ -101,8 +101,8 @@ const THREATS = [
 
 const SAMPLE_PY = `import requests, hashlib, uuid
 
-r = requests.post("https://api.galacticboosts.com/api/validate", json={
-    "license_key": "GALACTIC-XXXX-XXXX-XXXX-XXXX",
+r = requests.post("https://api.grazexauth.com/api/validate", json={
+    "license_key": "GX-XXXX-XXXX-XXXX-XXXX",
     "application_id": "your-app-id",
     "hwid": hashlib.sha256(
         str(uuid.getnode()).encode()
