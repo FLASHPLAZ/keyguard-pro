@@ -190,7 +190,7 @@ export default function ApiDocs() {
     <RoleLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
-        <p className="text-sm text-muted-foreground">Complete guide to integrate Galactic Boosts into your software</p>
+        <p className="text-sm text-muted-foreground">Complete guide to integrate GrazeXauth into your software</p>
       </div>
 
       {/* Table of Contents */}
