@@ -150,7 +150,7 @@ export default function Landing() {
                 <Key className="h-5 w-5 text-white" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">Galactic Boosts</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">GrazeXauth</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -332,7 +332,7 @@ export default function Landing() {
             <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
               <Eye className="h-3 w-3 text-purple-400" /> Compare
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to Galactic Boosts?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to GrazeXauth?</h2>
           </motion.div>
           <motion.div variants={fadeUp} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur overflow-hidden">
             <div className="overflow-x-auto">
@@ -340,7 +340,7 @@ export default function Landing() {
                 <thead>
                   <tr className="border-b border-border/50 bg-purple-500/5">
                     <th className="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Feature</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-purple-400">Galactic Boosts</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-purple-400">GrazeXauth</th>
                     <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Others</th>
                   </tr>
                 </thead>
@@ -451,7 +451,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={fadeUp} className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-violet-500/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
-            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust Galactic Boosts. Start free today.</p>
+            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/signup">
                 <Button size="lg" className="h-12 px-8 gap-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-purple-500/25 transition-shadow hover:shadow-2xl hover:shadow-purple-500/30">
@@ -471,7 +471,7 @@ export default function Landing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-purple-400" />
-            <span>&copy; {new Date().getFullYear()} Galactic Boosts. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} GrazeXauth. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>

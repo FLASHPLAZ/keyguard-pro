@@ -102,7 +102,7 @@ export default function Pricing() {
                 <Key className="h-5 w-5 text-white" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">Galactic Boosts</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">GrazeXauth</span>
           </Link>
           <div className="flex items-center gap-2">
             <Link to="/login">
@@ -229,7 +229,7 @@ export default function Pricing() {
                 <li><strong className="text-foreground/80">What we provide:</strong> License/key management, HWID binding, server-side validation, rate limiting, webhooks, and admin controls.</li>
                 <li><strong className="text-foreground/80">What we do not do:</strong> Code obfuscation, anti-debug/anti-tamper inside your binaries, or DRM for compiled code.</li>
                 <li><strong className="text-foreground/80">Your responsibilities:</strong> Integrate checks (don't rely on client-side alone). Use an obfuscator for your executables if needed.</li>
-                <li><strong className="text-foreground/80">How they complement:</strong> Obfuscation slows reverse-engineering; Galactic Boosts enforces access and usage via server truth.</li>
+                <li><strong className="text-foreground/80">How they complement:</strong> Obfuscation slows reverse-engineering; GrazeXauth enforces access and usage via server truth.</li>
               </ul>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function Pricing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-purple-400" />
-            <span>© {new Date().getFullYear()} Galactic Boosts</span>
+            <span>© {new Date().getFullYear()} GrazeXauth</span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
