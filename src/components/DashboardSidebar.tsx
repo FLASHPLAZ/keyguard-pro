@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
+  { icon: Shield, label: "Admin Panel", path: "/admin/panel" },
   { icon: AppWindow, label: "Applications", path: "/apps" },
   { icon: Key, label: "Licenses", path: "/licenses" },
   { icon: Users, label: "Resellers", path: "/resellers" },
