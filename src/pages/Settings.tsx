@@ -414,7 +414,7 @@ export default function SettingsPage() {
         </div>
 
         {/* IP/HWID Blacklist */}
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
+        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldBan className="h-4 w-4 text-destructive" />
@@ -486,10 +486,10 @@ export default function SettingsPage() {
               </table>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Reseller Generated Keys */}
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
+        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
@@ -569,7 +569,7 @@ export default function SettingsPage() {
               <TablePagination currentPage={rkPage} totalItems={filteredRk.length} pageSize={RK_PAGE_SIZE} onPageChange={setRkPage} />
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </RoleLayout>
   );
