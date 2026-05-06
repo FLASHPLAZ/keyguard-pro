@@ -46,5 +46,7 @@ export function usePlanLimits() {
     return data?.usage[resource] ?? 0;
   };
 
-  return { data, loading, refresh, canCreate, getLimit, getUsage };
+  const planName = data?.plan ?? "free";
+
+  return { data, loading, refresh, canCreate, getLimit, getUsage, planName };
 }

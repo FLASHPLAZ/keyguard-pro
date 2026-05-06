@@ -48,7 +48,8 @@ interface BlacklistEntry {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -261,16 +262,16 @@ export default function SettingsPage() {
                 <label className="mb-1 block text-xs text-muted-foreground">System Name</label>
                 <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow" defaultValue="GrazeXauth" readOnly />
               </div>
-              <div>
+              {isAdmin && <div>
                 <label className="mb-1 block text-xs text-muted-foreground">API Base URL</label>
                 <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
                   value="https://license.galacticboosts.online/api/validate" readOnly />
-              </div>
+              </div>}
             </div>
           </div>
 
-          {/* Rate Limiting */}
-          <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          {/* Rate Limiting — admin only */}
+          {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
             <div className="mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Rate Limiting</h3>
@@ -342,7 +343,7 @@ export default function SettingsPage() {
                   value={settings.resethwid_rate_limit_window} onChange={(e) => updateSetting("resethwid_rate_limit_window", e.target.value)} />
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Row: Discord + Anti-Sharing */}
@@ -413,7 +414,7 @@ export default function SettingsPage() {
         </div>
 
         {/* IP/HWID Blacklist */}
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
+        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldBan className="h-4 w-4 text-destructive" />
@@ -485,10 +486,10 @@ export default function SettingsPage() {
               </table>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Reseller Generated Keys */}
-        <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
+        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
@@ -568,7 +569,7 @@ export default function SettingsPage() {
               <TablePagination currentPage={rkPage} totalItems={filteredRk.length} pageSize={RK_PAGE_SIZE} onPageChange={setRkPage} />
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </RoleLayout>
   );

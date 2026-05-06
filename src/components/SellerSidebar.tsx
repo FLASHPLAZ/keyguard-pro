@@ -21,23 +21,39 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: AppWindow, label: "Applications", path: "/dashboard/apps" },
-  { icon: Key, label: "Licenses", path: "/dashboard/licenses" },
-  { icon: Users, label: "Resellers", path: "/dashboard/resellers" },
-  { icon: ShieldCheck, label: "Managers", path: "/dashboard/managers" },
-  { icon: ScrollText, label: "Logs", path: "/dashboard/logs" },
-  { icon: Code2, label: "API Docs", path: "/dashboard/api-docs" },
-  { icon: Bot, label: "Bot Guide", path: "/dashboard/bot-guide" },
-  { icon: Settings, label: "Settings", path: "/dashboard/settings" },
-];
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+
+function useSellerNavItems() {
+  const { planName } = usePlanLimits();
+  const isFree = planName === "free" || planName === "tester";
+  const isDev = planName === "developer";
+
+  const items = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", always: true },
+    { icon: AppWindow, label: "Applications", path: "/dashboard/apps", always: true },
+    { icon: Key, label: "Licenses", path: "/dashboard/licenses", always: true },
+    { icon: Users, label: "Resellers", path: "/dashboard/resellers", always: false, minPlan: "seller" },
+    { icon: ShieldCheck, label: "Managers", path: "/dashboard/managers", always: false, minPlan: "seller" },
+    { icon: ScrollText, label: "Logs", path: "/dashboard/logs", always: true },
+    { icon: Code2, label: "API Docs", path: "/dashboard/api-docs", always: true },
+    { icon: Bot, label: "Bot Guide", path: "/dashboard/bot-guide", always: false, minPlan: "developer" },
+    { icon: Settings, label: "Settings", path: "/dashboard/settings", always: true },
+  ];
+
+  return items.filter(item => {
+    if (item.always) return true;
+    if (item.minPlan === "developer") return !isFree;
+    if (item.minPlan === "seller") return !isFree && !isDev;
+    return true;
+  });
+}
 
 export function SellerSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const { user, signOut } = useAuth();
+  const navItems = useSellerNavItems();
 
   const handleSignOut = async () => {
     await signOut();
@@ -105,7 +121,7 @@ export function SellerSidebar() {
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3 scrollbar-thin">
           {navItems.map((item) => (
-            <NavItem key={item.path} item={item} />
+            <NavItem key={item.path} item={item as any} />
           ))}
         </nav>
 
