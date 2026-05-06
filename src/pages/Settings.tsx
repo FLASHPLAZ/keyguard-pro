@@ -343,7 +343,7 @@ export default function SettingsPage() {
                   value={settings.resethwid_rate_limit_window} onChange={(e) => updateSetting("resethwid_rate_limit_window", e.target.value)} />
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* Row: Discord + Anti-Sharing */}
