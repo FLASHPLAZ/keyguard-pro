@@ -1,0 +1,491 @@
+import { useState, useEffect } from "react";
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageTransition } from "@/components/PageTransition";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TablePagination } from "@/components/TablePagination";
+import { formatDate, getLicenseStatusColor } from "@/lib/license";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import {
+  Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
+  Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
+  TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
+  AlertTriangle, Shield,
+} from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area,
+} from "recharts";
+
+const PAGE_SIZE = 15;
+
+function StatMini({ label, value, icon: Icon, color = "text-primary" }: { label: string; value: number | string; icon: any; color?: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-4 transition-all hover:border-primary/30">
+      <div className={`rounded-lg bg-primary/10 p-2`}>
+        <Icon className={`h-4 w-4 ${color}`} />
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-lg font-bold text-foreground">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminPanel() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // ─── Overview stats ───
+  const [stats, setStats] = useState({
+    totalUsers: 0, totalApps: 0, totalLicenses: 0, activeLicenses: 0,
+    expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0, totalManagers: 0,
+    totalTenants: 0, freeTenants: 0, devTenants: 0, sellerTenants: 0,
+  });
+  const [barData, setBarData] = useState<any[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // ─── Users tab ───
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersSearch, setUsersSearch] = useState("");
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  // ─── Tenants tab ───
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenantsSearch, setTenantsSearch] = useState("");
+  const [tenantsPage, setTenantsPage] = useState(1);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+
+  // ─── Recent logs ───
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadOverview();
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === "users" && users.length === 0) loadUsers();
+    if (activeTab === "tenants" && tenants.length === 0) loadTenants();
+  }, [activeTab]);
+
+  async function loadOverview() {
+    setStatsLoading(true);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [profilesRes, appsRes, licensesRes, resellersRes, managersRes, tenantsRes, logsRes, validationLogsRes] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("applications").select("id", { count: "exact", head: true }),
+      supabase.from("licenses").select("id, status", { count: "exact" }),
+      supabase.from("resellers").select("id", { count: "exact", head: true }),
+      supabase.from("manager_permissions").select("id", { count: "exact", head: true }),
+      supabase.from("tenants").select("id, plan"),
+      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
+      supabase.from("activity_logs")
+        .select("created_at")
+        .in("action", ["License Login", "First Login — HWID Bound"])
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const licenses = licensesRes.data || [];
+    const tenantData = tenantsRes.data || [];
+    setStats({
+      totalUsers: profilesRes.count || 0,
+      totalApps: appsRes.count || 0,
+      totalLicenses: licensesRes.count || 0,
+      activeLicenses: licenses.filter(l => l.status === "active").length,
+      expiredLicenses: licenses.filter(l => l.status === "expired").length,
+      bannedLicenses: licenses.filter(l => l.status === "banned").length,
+      totalResellers: resellersRes.count || 0,
+      totalManagers: managersRes.count || 0,
+      totalTenants: tenantData.length,
+      freeTenants: tenantData.filter(t => t.plan === "free").length,
+      devTenants: tenantData.filter(t => t.plan === "developer").length,
+      sellerTenants: tenantData.filter(t => t.plan === "seller").length,
+    });
+
+    setRecentLogs(logsRes.data || []);
+
+    // Build 7-day chart
+    const days: { label: string; dateStr: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push({ label: d.toLocaleDateString("en-US", { weekday: "short" }), dateStr: d.toISOString().split("T")[0] });
+    }
+    const countsByDate = new Map<string, number>();
+    for (const row of validationLogsRes.data || []) {
+      const dateKey = new Date(row.created_at).toISOString().split("T")[0];
+      countsByDate.set(dateKey, (countsByDate.get(dateKey) || 0) + 1);
+    }
+    setBarData(days.map(d => ({ name: d.label, validations: countsByDate.get(d.dateStr) || 0 })));
+    setStatsLoading(false);
+  }
+
+  async function loadUsers() {
+    setUsersLoading(true);
+    const { data } = await supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false });
+    setUsers(data || []);
+    setUsersLoading(false);
+  }
+
+  async function loadTenants() {
+    setTenantsLoading(true);
+    const { data } = await supabase.from("tenants").select("*").order("created_at", { ascending: false });
+    setTenants(data || []);
+    setTenantsLoading(false);
+  }
+
+  async function suspendTenant(id: string, suspended: boolean) {
+    await supabase.from("tenants").update({ suspended: !suspended }).eq("id", id);
+    toast.success(suspended ? "Tenant unsuspended" : "Tenant suspended");
+    loadTenants();
+  }
+
+  async function updateTenantPlan(id: string, plan: string) {
+    await supabase.from("tenants").update({ plan }).eq("id", id);
+    toast.success(`Plan updated to ${plan}`);
+    loadTenants();
+    loadOverview();
+  }
+
+  // Filtered data
+  const filteredUsers = users.filter(u =>
+    (u.username || "").toLowerCase().includes(usersSearch.toLowerCase()) ||
+    (u.email || "").toLowerCase().includes(usersSearch.toLowerCase())
+  );
+  const paginatedUsers = filteredUsers.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE);
+
+  const filteredTenants = tenants.filter(t =>
+    (t.name || "").toLowerCase().includes(tenantsSearch.toLowerCase())
+  );
+  const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
+
+  const pieData = [
+    { name: "Free", value: stats.freeTenants || 1, color: "hsl(215, 20%, 50%)" },
+    { name: "Developer", value: stats.devTenants || 1, color: "hsl(262, 83%, 58%)" },
+    { name: "Seller", value: stats.sellerTenants || 1, color: "hsl(280, 80%, 60%)" },
+  ];
+
+  const licensePie = [
+    { name: "Active", value: stats.activeLicenses || 1, color: "hsl(142, 72%, 45%)" },
+    { name: "Expired", value: stats.expiredLicenses || 1, color: "hsl(0, 72%, 55%)" },
+    { name: "Banned", value: stats.bannedLicenses || 1, color: "hsl(38, 92%, 55%)" },
+  ];
+
+  return (
+    <DashboardLayout>
+      <PageTransition>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Admin Control Center</h1>
+          <p className="text-sm text-muted-foreground mt-1">Complete platform management — users, subscriptions, apps, licenses & analytics</p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-secondary/50 border border-border/60 flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
+            <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
+            <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
+          </TabsList>
+
+          {/* ─── OVERVIEW TAB ─── */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Top-level stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {statsLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+                    <Skeleton className="h-3 w-16" /><Skeleton className="h-6 w-10" />
+                  </div>
+                ))
+              ) : (
+                <>
+                  <StatMini label="Total Users" value={stats.totalUsers} icon={Users} />
+                  <StatMini label="Applications" value={stats.totalApps} icon={AppWindow} />
+                  <StatMini label="Total Licenses" value={stats.totalLicenses} icon={Key} />
+                  <StatMini label="Active Licenses" value={stats.activeLicenses} icon={CheckCircle} color="text-emerald-400" />
+                  <StatMini label="Resellers" value={stats.totalResellers} icon={Crown} />
+                  <StatMini label="Managers" value={stats.totalManagers} icon={ShieldCheck} />
+                </>
+              )}
+            </div>
+
+            {/* Charts row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Validation chart */}
+              <Card className="lg:col-span-2 border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />License Validations (7 days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? <Skeleton className="h-[200px] w-full" /> : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <AreaChart data={barData}>
+                        <defs>
+                          <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" vertical={false} />
+                        <XAxis dataKey="name" stroke="hsl(215, 12%, 50%)" fontSize={11} tickLine={false} axisLine={false} />
+                        <YAxis stroke="hsl(215, 12%, 50%)" fontSize={11} allowDecimals={false} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "10px", color: "hsl(210, 20%, 92%)" }} />
+                        <Area type="monotone" dataKey="validations" stroke="hsl(262, 83%, 58%)" fillOpacity={1} fill="url(#colorVal)" strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Plan distribution pie */}
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" />Plan Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? <Skeleton className="h-[200px] w-full" /> : (
+                    <>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <PieChart>
+                          <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                            {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          </Pie>
+                          <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "10px", color: "hsl(210, 20%, 92%)" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="flex justify-center gap-4 mt-2">
+                        {pieData.map(e => (
+                          <div key={e.name} className="flex items-center gap-1.5">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: e.color }} />
+                            <span className="text-xs text-muted-foreground">{e.name}: {e.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* License distribution + Recent activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><Key className="h-4 w-4 text-primary" />License Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {statsLoading ? <Skeleton className="h-[180px] w-full" /> : (
+                    <>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <PieChart>
+                          <Pie data={licensePie} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                            {licensePie.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                          </Pie>
+                          <Tooltip contentStyle={{ backgroundColor: "hsl(220, 18%, 10%)", border: "1px solid hsl(220, 14%, 18%)", borderRadius: "10px", color: "hsl(210, 20%, 92%)" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="flex justify-center gap-4 mt-2">
+                        {licensePie.map(e => (
+                          <div key={e.name} className="flex items-center gap-1.5">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: e.color }} />
+                            <span className="text-xs text-muted-foreground">{e.name}: {e.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />Recent Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                    {recentLogs.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No activity yet</p>}
+                    {recentLogs.map((log: any) => (
+                      <div key={log.id} className="flex items-start gap-2 rounded-lg bg-secondary/20 px-3 py-2 border border-transparent hover:border-border/30 transition-all">
+                        <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground">{log.action}</p>
+                          {log.license_key && <p className="font-mono text-[10px] text-muted-foreground truncate">{log.license_key}</p>}
+                          <p className="text-[10px] text-muted-foreground">{log.application_name} · {formatDate(log.created_at)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Quick stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatMini label="Banned Licenses" value={stats.bannedLicenses} icon={Ban} color="text-destructive" />
+              <StatMini label="Expired Licenses" value={stats.expiredLicenses} icon={XCircle} color="text-yellow-500" />
+              <StatMini label="Total Tenants" value={stats.totalTenants} icon={Globe} />
+              <StatMini label="Free Plans" value={stats.freeTenants} icon={Shield} color="text-muted-foreground" />
+            </div>
+          </TabsContent>
+
+          {/* ─── USERS TAB ─── */}
+          <TabsContent value="users" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">All Platform Users</h2>
+                <p className="text-xs text-muted-foreground">View and manage every registered user across the platform</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadUsers}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+            </div>
+
+            <div className="relative sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search users..." value={usersSearch} onChange={e => setUsersSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+            </div>
+
+            {usersLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[600px]">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Username</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedUsers.map((u: any) => {
+                          const roles = u.user_roles || [];
+                          const roleStr = roles.length > 0 ? roles.map((r: any) => r.role).join(", ") : u.role || "unknown";
+                          return (
+                            <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                              <td className="px-4 py-3 font-medium text-foreground">{u.username}</td>
+                              <td className="px-4 py-3 text-muted-foreground text-xs">{u.email}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant={roleStr.includes("admin") ? "default" : "secondary"} className="text-[10px]">
+                                  {roleStr}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(u.created_at)}</td>
+                            </tr>
+                          );
+                        })}
+                        {paginatedUsers.length === 0 && (
+                          <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">No users found</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <TablePagination currentPage={usersPage} totalItems={filteredUsers.length} pageSize={PAGE_SIZE} onPageChange={setUsersPage} />
+              </>
+            )}
+          </TabsContent>
+
+          {/* ─── TENANTS / SUBSCRIPTIONS TAB ─── */}
+          <TabsContent value="tenants" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Subscriptions & Tenants</h2>
+                <p className="text-xs text-muted-foreground">Manage plans, suspend workspaces, and view billing status</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadTenants}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+            </div>
+
+            {/* Plan summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatMini label="Total Tenants" value={stats.totalTenants} icon={Globe} />
+              <StatMini label="Free" value={stats.freeTenants} icon={Users} color="text-muted-foreground" />
+              <StatMini label="Developer" value={stats.devTenants} icon={AppWindow} color="text-primary" />
+              <StatMini label="Seller" value={stats.sellerTenants} icon={Crown} color="text-fuchsia-400" />
+            </div>
+
+            <div className="relative sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search tenants..." value={tenantsSearch} onChange={e => setTenantsSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+            </div>
+
+            {tenantsLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Workspace</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedTenants.map((t: any) => (
+                          <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                            <td className="px-4 py-3 font-medium text-foreground">{t.name}</td>
+                            <td className="px-4 py-3">
+                              <select
+                                value={t.plan}
+                                onChange={e => updateTenantPlan(t.id, e.target.value)}
+                                className="rounded border border-border bg-secondary px-2 py-1 text-xs text-foreground"
+                              >
+                                <option value="free">Free</option>
+                                <option value="developer">Developer</option>
+                                <option value="seller">Seller</option>
+                                <option value="platform">Platform</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-3">
+                              {t.suspended ? (
+                                <Badge variant="destructive" className="text-[10px]">Suspended</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] text-emerald-400 border-emerald-400/30">Active</Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <Button
+                                variant="ghost" size="sm"
+                                onClick={() => suspendTenant(t.id, t.suspended)}
+                                className={t.suspended ? "text-emerald-400 hover:text-emerald-300" : "text-destructive hover:text-destructive/80"}
+                              >
+                                {t.suspended ? <UserCheck className="h-3.5 w-3.5 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
+                                {t.suspended ? "Unsuspend" : "Suspend"}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                        {paginatedTenants.length === 0 && (
+                          <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No tenants found</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <TablePagination currentPage={tenantsPage} totalItems={filteredTenants.length} pageSize={PAGE_SIZE} onPageChange={setTenantsPage} />
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </PageTransition>
+    </DashboardLayout>
+  );
+}
