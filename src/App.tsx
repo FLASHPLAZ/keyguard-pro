@@ -26,6 +26,7 @@ import ManagerApps from "./pages/ManagerApps";
 import ManagerLicenses from "./pages/ManagerLicenses";
 
 import NotFound from "./pages/NotFound";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             {/* Admin routes (platform owner) */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />
+            <Route path="/admin/panel" element={<ProtectedRoute requiredRole="admin"><AdminPanel /></ProtectedRoute>} />
             <Route path="/apps" element={<ProtectedRoute requiredRole="admin"><Applications /></ProtectedRoute>} />
             <Route path="/licenses" element={<ProtectedRoute requiredRole="admin"><Licenses /></ProtectedRoute>} />
             <Route path="/resellers" element={<ProtectedRoute requiredRole="admin"><Resellers /></ProtectedRoute>} />
