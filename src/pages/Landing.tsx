@@ -47,19 +47,46 @@ function Counter({ value, suffix = "", prefix = "" }: { value: number; suffix?: 
   return <span ref={ref}>{prefix}{count}{suffix}</span>;
 }
 
-const FEATURES = [
-  { icon: Key, title: "License Keys", desc: "Generate, validate, ban & revoke with HWID binding, expiration, and metadata.", color: "from-purple-500 to-violet-600" },
-  { icon: Users, title: "App Users", desc: "End-user auth from your software with username/password sessions and tiers.", color: "from-blue-500 to-indigo-600" },
-  { icon: Database, title: "Variables API", desc: "Store runtime secrets gated by license validity and tier.", color: "from-fuchsia-500 to-pink-600" },
-  { icon: Webhook, title: "Webhooks", desc: "Real-time POST notifications for login, ban, HWID reset events.", color: "from-violet-500 to-purple-600" },
-  { icon: Shield, title: "Anti-Sharing", desc: "Auto-ban shared keys across IPs. HMAC signing prevents replay.", color: "from-indigo-500 to-blue-600" },
-  { icon: Activity, title: "Live Analytics", desc: "Real-time dashboard with trends, heatmap & active sessions.", color: "from-pink-500 to-rose-600" },
-  { icon: Globe, title: "Resellers", desc: "Delegate generation with credit limits & per-app permissions.", color: "from-purple-400 to-indigo-600" },
-  { icon: Terminal, title: "Bot Integration", desc: "Discord slash commands, heartbeat enforcement & bot API keys.", color: "from-violet-400 to-fuchsia-600" },
-  { icon: Cpu, title: "Sessions", desc: "Control active sessions, enforce limits & concurrent access.", color: "from-blue-400 to-purple-600" },
-  { icon: Lock, title: "Hash Checks", desc: "Server-side hash verification for tamper detection.", color: "from-indigo-400 to-violet-600" },
-  { icon: Server, title: "Edge Network", desc: "Serverless edge with <50ms latency across 300+ locations.", color: "from-purple-500 to-pink-600" },
-  { icon: MonitorSmartphone, title: "Multi-Platform", desc: "SDKs for Python, C#, Node.js, C++, Go, Rust & Java.", color: "from-fuchsia-400 to-purple-600" },
+const FEATURE_GROUPS = [
+  {
+    label: "Authentication",
+    icon: Key,
+    blurb: "Everything to identify, authorize, and track your users.",
+    items: [
+      { icon: Key, title: "License Keys", desc: "Generate, validate, ban & revoke with HWID binding & metadata." },
+      { icon: Users, title: "App Users", desc: "Username/password sessions, tiered access, subscriptions." },
+      { icon: Cpu, title: "Sessions", desc: "Enforce concurrent-session limits across devices." },
+      { icon: Database, title: "Variables API", desc: "Store runtime secrets gated by license validity & tier." },
+    ],
+  },
+  {
+    label: "Security",
+    icon: Shield,
+    blurb: "Defense-in-depth that stops sharing, tampering & abuse.",
+    items: [
+      { icon: Shield, title: "Anti-Sharing", desc: "Auto-ban shared keys across unique IPs with thresholds." },
+      { icon: Lock, title: "Request Signing", desc: "HMAC-SHA256 with 60s replay window — zero spoofing." },
+      { icon: Eye, title: "Hash Checks", desc: "Server-side binary verification detects tampering." },
+      { icon: Globe, title: "Global Blacklist", desc: "Block IPs & HWIDs platform-wide in one click." },
+    ],
+  },
+  {
+    label: "Scale & Ops",
+    icon: Activity,
+    blurb: "Built to grow with you — from 10 users to 10 million.",
+    items: [
+      { icon: Activity, title: "Live Analytics", desc: "Realtime dashboard, heatmaps, 7-day charts." },
+      { icon: Webhook, title: "Webhooks", desc: "POST events for login, ban, HWID reset, expiry." },
+      { icon: Terminal, title: "Discord Bot", desc: "Slash commands, heartbeat enforcement, bot API keys." },
+      { icon: Server, title: "Edge Network", desc: "Serverless edge with <50ms latency worldwide." },
+    ],
+  },
+];
+
+const PRICING_TEASER = [
+  { name: "Tester", price: "Free", desc: "1 app, 50 keys, all core features.", cta: "Start free", highlight: false },
+  { name: "Developer", price: "$2.99", desc: "8 apps, 10k keys, resellers, webhooks.", cta: "Go Developer", highlight: true },
+  { name: "Seller", price: "$4.99", desc: "Unlimited apps & keys, manager seats, priority support.", cta: "Go Seller", highlight: false },
 ];
 
 const COMPARISONS = [
@@ -119,6 +146,7 @@ export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [activeGroup, setActiveGroup] = useState(0);
 
   useEffect(() => {
     const handler = () => setScrollY(window.scrollY);
@@ -185,37 +213,93 @@ export default function Landing() {
         </AnimatePresence>
       </motion.header>
 
-      {/* Hero */}
-      <section className="relative z-10 px-4 sm:px-6 pt-20 pb-16 md:pt-32 md:pb-24">
-        <div className="mx-auto max-w-5xl text-center">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-1.5 text-xs text-purple-300 backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" /> Free during beta — no credit card
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
-            Authentication<br className="hidden sm:block" />{" "}
-            <span className="bg-gradient-to-r from-purple-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">made for developers.</span>
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }} className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
-            The modern license-key & user-auth platform. Secure HWID binding, anti-sharing, live analytics, and multi-language SDKs — all in one API.
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6 }} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/signup">
-              <Button size="lg" className="h-12 px-8 gap-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0 shadow-xl shadow-purple-500/25 transition-shadow hover:shadow-2xl hover:shadow-purple-500/30">
-                <Rocket className="h-4 w-4" /> Start for free
-              </Button>
-            </Link>
-            <a href="#code">
-              <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50">
-                <Code2 className="h-4 w-4" /> View the API
-              </Button>
-            </a>
-          </motion.div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65, duration: 0.5 }} className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang, i) => (
-              <motion.div key={lang} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 + i * 0.05 }} className="rounded-lg border border-border/40 bg-card/30 px-3.5 py-1.5 backdrop-blur font-mono text-xs text-muted-foreground/70 hover:border-purple-500/40 hover:text-purple-300 transition-colors cursor-default">
-                {lang}
-              </motion.div>
-            ))}
+      {/* Hero — KeyAuth-style split */}
+      <section className="relative z-10 px-4 sm:px-6 pt-16 pb-16 md:pt-24 md:pb-24">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+          {/* Left: copy */}
+          <div className="text-center lg:text-left">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-1.5 text-xs text-purple-300 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" /> Free during beta — no card needed
+            </motion.div>
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-bold tracking-tight leading-[1.05]">
+              The license API <br className="hidden sm:block" />
+              built <span className="gradient-text">for devs</span>.
+            </motion.h1>
+            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }} className="mt-6 max-w-xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground leading-relaxed">
+              Generate keys, bind hardware, block sharing, and watch every login in real time — with one REST call.
+            </motion.p>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6 }} className="mt-9 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3">
+              <Link to="/signup">
+                <Button size="lg" className="h-12 px-8 gap-2 gradient-primary text-white border-0 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transition-all hover:scale-[1.02]">
+                  <Rocket className="h-4 w-4" /> Start for free
+                </Button>
+              </Link>
+              <a href="#code">
+                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50">
+                  <Code2 className="h-4 w-4" /> View the API
+                </Button>
+              </a>
+            </motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65, duration: 0.5 }} className="mt-8 flex flex-wrap items-center lg:justify-start justify-center gap-2">
+              {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang, i) => (
+                <motion.div key={lang} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 + i * 0.05 }} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80 hover:border-purple-500/40 hover:text-purple-300 transition-colors">
+                  {lang}
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Right: floating code panel */}
+          <motion.div
+            initial={{ opacity: 0, y: 40, rotateX: 8 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
+          >
+            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-purple-600/30 via-fuchsia-500/20 to-violet-600/30 blur-3xl opacity-60" />
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="relative glass-panel overflow-hidden"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 bg-purple-500/[0.04] px-4 py-2.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
+                  <span className="ml-3 text-xs text-muted-foreground font-mono">validate.py</span>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-purple-300/80">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live
+                </span>
+              </div>
+              <pre className="overflow-x-auto p-5 text-[11px] sm:text-xs leading-relaxed font-mono">
+                <code className="text-foreground/90">{SAMPLE_PY}</code>
+              </pre>
+              <div className="border-t border-white/5 bg-purple-500/[0.03] px-4 py-2.5 flex items-center justify-between text-[11px] font-mono">
+                <span className="text-green-400">✓ 200 OK</span>
+                <span className="text-muted-foreground">42ms · hwid bound</span>
+              </div>
+            </motion.div>
+            {/* floating badge */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1, duration: 0.5, type: "spring" }}
+              className="absolute -left-4 top-1/3 hidden md:flex items-center gap-2 rounded-xl border border-purple-500/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
+            >
+              <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center"><Shield className="h-3.5 w-3.5 text-white" /></div>
+              <div className="text-[11px]"><div className="font-semibold">HWID bound</div><div className="text-muted-foreground">device #A4B2</div></div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.2, duration: 0.5, type: "spring" }}
+              className="absolute -right-4 bottom-8 hidden md:flex items-center gap-2 rounded-xl border border-purple-500/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
+            >
+              <div className="h-7 w-7 rounded-lg bg-green-500/20 flex items-center justify-center"><CheckCircle2 className="h-3.5 w-3.5 text-green-400" /></div>
+              <div className="text-[11px]"><div className="font-semibold">License valid</div><div className="text-muted-foreground">42ms response</div></div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -242,27 +326,70 @@ export default function Landing() {
         </div>
       </Section>
 
-      {/* Features */}
+      {/* Features — tabbed groups */}
       <Section id="features" className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-6xl">
-          <motion.div variants={fadeUp} className="text-center mb-14">
+          <motion.div variants={fadeUp} className="text-center mb-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
               <Zap className="h-3 w-3 text-purple-400" /> Features
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything you need to ship.</h2>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">A complete toolkit for authentication, monetization & user management.</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A platform, not just an API.</h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">Pick a pillar to explore what's built in.</p>
           </motion.div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {FEATURES.map((f, i) => (
-              <motion.div key={f.title} variants={fadeUp} custom={i} className="group relative rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur transition-all duration-300 hover:border-purple-500/40 hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/5">
-                <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${f.color} text-white shadow-lg`}>
-                  <f.icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-sm font-semibold mb-1.5">{f.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-              </motion.div>
+
+          {/* Tabs */}
+          <div className="mb-8 flex flex-wrap justify-center gap-2">
+            {FEATURE_GROUPS.map((g, i) => (
+              <button
+                key={g.label}
+                onClick={() => setActiveGroup(i)}
+                className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                  activeGroup === i
+                    ? "text-white"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {activeGroup === i && (
+                  <motion.div
+                    layoutId="feat-tab"
+                    className="absolute inset-0 rounded-full gradient-primary shadow-lg shadow-purple-500/30"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
+                <g.icon className="relative h-4 w-4" />
+                <span className="relative">{g.label}</span>
+              </button>
             ))}
           </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeGroup}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35 }}
+            >
+              <p className="text-center text-sm text-muted-foreground mb-8">{FEATURE_GROUPS[activeGroup].blurb}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {FEATURE_GROUPS[activeGroup].items.map((f, i) => (
+                  <motion.div
+                    key={f.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06, duration: 0.4 }}
+                    className="group relative rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur transition-all duration-300 hover:border-purple-500/40 hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/10"
+                  >
+                    <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-white shadow-lg shadow-purple-500/25">
+                      <f.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="text-sm font-semibold mb-1.5">{f.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </Section>
 
@@ -383,6 +510,58 @@ export default function Landing() {
         </div>
       </Section>
 
+      {/* Pricing teaser */}
+      <Section id="pricing-teaser" className="relative z-10 px-4 sm:px-6 py-20">
+        <div className="mx-auto max-w-6xl">
+          <motion.div variants={fadeUp} className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
+              <Sparkles className="h-3 w-3 text-purple-400" /> Pricing
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, transparent pricing</h2>
+            <p className="mt-3 text-muted-foreground">Free forever for solo devs. Pay only when you scale.</p>
+          </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {PRICING_TEASER.map((p, i) => (
+              <motion.div
+                key={p.name}
+                variants={fadeUp}
+                custom={i}
+                className={`relative rounded-2xl border p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 ${
+                  p.highlight
+                    ? "border-purple-500/60 bg-gradient-to-br from-purple-500/10 to-violet-500/5 shadow-2xl shadow-purple-500/20"
+                    : "border-border/50 bg-card/40 hover:border-purple-500/30"
+                }`}
+              >
+                {p.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full gradient-primary px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-lg">
+                    Most popular
+                  </div>
+                )}
+                <div className="text-sm font-medium text-muted-foreground mb-2">{p.name}</div>
+                <div className="mb-3 flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">{p.price}</span>
+                  {p.price !== "Free" && <span className="text-xs text-muted-foreground">/mo</span>}
+                </div>
+                <p className="text-sm text-muted-foreground mb-6">{p.desc}</p>
+                <Link to="/pricing">
+                  <Button
+                    className={`w-full ${p.highlight ? "gradient-primary text-white border-0 hover:shadow-lg hover:shadow-purple-500/30" : ""}`}
+                    variant={p.highlight ? "default" : "outline"}
+                  >
+                    {p.cta} <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <Link to="/pricing" className="text-sm text-purple-300 hover:text-purple-200 inline-flex items-center gap-1">
+              See full feature comparison <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </Section>
+
       {/* Testimonials */}
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-6xl">
@@ -428,15 +607,35 @@ export default function Landing() {
           </motion.div>
           <div className="space-y-3">
             {FAQS.map((f, i) => (
-              <motion.div key={i} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur overflow-hidden transition-all duration-200 hover:border-purple-500/30">
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-medium">
-                  {f.q}
-                  {openFaq === i ? <ChevronUp className="h-4 w-4 text-purple-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                custom={i}
+                className={`group rounded-xl border backdrop-blur overflow-hidden transition-all duration-300 ${
+                  openFaq === i
+                    ? "border-purple-500/50 bg-purple-500/[0.04] shadow-lg shadow-purple-500/10"
+                    : "border-border/50 bg-card/40 hover:border-purple-500/30"
+                }`}
+              >
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-medium">
+                  <span className={openFaq === i ? "text-foreground" : "text-foreground/90"}>{f.q}</span>
+                  <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.3 }} className="shrink-0">
+                    <ChevronDown className={`h-4 w-4 ${openFaq === i ? "text-purple-400" : "text-muted-foreground"}`} />
+                  </motion.div>
                 </button>
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {openFaq === i && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
-                      <div className="px-5 pb-4 text-sm text-muted-foreground leading-relaxed">{f.a}</div>
+                    <motion.div
+                      key="content"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-purple-500/10 pt-4">
+                        {f.a}
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
