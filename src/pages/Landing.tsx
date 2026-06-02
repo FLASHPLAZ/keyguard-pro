@@ -608,22 +608,13 @@ export default function Landing() {
                     <ChevronDown className={`h-4 w-4 ${openFaq === i ? "text-primary" : "text-muted-foreground"}`} />
                   </motion.div>
                 </button>
-                <AnimatePresence initial={false}>
-                  {openFaq === i && (
-                    <motion.div
-                      key="content"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-4">
-                        {f.a}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {openFaq === i && (
+                  <div className="overflow-hidden animate-fade-in">
+                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-4">
+                      {f.a}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
@@ -633,7 +624,7 @@ export default function Landing() {
       {/* CTA */}
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/70/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
+          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
