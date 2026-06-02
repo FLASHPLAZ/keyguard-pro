@@ -189,19 +189,17 @@ export default function Landing() {
             </button>
           </div>
         </div>
-        <AnimatePresence>
-          {mobileMenu && (
-            <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden border-t border-border/40 overflow-hidden">
-              <div className="flex flex-col gap-3 px-4 py-4 text-sm">
-                <a href="#features" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Features</a>
-                <a href="#how" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">How it works</a>
-                <a href="#compare" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Compare</a>
-                <Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link>
-                <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
+        {mobileMenu && (
+          <nav className="md:hidden border-t border-border/40 animate-fade-in">
+            <div className="flex flex-col gap-3 px-4 py-4 text-sm">
+              <a href="#features" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Features</a>
+              <a href="#how" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">How it works</a>
+              <a href="#compare" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Compare</a>
+              <Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link>
+              <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
+            </div>
+          </nav>
+        )}
       </motion.header>
 
       {/* Hero — KeyAuth-style split */}
@@ -242,17 +240,13 @@ export default function Landing() {
 
           {/* Right: floating code panel */}
           <motion.div
-            initial={{ opacity: 0, y: 40, rotateX: 8 }}
-            animate={{ opacity: 1, y: 0, rotateX: 0 }}
-            transition={{ delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="relative"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative will-change-transform"
           >
-            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/30 via-primary/20 to-primary/80/30 blur-3xl opacity-60" />
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="relative glass-panel overflow-hidden"
-            >
+            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/25 via-primary/15 to-primary/25 blur-2xl opacity-50 hidden md:block" />
+            <div className="relative glass-panel overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/5 bg-primary/[0.04] px-4 py-2.5">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
@@ -271,7 +265,7 @@ export default function Landing() {
                 <span className="text-green-400">✓ 200 OK</span>
                 <span className="text-muted-foreground">42ms · hwid bound</span>
               </div>
-            </motion.div>
+            </div>
             {/* floating badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.6 }}
