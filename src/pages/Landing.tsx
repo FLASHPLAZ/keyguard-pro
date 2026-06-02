@@ -189,19 +189,17 @@ export default function Landing() {
             </button>
           </div>
         </div>
-        <AnimatePresence>
-          {mobileMenu && (
-            <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden border-t border-border/40 overflow-hidden">
-              <div className="flex flex-col gap-3 px-4 py-4 text-sm">
-                <a href="#features" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Features</a>
-                <a href="#how" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">How it works</a>
-                <a href="#compare" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Compare</a>
-                <Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link>
-                <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
+        {mobileMenu && (
+          <nav className="md:hidden border-t border-border/40 animate-fade-in">
+            <div className="flex flex-col gap-3 px-4 py-4 text-sm">
+              <a href="#features" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Features</a>
+              <a href="#how" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">How it works</a>
+              <a href="#compare" onClick={() => setMobileMenu(false)} className="text-muted-foreground hover:text-foreground">Compare</a>
+              <Link to="/pricing" className="text-muted-foreground hover:text-foreground">Pricing</Link>
+              <Link to="/login" className="text-muted-foreground hover:text-foreground">Sign in</Link>
+            </div>
+          </nav>
+        )}
       </motion.header>
 
       {/* Hero — KeyAuth-style split */}
@@ -242,17 +240,13 @@ export default function Landing() {
 
           {/* Right: floating code panel */}
           <motion.div
-            initial={{ opacity: 0, y: 40, rotateX: 8 }}
-            animate={{ opacity: 1, y: 0, rotateX: 0 }}
-            transition={{ delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            className="relative"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="relative will-change-transform"
           >
-            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/30 via-primary/20 to-primary/80/30 blur-3xl opacity-60" />
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              className="relative glass-panel overflow-hidden"
-            >
+            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/25 via-primary/15 to-primary/25 blur-2xl opacity-50 hidden md:block" />
+            <div className="relative glass-panel overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/5 bg-primary/[0.04] px-4 py-2.5">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
@@ -271,7 +265,7 @@ export default function Landing() {
                 <span className="text-green-400">✓ 200 OK</span>
                 <span className="text-muted-foreground">42ms · hwid bound</span>
               </div>
-            </motion.div>
+            </div>
             {/* floating badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.6 }}
@@ -614,22 +608,13 @@ export default function Landing() {
                     <ChevronDown className={`h-4 w-4 ${openFaq === i ? "text-primary" : "text-muted-foreground"}`} />
                   </motion.div>
                 </button>
-                <AnimatePresence initial={false}>
-                  {openFaq === i && (
-                    <motion.div
-                      key="content"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-4">
-                        {f.a}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {openFaq === i && (
+                  <div className="overflow-hidden animate-fade-in">
+                    <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-4">
+                      {f.a}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ))}
           </div>
@@ -639,7 +624,7 @@ export default function Landing() {
       {/* CTA */}
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/70/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
+          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
