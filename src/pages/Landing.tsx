@@ -143,29 +143,20 @@ else:
     print(f"❌ {data['error']}")`;
 
 export default function Landing() {
-  const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [activeGroup, setActiveGroup] = useState(0);
 
-  useEffect(() => {
-    const handler = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
-
   return (
     <div className="relative min-h-screen bg-background overflow-x-hidden">
       {/* Ambient background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
+        <div className="absolute inset-0 opacity-[0.025] hidden sm:block" style={{
           backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }} />
-        <motion.div className="absolute -left-32 top-32 h-[600px] w-[600px] rounded-full bg-primary/[0.12] blur-[120px]" animate={{ y: scrollY * 0.05 }} transition={{ type: "tween", duration: 0 }} />
-        <motion.div className="absolute -right-32 top-[600px] h-[500px] w-[500px] rounded-full bg-primary/70/[0.08] blur-[100px]" animate={{ y: scrollY * -0.03 }} transition={{ type: "tween", duration: 0 }} />
-        <div className="absolute left-1/2 top-[1200px] h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-primary/[0.07] blur-[90px]" />
-        <div className="absolute right-1/4 top-[2000px] h-[500px] w-[500px] rounded-full bg-primary/[0.07] blur-[100px]" />
+        <div className="absolute -left-32 top-32 h-[400px] w-[400px] rounded-full bg-primary/[0.10] blur-[80px]" />
+        <div className="absolute -right-32 top-[600px] h-[350px] w-[350px] rounded-full bg-primary/[0.08] blur-[80px] hidden md:block" />
       </div>
 
       {/* Navigation */}
