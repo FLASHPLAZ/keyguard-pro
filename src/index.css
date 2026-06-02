@@ -75,7 +75,12 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
     background-image: var(--gradient-mesh);
-    background-attachment: fixed;
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      background-attachment: fixed;
+    }
   }
 
   .font-mono {
