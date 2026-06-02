@@ -143,29 +143,20 @@ else:
     print(f"❌ {data['error']}")`;
 
 export default function Landing() {
-  const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [activeGroup, setActiveGroup] = useState(0);
 
-  useEffect(() => {
-    const handler = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
-
   return (
     <div className="relative min-h-screen bg-background overflow-x-hidden">
       {/* Ambient background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.03]" style={{
+      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
+        <div className="absolute inset-0 opacity-[0.025] hidden sm:block" style={{
           backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }} />
-        <motion.div className="absolute -left-32 top-32 h-[600px] w-[600px] rounded-full bg-purple-600/[0.12] blur-[120px]" animate={{ y: scrollY * 0.05 }} transition={{ type: "tween", duration: 0 }} />
-        <motion.div className="absolute -right-32 top-[600px] h-[500px] w-[500px] rounded-full bg-violet-500/[0.08] blur-[100px]" animate={{ y: scrollY * -0.03 }} transition={{ type: "tween", duration: 0 }} />
-        <div className="absolute left-1/2 top-[1200px] h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-fuchsia-500/[0.07] blur-[90px]" />
-        <div className="absolute right-1/4 top-[2000px] h-[500px] w-[500px] rounded-full bg-indigo-500/[0.07] blur-[100px]" />
+        <div className="absolute -left-32 top-32 h-[400px] w-[400px] rounded-full bg-primary/[0.10] blur-[80px]" />
+        <div className="absolute -right-32 top-[600px] h-[350px] w-[350px] rounded-full bg-primary/[0.08] blur-[80px] hidden md:block" />
       </div>
 
       {/* Navigation */}
@@ -173,12 +164,12 @@ export default function Landing() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="relative">
-              <div className="absolute -inset-1.5 rounded-lg bg-purple-500/30 blur-md" />
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-500/25">
+              <div className="absolute -inset-1.5 rounded-lg bg-primary/30 blur-md" />
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
                 <Key className="h-5 w-5 text-white" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">GrazeXauth</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">GrazeXauth</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -189,7 +180,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <Link to="/login"><Button variant="ghost" size="sm" className="hidden sm:inline-flex">Sign in</Button></Link>
             <Link to="/signup">
-              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0">
+              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/70 text-white border-0">
                 Get started <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -218,8 +209,8 @@ export default function Landing() {
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-center">
           {/* Left: copy */}
           <div className="text-center lg:text-left">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-4 py-1.5 text-xs text-purple-300 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" /> Free during beta — no card needed
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" /> Free during beta — no card needed
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-bold tracking-tight leading-[1.05]">
               The license API <br className="hidden sm:block" />
@@ -230,19 +221,19 @@ export default function Landing() {
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6 }} className="mt-9 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3">
               <Link to="/signup">
-                <Button size="lg" className="h-12 px-8 gap-2 gradient-primary text-white border-0 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 transition-all hover:scale-[1.02]">
+                <Button size="lg" className="h-12 px-8 gap-2 gradient-primary text-white border-0 shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:scale-[1.02]">
                   <Rocket className="h-4 w-4" /> Start for free
                 </Button>
               </Link>
               <a href="#code">
-                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-purple-500/30 hover:bg-purple-500/10 hover:border-purple-500/50">
+                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50">
                   <Code2 className="h-4 w-4" /> View the API
                 </Button>
               </a>
             </motion.div>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65, duration: 0.5 }} className="mt-8 flex flex-wrap items-center lg:justify-start justify-center gap-2">
               {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang, i) => (
-                <motion.div key={lang} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 + i * 0.05 }} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80 hover:border-purple-500/40 hover:text-purple-300 transition-colors">
+                <motion.div key={lang} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 + i * 0.05 }} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80 hover:border-primary/40 hover:text-primary transition-colors">
                   {lang}
                 </motion.div>
               ))}
@@ -256,27 +247,27 @@ export default function Landing() {
             transition={{ delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             className="relative"
           >
-            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-purple-600/30 via-fuchsia-500/20 to-violet-600/30 blur-3xl opacity-60" />
+            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/30 via-primary/20 to-primary/80/30 blur-3xl opacity-60" />
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               className="relative glass-panel overflow-hidden"
             >
-              <div className="flex items-center justify-between border-b border-white/5 bg-purple-500/[0.04] px-4 py-2.5">
+              <div className="flex items-center justify-between border-b border-white/5 bg-primary/[0.04] px-4 py-2.5">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
                   <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
                   <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
                   <span className="ml-3 text-xs text-muted-foreground font-mono">validate.py</span>
                 </div>
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-purple-300/80">
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary/80">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live
                 </span>
               </div>
               <pre className="overflow-x-auto p-5 text-[11px] sm:text-xs leading-relaxed font-mono">
                 <code className="text-foreground/90">{SAMPLE_PY}</code>
               </pre>
-              <div className="border-t border-white/5 bg-purple-500/[0.03] px-4 py-2.5 flex items-center justify-between text-[11px] font-mono">
+              <div className="border-t border-white/5 bg-primary/[0.03] px-4 py-2.5 flex items-center justify-between text-[11px] font-mono">
                 <span className="text-green-400">✓ 200 OK</span>
                 <span className="text-muted-foreground">42ms · hwid bound</span>
               </div>
@@ -286,7 +277,7 @@ export default function Landing() {
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 1, duration: 0.5, type: "spring" }}
-              className="absolute -left-4 top-1/3 hidden md:flex items-center gap-2 rounded-xl border border-purple-500/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
+              className="absolute -left-4 top-1/3 hidden md:flex items-center gap-2 rounded-xl border border-primary/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
             >
               <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center"><Shield className="h-3.5 w-3.5 text-white" /></div>
               <div className="text-[11px]"><div className="font-semibold">HWID bound</div><div className="text-muted-foreground">device #A4B2</div></div>
@@ -295,7 +286,7 @@ export default function Landing() {
               initial={{ opacity: 0, scale: 0.6 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 1.2, duration: 0.5, type: "spring" }}
-              className="absolute -right-4 bottom-8 hidden md:flex items-center gap-2 rounded-xl border border-purple-500/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
+              className="absolute -right-4 bottom-8 hidden md:flex items-center gap-2 rounded-xl border border-primary/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
             >
               <div className="h-7 w-7 rounded-lg bg-green-500/20 flex items-center justify-center"><CheckCircle2 className="h-3.5 w-3.5 text-green-400" /></div>
               <div className="text-[11px]"><div className="font-semibold">License valid</div><div className="text-muted-foreground">42ms response</div></div>
@@ -314,9 +305,9 @@ export default function Landing() {
               { label: "Languages", value: 7, suffix: "+", icon: Code2 },
               { label: "Setup", value: 30, suffix: "s", icon: Rocket },
             ].map((s, i) => (
-              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-xl border border-purple-500/20 bg-card/30 backdrop-blur py-5 px-4 transition-all duration-300 hover:border-purple-500/40 hover:bg-purple-500/5 hover:-translate-y-0.5">
-                <s.icon className="h-5 w-5 text-purple-400 mb-2" />
-                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent font-mono">
+              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-xl border border-primary/20 bg-card/30 backdrop-blur py-5 px-4 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 hover:-translate-y-0.5">
+                <s.icon className="h-5 w-5 text-primary mb-2" />
+                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent font-mono">
                   <Counter value={s.value} suffix={s.suffix} prefix={s.prefix} />
                 </span>
                 <span className="text-xs text-muted-foreground mt-1">{s.label}</span>
@@ -330,8 +321,8 @@ export default function Landing() {
       <Section id="features" className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <motion.div variants={fadeUp} className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Zap className="h-3 w-3 text-purple-400" /> Features
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Zap className="h-3 w-3 text-primary" /> Features
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">A platform, not just an API.</h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">Pick a pillar to explore what's built in.</p>
@@ -352,7 +343,7 @@ export default function Landing() {
                 {activeGroup === i && (
                   <motion.div
                     layoutId="feat-tab"
-                    className="absolute inset-0 rounded-full gradient-primary shadow-lg shadow-purple-500/30"
+                    className="absolute inset-0 rounded-full gradient-primary shadow-lg shadow-primary/30"
                     transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
@@ -378,9 +369,9 @@ export default function Landing() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, duration: 0.4 }}
-                    className="group relative rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur transition-all duration-300 hover:border-purple-500/40 hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/10"
+                    className="group relative rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur transition-all duration-300 hover:border-primary/40 hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
                   >
-                    <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-white shadow-lg shadow-purple-500/25">
+                    <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-white shadow-lg shadow-primary/25">
                       <f.icon className="h-5 w-5" />
                     </div>
                     <h3 className="text-sm font-semibold mb-1.5">{f.title}</h3>
@@ -397,15 +388,15 @@ export default function Landing() {
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <motion.div variants={fadeUp} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Shield className="h-3 w-3 text-purple-400" /> Security
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Shield className="h-3 w-3 text-primary" /> Security
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">See how we block attacks</h2>
             <p className="mt-3 text-muted-foreground max-w-xl mx-auto">Real threat scenarios and our automated defenses.</p>
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {THREATS.map((t, i) => (
-              <motion.div key={t.title} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-6 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1">
+              <motion.div key={t.title} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-6 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
                 <h3 className="font-semibold text-sm mb-2">{t.title}</h3>
                 <p className="text-xs text-muted-foreground mb-3">{t.desc}</p>
                 <div className="space-y-2 text-xs">
@@ -428,20 +419,20 @@ export default function Landing() {
       <Section id="how" className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-5xl">
           <motion.div variants={fadeUp} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Rocket className="h-3 w-3 text-purple-400" /> Quick Start
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Rocket className="h-3 w-3 text-primary" /> Quick Start
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Live in 3 steps</h2>
           </motion.div>
           <div className="relative grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="hidden md:block absolute top-12 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-purple-500/40 via-violet-500/40 to-purple-500/40" />
+            <div className="hidden md:block absolute top-12 left-[16.5%] right-[16.5%] h-px bg-gradient-to-r from-primary/40 via-primary/70/40 to-primary/40" />
             {[
               { n: "1", title: "Create Account", desc: "Sign up in 30 seconds — no credit card required." },
               { n: "2", title: "Add Your App", desc: "Create an application. This holds your keys, users & data." },
               { n: "3", title: "Integrate API", desc: "Copy our SDK snippet — authentication live in 5 minutes." },
             ].map((s, i) => (
-              <motion.div key={s.n} variants={fadeUp} custom={i} className="relative rounded-xl border border-border/50 bg-card/40 p-6 backdrop-blur hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1">
-                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-violet-600 text-sm font-bold text-white shadow-lg shadow-purple-500/25">
+              <motion.div key={s.n} variants={fadeUp} custom={i} className="relative rounded-xl border border-border/50 bg-card/40 p-6 backdrop-blur hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-sm font-bold text-white shadow-lg shadow-primary/25">
                   {s.n}
                 </div>
                 <h3 className="text-center text-base font-semibold mb-2">{s.title}</h3>
@@ -456,8 +447,8 @@ export default function Landing() {
       <Section id="compare" className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl">
           <motion.div variants={fadeUp} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Eye className="h-3 w-3 text-purple-400" /> Compare
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Eye className="h-3 w-3 text-primary" /> Compare
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to GrazeXauth?</h2>
           </motion.div>
@@ -465,17 +456,17 @@ export default function Landing() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/50 bg-purple-500/5">
+                  <tr className="border-b border-border/50 bg-primary/5">
                     <th className="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Feature</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-purple-400">GrazeXauth</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-primary">GrazeXauth</th>
                     <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Others</th>
                   </tr>
                 </thead>
                 <tbody>
                   {COMPARISONS.map((c, i) => (
-                    <tr key={c.feature} className={`border-b border-border/30 transition-colors hover:bg-purple-500/[0.04] ${i % 2 === 0 ? "bg-purple-500/[0.02]" : ""}`}>
+                    <tr key={c.feature} className={`border-b border-border/30 transition-colors hover:bg-primary/[0.04] ${i % 2 === 0 ? "bg-primary/[0.02]" : ""}`}>
                       <td className="px-5 py-3 text-foreground/90">{c.feature}</td>
-                      <td className="px-5 py-3 text-center">{c.us ? <CheckCircle2 className="h-4 w-4 text-purple-400 mx-auto" /> : <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-5 py-3 text-center">{c.us ? <CheckCircle2 className="h-4 w-4 text-primary mx-auto" /> : <span className="text-muted-foreground">—</span>}</td>
                       <td className="px-5 py-3 text-center">{c.them ? <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 mx-auto" /> : <span className="text-muted-foreground">—</span>}</td>
                     </tr>
                   ))}
@@ -493,15 +484,15 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">One API call. That's it.</h2>
             <p className="mt-3 text-muted-foreground">Validate, bind HWIDs, and detect sharing — one request.</p>
           </motion.div>
-          <motion.div variants={fadeUp} className="rounded-xl border border-purple-500/20 bg-card/60 backdrop-blur overflow-hidden shadow-2xl shadow-purple-500/10">
-            <div className="flex items-center justify-between border-b border-border/50 bg-purple-500/5 px-4 py-2">
+          <motion.div variants={fadeUp} className="rounded-xl border border-primary/20 bg-card/60 backdrop-blur overflow-hidden shadow-2xl shadow-primary/10">
+            <div className="flex items-center justify-between border-b border-border/50 bg-primary/5 px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
                 <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
                 <span className="ml-3 text-xs text-muted-foreground">validate.py</span>
               </div>
-              <Lock className="h-3.5 w-3.5 text-purple-400" />
+              <Lock className="h-3.5 w-3.5 text-primary" />
             </div>
             <pre className="overflow-x-auto p-5 text-xs sm:text-sm leading-relaxed font-mono">
               <code className="text-foreground/90">{SAMPLE_PY}</code>
@@ -514,8 +505,8 @@ export default function Landing() {
       <Section id="pricing-teaser" className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <motion.div variants={fadeUp} className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Sparkles className="h-3 w-3 text-purple-400" /> Pricing
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Sparkles className="h-3 w-3 text-primary" /> Pricing
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, transparent pricing</h2>
             <p className="mt-3 text-muted-foreground">Free forever for solo devs. Pay only when you scale.</p>
@@ -528,8 +519,8 @@ export default function Landing() {
                 custom={i}
                 className={`relative rounded-2xl border p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 ${
                   p.highlight
-                    ? "border-purple-500/60 bg-gradient-to-br from-purple-500/10 to-violet-500/5 shadow-2xl shadow-purple-500/20"
-                    : "border-border/50 bg-card/40 hover:border-purple-500/30"
+                    ? "border-primary/60 bg-gradient-to-br from-primary/10 to-primary/70/5 shadow-2xl shadow-primary/20"
+                    : "border-border/50 bg-card/40 hover:border-primary/30"
                 }`}
               >
                 {p.highlight && (
@@ -545,7 +536,7 @@ export default function Landing() {
                 <p className="text-sm text-muted-foreground mb-6">{p.desc}</p>
                 <Link to="/pricing">
                   <Button
-                    className={`w-full ${p.highlight ? "gradient-primary text-white border-0 hover:shadow-lg hover:shadow-purple-500/30" : ""}`}
+                    className={`w-full ${p.highlight ? "gradient-primary text-white border-0 hover:shadow-lg hover:shadow-primary/30" : ""}`}
                     variant={p.highlight ? "default" : "outline"}
                   >
                     {p.cta} <ArrowRight className="h-3.5 w-3.5" />
@@ -555,7 +546,7 @@ export default function Landing() {
             ))}
           </div>
           <div className="text-center mt-6">
-            <Link to="/pricing" className="text-sm text-purple-300 hover:text-purple-200 inline-flex items-center gap-1">
+            <Link to="/pricing" className="text-sm text-primary hover:text-primary inline-flex items-center gap-1">
               See full feature comparison <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -566,14 +557,14 @@ export default function Landing() {
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-6xl">
           <motion.div variants={fadeUp} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">
-              <Star className="h-3 w-3 text-purple-400" /> Reviews
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
+              <Star className="h-3 w-3 text-primary" /> Reviews
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Loved by developers</h2>
           </motion.div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {TESTIMONIALS.map((t, i) => (
-              <motion.div key={i} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-5 transition-all duration-300 hover:border-purple-500/30 hover:-translate-y-1">
+              <motion.div key={i} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-5 transition-all duration-300 hover:border-primary/30 hover:-translate-y-1">
                 <div className="flex gap-0.5 mb-3">
                   {Array.from({ length: t.stars }).map((_, j) => (
                     <Star key={j} className="h-4 w-4 fill-yellow-500 text-yellow-500" />
@@ -584,7 +575,7 @@ export default function Landing() {
                 </div>
                 <p className="text-sm text-foreground/80 mb-4 leading-relaxed">"{t.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-violet-600 text-xs font-bold text-white">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-xs font-bold text-white">
                     {t.name[0]}
                   </div>
                   <div>
@@ -602,7 +593,7 @@ export default function Landing() {
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl">
           <motion.div variants={fadeUp} className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4 mx-auto">FAQ</div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">FAQ</div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Frequently asked questions</h2>
           </motion.div>
           <div className="space-y-3">
@@ -613,14 +604,14 @@ export default function Landing() {
                 custom={i}
                 className={`group rounded-xl border backdrop-blur overflow-hidden transition-all duration-300 ${
                   openFaq === i
-                    ? "border-purple-500/50 bg-purple-500/[0.04] shadow-lg shadow-purple-500/10"
-                    : "border-border/50 bg-card/40 hover:border-purple-500/30"
+                    ? "border-primary/50 bg-primary/[0.04] shadow-lg shadow-primary/10"
+                    : "border-border/50 bg-card/40 hover:border-primary/30"
                 }`}
               >
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-medium">
                   <span className={openFaq === i ? "text-foreground" : "text-foreground/90"}>{f.q}</span>
                   <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.3 }} className="shrink-0">
-                    <ChevronDown className={`h-4 w-4 ${openFaq === i ? "text-purple-400" : "text-muted-foreground"}`} />
+                    <ChevronDown className={`h-4 w-4 ${openFaq === i ? "text-primary" : "text-muted-foreground"}`} />
                   </motion.div>
                 </button>
                 <AnimatePresence initial={false}>
@@ -633,7 +624,7 @@ export default function Landing() {
                       transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                       className="overflow-hidden"
                     >
-                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-purple-500/10 pt-4">
+                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-primary/10 pt-4">
                         {f.a}
                       </div>
                     </motion.div>
@@ -648,17 +639,17 @@ export default function Landing() {
       {/* CTA */}
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <motion.div variants={fadeUp} className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-violet-500/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
+          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/70/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/signup">
-                <Button size="lg" className="h-12 px-8 gap-2 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-purple-500/25 transition-shadow hover:shadow-2xl hover:shadow-purple-500/30">
+                <Button size="lg" className="h-12 px-8 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/70 text-white border-0 shadow-lg shadow-primary/25 transition-shadow hover:shadow-2xl hover:shadow-primary/30">
                   Start for free <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/pricing">
-                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-purple-500/30 hover:bg-purple-500/10">View Pricing</Button>
+                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-primary/30 hover:bg-primary/10">View Pricing</Button>
               </Link>
             </div>
           </motion.div>
@@ -669,7 +660,7 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Key className="h-4 w-4 text-purple-400" />
+            <Key className="h-4 w-4 text-primary" />
             <span>&copy; {new Date().getFullYear()} GrazeXauth. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
