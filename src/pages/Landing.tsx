@@ -202,91 +202,142 @@ export default function Landing() {
         )}
       </motion.header>
 
-      {/* Hero — KeyAuth-style split */}
-      <section className="relative z-10 px-4 sm:px-6 pt-16 pb-16 md:pt-24 md:pb-24">
-        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-center">
-          {/* Left: copy */}
-          <div className="text-center lg:text-left">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-primary animate-pulse" /> Free during beta — no card needed
-            </motion.div>
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] }} className="text-[2rem] xs:text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-bold tracking-tight leading-[1.08] break-words">
-              The license API <br className="hidden lg:block" />
-              built <span className="gradient-text">for devs</span>.
-            </motion.h1>
-            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }} className="mt-6 max-w-xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Generate keys, bind hardware, block sharing, and watch every login in real time — with one REST call.
-            </motion.p>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.6 }} className="mt-9 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3">
-              <Link to="/signup">
-                <Button size="lg" className="h-12 px-8 gap-2 gradient-primary text-white border-0 shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all hover:scale-[1.02]">
-                  <Rocket className="h-4 w-4" /> Start for free
-                </Button>
-              </Link>
-              <a href="#code">
-                <Button size="lg" variant="outline" className="h-12 px-8 gap-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50">
-                  <Code2 className="h-4 w-4" /> View the API
-                </Button>
-              </a>
-            </motion.div>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65, duration: 0.5 }} className="mt-8 flex flex-wrap items-center lg:justify-start justify-center gap-2">
-              {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang, i) => (
-                <motion.div key={lang} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 + i * 0.05 }} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80 hover:border-primary/40 hover:text-primary transition-colors">
-                  {lang}
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
+      {/* Hero — centered, SellAuth-inspired */}
+      <section className="relative z-10 px-4 sm:px-6 pt-14 pb-12 md:pt-24 md:pb-20">
+        {/* dramatic radial backdrop */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[700px] overflow-hidden">
+          <div className="absolute left-1/2 top-[-200px] h-[700px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.25),transparent_60%)]" />
+          <div className="absolute left-1/2 top-[120px] h-[2px] w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        </div>
 
-          {/* Right: floating code panel */}
+        <div className="mx-auto max-w-4xl text-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative will-change-transform"
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-4 py-1.5 text-xs sm:text-sm text-foreground/90 shadow-lg shadow-primary/5"
           >
-            <div className="absolute -inset-6 rounded-3xl bg-gradient-to-br from-primary/25 via-primary/15 to-primary/25 blur-2xl opacity-50 hidden md:block" />
-            <div className="relative glass-panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/5 bg-primary/[0.04] px-4 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-                  <span className="ml-3 text-xs text-muted-foreground font-mono">validate.py</span>
-                </div>
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-primary/80">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">Introducing GrazeXauth</span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-7 font-extrabold tracking-tight leading-[0.95] text-foreground text-[2.6rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-[5.25rem]"
+            style={{ letterSpacing: "-0.035em" }}
+          >
+            The license API <br className="hidden sm:block" />
+            built <span className="gradient-text">for scale.</span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.6 }}
+            className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed px-2"
+          >
+            GrazeXauth is the all-in-one auth platform that helps you generate keys,
+            bind hardware, block sharing, and watch every login in real time.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
+          >
+            <Link to="/signup" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                className="group relative h-14 w-full sm:w-[280px] rounded-full bg-gradient-to-r from-primary via-primary to-primary-glow text-primary-foreground font-semibold text-base border-0 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.6)] hover:shadow-[0_0_60px_-6px_hsl(var(--primary)/0.8)] hover:scale-[1.02] transition-all duration-300"
+              >
+                Get started
+                <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 group-hover:translate-x-0.5 transition-transform">
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </span>
-              </div>
-              <pre className="overflow-x-auto p-5 text-[11px] sm:text-xs leading-relaxed font-mono">
-                <code className="text-foreground/90">{SAMPLE_PY}</code>
-              </pre>
-              <div className="border-t border-white/5 bg-primary/[0.03] px-4 py-2.5 flex items-center justify-between text-[11px] font-mono">
-                <span className="text-green-400">✓ 200 OK</span>
-                <span className="text-muted-foreground">42ms · hwid bound</span>
-              </div>
-            </div>
-            {/* floating badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1, duration: 0.5, type: "spring" }}
-              className="absolute -left-4 top-1/3 hidden md:flex items-center gap-2 rounded-xl border border-primary/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
-            >
-              <div className="h-7 w-7 rounded-lg gradient-primary flex items-center justify-center"><Shield className="h-3.5 w-3.5 text-white" /></div>
-              <div className="text-[11px]"><div className="font-semibold">HWID bound</div><div className="text-muted-foreground">device #A4B2</div></div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.2, duration: 0.5, type: "spring" }}
-              className="absolute -right-4 bottom-8 hidden md:flex items-center gap-2 rounded-xl border border-primary/30 bg-card/80 backdrop-blur-xl px-3 py-2 shadow-xl"
-            >
-              <div className="h-7 w-7 rounded-lg bg-green-500/20 flex items-center justify-center"><CheckCircle2 className="h-3.5 w-3.5 text-green-400" /></div>
-              <div className="text-[11px]"><div className="font-semibold">License valid</div><div className="text-muted-foreground">42ms response</div></div>
-            </motion.div>
+              </Button>
+            </Link>
+            <a href="#features" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                className="group h-14 w-full sm:w-[280px] rounded-full border-border/60 bg-card/40 backdrop-blur hover:bg-card/70 hover:border-primary/40 text-foreground font-semibold text-base"
+              >
+                More details
+                <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Button>
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-7 flex flex-wrap items-center justify-center gap-2"
+          >
+            {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang) => (
+              <span key={lang} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80">
+                {lang}
+              </span>
+            ))}
           </motion.div>
         </div>
+
+        {/* Dashboard / code preview */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto mt-16 max-w-5xl px-2 sm:px-0 relative will-change-transform"
+        >
+          <div className="absolute -inset-x-6 -inset-y-10 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent blur-3xl opacity-60 hidden md:block" />
+          <div className="relative rounded-2xl border border-border/60 bg-card/70 backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)]">
+            <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-card/80 to-card/40 px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
+                <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
+                <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
+                <span className="ml-3 text-xs text-muted-foreground font-mono hidden sm:inline">api/validate.py</span>
+              </div>
+              <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary/90 font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live
+              </span>
+            </div>
+            <div className="grid md:grid-cols-[1fr_280px]">
+              <pre className="overflow-x-auto p-4 sm:p-6 text-[11px] sm:text-xs leading-relaxed font-mono">
+                <code className="text-foreground/90">{SAMPLE_PY}</code>
+              </pre>
+              <div className="border-t md:border-t-0 md:border-l border-border/50 p-4 sm:p-5 space-y-3 bg-background/30">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</div>
+                <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                  <div className="text-[11px]">
+                    <div className="font-semibold text-foreground">200 OK · 42ms</div>
+                    <div className="text-muted-foreground">License valid</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                  <Shield className="h-4 w-4 text-primary shrink-0" />
+                  <div className="text-[11px]">
+                    <div className="font-semibold text-foreground">HWID bound</div>
+                    <div className="text-muted-foreground font-mono">device #A4B2</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/40 px-3 py-2">
+                  <Activity className="h-4 w-4 text-primary-glow shrink-0" />
+                  <div className="text-[11px]">
+                    <div className="font-semibold text-foreground">Logged event</div>
+                    <div className="text-muted-foreground">India · login_success</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </section>
 
       {/* Stats */}
