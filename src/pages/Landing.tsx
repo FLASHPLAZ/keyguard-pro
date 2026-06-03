@@ -395,7 +395,7 @@ export default function Landing() {
                 <p className="text-xs text-muted-foreground mb-3">{t.desc}</p>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2">
-                    <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
+                    <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                     <span className="text-blue-300">{t.defense}</span>
                   </div>
                   <div className="flex items-start gap-2">
