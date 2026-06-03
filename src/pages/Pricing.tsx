@@ -23,7 +23,7 @@ const PLANS = [
     cta: "Start Developer Plan",
     ctaLink: "/signup",
     highlight: true,
-    color: "border-purple-500/50",
+    color: "border-primary/50",
   },
   {
     name: "Seller",
@@ -33,7 +33,7 @@ const PLANS = [
     cta: "Start Seller Plan",
     ctaLink: "/signup",
     highlight: false,
-    color: "border-violet-500/40",
+    color: "border-primary-glow/40",
   },
 ];
 
@@ -145,8 +145,8 @@ export default function Pricing() {
   return (
     <div className="relative min-h-screen bg-background overflow-x-hidden">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 top-32 h-[600px] w-[600px] rounded-full bg-purple-600/[0.1] blur-[120px]" />
-        <div className="absolute -right-32 top-[400px] h-[500px] w-[500px] rounded-full bg-violet-500/[0.08] blur-[100px]" />
+        <div className="absolute -left-32 top-32 h-[600px] w-[600px] rounded-full bg-primary/[0.1] blur-[120px]" />
+        <div className="absolute -right-32 top-[400px] h-[500px] w-[500px] rounded-full bg-primary/[0.08] blur-[100px]" />
       </div>
 
       {/* Nav */}
@@ -154,12 +154,12 @@ export default function Pricing() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="relative">
-              <div className="absolute -inset-1.5 rounded-lg bg-purple-500/30 blur-md" />
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg shadow-purple-500/25">
+              <div className="absolute -inset-1.5 rounded-lg bg-primary/30 blur-md" />
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-glow shadow-lg shadow-primary/25">
                 <Key className="h-5 w-5 text-white" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-transparent">GrazeXauth</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">GrazeXauth</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <Link to="/#features" className="hover:text-foreground transition-colors">Features</Link>
@@ -168,7 +168,7 @@ export default function Pricing() {
           <div className="flex items-center gap-2">
             <Link to="/login"><Button variant="ghost" size="sm">Sign in</Button></Link>
             <Link to="/signup">
-              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0">
+              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 text-white border-0">
                 Get started <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -179,8 +179,8 @@ export default function Pricing() {
       {/* Pricing Header */}
       <section className="relative z-10 px-4 sm:px-6 pt-16 pb-8 text-center">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 mb-4">
-            <Sparkles className="h-3 w-3 text-purple-400" /> Pricing
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4">
+            <Sparkles className="h-3 w-3 text-primary" /> Pricing
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
             Simple, transparent pricing.
@@ -190,7 +190,7 @@ export default function Pricing() {
 
         <div className="mt-8 flex items-center justify-center gap-3">
           <span className={`text-sm ${!yearly ? "text-foreground" : "text-muted-foreground"}`}>Monthly</span>
-          <button onClick={() => setYearly(!yearly)} className={`relative h-7 w-12 rounded-full transition-colors ${yearly ? "bg-purple-600" : "bg-secondary"}`}>
+          <button onClick={() => setYearly(!yearly)} className={`relative h-7 w-12 rounded-full transition-colors ${yearly ? "bg-primary" : "bg-secondary"}`}>
             <div className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${yearly ? "translate-x-6" : "translate-x-1"}`} />
           </button>
           <span className={`text-sm ${yearly ? "text-foreground" : "text-muted-foreground"}`}>Yearly</span>
@@ -209,12 +209,12 @@ export default function Pricing() {
               transition={{ delay: idx * 0.1, duration: 0.5 }}
               className={`relative rounded-2xl border backdrop-blur p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                 plan.highlight
-                  ? "border-purple-500/50 bg-purple-500/5 shadow-xl shadow-purple-500/10 scale-[1.02]"
+                  ? "border-primary/50 bg-primary/5 shadow-xl shadow-primary/10 scale-[1.02]"
                   : "border-border/50 bg-card/40"
               }`}
             >
               {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-500 to-violet-500 px-4 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-primary-glow px-4 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
                   Most Popular
                 </div>
               )}
@@ -228,7 +228,7 @@ export default function Pricing() {
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text text-transparent">
+                    <span className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
                       ${yearly ? plan.yearlyPrice.toFixed(2) : plan.monthlyPrice.toFixed(2)}
                     </span>
                     <span className="text-sm text-muted-foreground">/{yearly ? "year" : "month"}</span>
@@ -238,9 +238,9 @@ export default function Pricing() {
               <Link to={plan.ctaLink} className="mt-6">
                 <Button className={`w-full ${
                   plan.highlight
-                    ? "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white border-0"
+                    ? "bg-gradient-to-r from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 text-white border-0"
                     : plan.name === "Seller"
-                    ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white border-0"
+                    ? "bg-gradient-to-r from-primary-glow to-primary hover:from-primary-glow/90 hover:to-primary/90 text-white border-0"
                     : "bg-secondary hover:bg-secondary/80"
                 }`}>
                   {plan.cta}
@@ -263,30 +263,30 @@ export default function Pricing() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/50 bg-purple-500/5">
+                  <tr className="border-b border-border/50 bg-primary/5">
                     <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[40%]">Features</th>
                     <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[20%]">
                       <div>Tester</div>
                       <div className="text-[10px] font-normal mt-0.5 text-muted-foreground/60">Free</div>
                     </th>
-                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-purple-400 w-[20%]">
+                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-primary w-[20%]">
                       <div>Developer</div>
-                      <div className="text-[10px] font-normal mt-0.5 text-purple-400/60">${yearly ? "14.99/yr" : "2.99/mo"}</div>
+                      <div className="text-[10px] font-normal mt-0.5 text-primary/60">${yearly ? "14.99/yr" : "2.99/mo"}</div>
                     </th>
-                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-violet-400 w-[20%]">
+                    <th className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wider text-primary-glow w-[20%]">
                       <div>Seller</div>
-                      <div className="text-[10px] font-normal mt-0.5 text-violet-400/60">${yearly ? "24.99/yr" : "4.99/mo"}</div>
+                      <div className="text-[10px] font-normal mt-0.5 text-primary-glow/60">${yearly ? "24.99/yr" : "4.99/mo"}</div>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {FEATURE_TABLE.map((section) => (
                     <>
-                      <tr key={section.category} className="bg-purple-500/[0.03]">
-                        <td colSpan={4} className="px-5 py-2.5 text-xs font-semibold text-purple-400 uppercase tracking-wider">{section.category}</td>
+                      <tr key={section.category} className="bg-primary/[0.03]">
+                        <td colSpan={4} className="px-5 py-2.5 text-xs font-semibold text-primary uppercase tracking-wider">{section.category}</td>
                       </tr>
                       {section.rows.map((row, ri) => (
-                        <tr key={row.name} className={`border-b border-border/20 transition-colors hover:bg-purple-500/[0.04] ${ri % 2 === 0 ? "" : "bg-purple-500/[0.01]"}`}>
+                        <tr key={row.name} className={`border-b border-border/20 transition-colors hover:bg-primary/[0.04] ${ri % 2 === 0 ? "" : "bg-primary/[0.01]"}`}>
                           <td className="px-5 py-3 text-foreground/80 font-medium">{row.name}</td>
                           <td className="px-4 py-3 text-center"><CellDisplay value={row.tester} /></td>
                           <td className="px-4 py-3 text-center"><CellDisplay value={row.developer} /></td>
@@ -329,7 +329,7 @@ export default function Pricing() {
       <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Key className="h-4 w-4 text-purple-400" />
+            <Key className="h-4 w-4 text-primary" />
             <span>© {new Date().getFullYear()} GrazeXauth</span>
           </div>
           <div className="flex items-center gap-6">
