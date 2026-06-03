@@ -155,12 +155,12 @@ export default function Landing() {
           backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
           backgroundSize: "60px 60px",
         }} />
-        <div className="absolute -left-32 top-32 h-[400px] w-[400px] rounded-full bg-primary/[0.10] blur-[80px]" />
+        <div className="absolute -left-32 top-32 h-[400px] w-[400px] rounded-full bg-primary/[0.10] blur-[80px] hidden md:block" />
         <div className="absolute -right-32 top-[600px] h-[350px] w-[350px] rounded-full bg-primary/[0.08] blur-[80px] hidden md:block" />
       </div>
 
       {/* Navigation */}
-      <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="sticky top-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/70">
+      <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="sticky top-0 z-50 border-b border-border/40 md:backdrop-blur-xl bg-background/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="relative">
@@ -215,7 +215,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-4 py-1.5 text-xs sm:text-sm text-foreground/90 shadow-lg shadow-primary/5"
+            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 md:backdrop-blur px-4 py-1.5 text-xs sm:text-sm text-foreground/90 shadow-lg shadow-primary/5"
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="font-medium">Introducing GrazeXauth</span>
@@ -263,7 +263,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="group h-14 w-full sm:w-[280px] rounded-full border-border/60 bg-card/40 backdrop-blur hover:bg-card/70 hover:border-primary/40 text-foreground font-semibold text-base"
+                className="group h-14 w-full sm:w-[280px] rounded-full border-border/60 bg-card/40 md:backdrop-blur hover:bg-card/70 hover:border-primary/40 text-foreground font-semibold text-base"
               >
                 More details
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
@@ -280,7 +280,7 @@ export default function Landing() {
             className="mt-7 flex flex-wrap items-center justify-center gap-2"
           >
             {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang) => (
-              <span key={lang} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 backdrop-blur font-mono text-[11px] text-muted-foreground/80">
+              <span key={lang} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 md:backdrop-blur font-mono text-[11px] text-muted-foreground/80">
                 {lang}
               </span>
             ))}
@@ -295,7 +295,7 @@ export default function Landing() {
           className="mx-auto mt-16 max-w-5xl px-2 sm:px-0 relative will-change-transform"
         >
           <div className="absolute -inset-x-6 -inset-y-10 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent blur-3xl opacity-60 hidden md:block" />
-          <div className="relative rounded-2xl border border-border/60 bg-card/70 backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)]">
+          <div className="relative rounded-2xl border border-border/60 bg-card/70 md:backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)]">
             <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-card/80 to-card/40 px-4 py-3">
               <div className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
@@ -350,7 +350,7 @@ export default function Landing() {
               { label: "Languages", value: 7, suffix: "+", icon: Code2 },
               { label: "Setup", value: 30, suffix: "s", icon: Rocket },
             ].map((s, i) => (
-              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-xl border border-primary/20 bg-card/30 backdrop-blur py-5 px-4 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 hover:-translate-y-0.5">
+              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-xl border border-primary/20 bg-card/30 md:backdrop-blur py-5 px-4 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 md:hover:-translate-y-0.5">
                 <s.icon className="h-5 w-5 text-primary mb-2" />
                 <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent font-mono">
                   <Counter value={s.value} suffix={s.suffix} prefix={s.prefix} />
@@ -414,7 +414,7 @@ export default function Landing() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06, duration: 0.4 }}
-                    className="group relative rounded-xl border border-border/50 bg-card/40 p-5 backdrop-blur transition-all duration-300 hover:border-primary/40 hover:bg-card/60 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
+                    className="group relative rounded-xl border border-border/50 bg-card/40 p-5 md:backdrop-blur transition-all duration-300 hover:border-primary/40 hover:bg-card/60 md:hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
                   >
                     <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg gradient-primary text-white shadow-lg shadow-primary/25">
                       <f.icon className="h-5 w-5" />
@@ -441,7 +441,7 @@ export default function Landing() {
           </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {THREATS.map((t, i) => (
-              <motion.div key={t.title} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-6 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+              <motion.div key={t.title} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 md:backdrop-blur p-6 hover:border-primary/30 transition-all duration-300 md:hover:-translate-y-1">
                 <h3 className="font-semibold text-sm mb-2">{t.title}</h3>
                 <p className="text-xs text-muted-foreground mb-3">{t.desc}</p>
                 <div className="space-y-2 text-xs">
@@ -476,7 +476,7 @@ export default function Landing() {
               { n: "2", title: "Add Your App", desc: "Create an application. This holds your keys, users & data." },
               { n: "3", title: "Integrate API", desc: "Copy our SDK snippet — authentication live in 5 minutes." },
             ].map((s, i) => (
-              <motion.div key={s.n} variants={fadeUp} custom={i} className="relative rounded-xl border border-border/50 bg-card/40 p-6 backdrop-blur hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+              <motion.div key={s.n} variants={fadeUp} custom={i} className="relative rounded-xl border border-border/50 bg-card/40 p-6 md:backdrop-blur hover:border-primary/30 transition-all duration-300 md:hover:-translate-y-1">
                 <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-sm font-bold text-white shadow-lg shadow-primary/25">
                   {s.n}
                 </div>
@@ -497,7 +497,7 @@ export default function Landing() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to GrazeXauth?</h2>
           </motion.div>
-          <motion.div variants={fadeUp} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur overflow-hidden">
+          <motion.div variants={fadeUp} className="rounded-xl border border-border/50 bg-card/40 md:backdrop-blur overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -529,7 +529,7 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">One API call. That's it.</h2>
             <p className="mt-3 text-muted-foreground">Validate, bind HWIDs, and detect sharing — one request.</p>
           </motion.div>
-          <motion.div variants={fadeUp} className="rounded-xl border border-primary/20 bg-card/60 backdrop-blur overflow-hidden shadow-2xl shadow-primary/10">
+          <motion.div variants={fadeUp} className="rounded-xl border border-primary/20 bg-card/60 md:backdrop-blur overflow-hidden shadow-2xl shadow-primary/10">
             <div className="flex items-center justify-between border-b border-border/50 bg-primary/5 px-4 py-2">
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
@@ -562,7 +562,7 @@ export default function Landing() {
                 key={p.name}
                 variants={fadeUp}
                 custom={i}
-                className={`relative rounded-2xl border p-7 backdrop-blur transition-all duration-300 hover:-translate-y-1 ${
+                className={`relative rounded-2xl border p-7 md:backdrop-blur transition-all duration-300 md:hover:-translate-y-1 ${
                   p.highlight
                     ? "border-primary/60 bg-gradient-to-br from-primary/10 to-primary/70/5 shadow-2xl shadow-primary/20"
                     : "border-border/50 bg-card/40 hover:border-primary/30"
@@ -609,7 +609,7 @@ export default function Landing() {
           </motion.div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {TESTIMONIALS.map((t, i) => (
-              <motion.div key={i} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 backdrop-blur p-5 transition-all duration-300 hover:border-primary/30 hover:-translate-y-1">
+              <motion.div key={i} variants={fadeUp} custom={i} className="rounded-xl border border-border/50 bg-card/40 md:backdrop-blur p-5 transition-all duration-300 hover:border-primary/30 md:hover:-translate-y-1">
                 <div className="flex gap-0.5 mb-3">
                   {Array.from({ length: t.stars }).map((_, j) => (
                     <Star key={j} className="h-4 w-4 fill-yellow-500 text-yellow-500" />
@@ -647,7 +647,7 @@ export default function Landing() {
                 key={i}
                 variants={fadeUp}
                 custom={i}
-                className={`group rounded-xl border backdrop-blur overflow-hidden transition-all duration-300 ${
+                className={`group rounded-xl border md:backdrop-blur overflow-hidden transition-all duration-300 ${
                   openFaq === i
                     ? "border-primary/50 bg-primary/[0.04] shadow-lg shadow-primary/10"
                     : "border-border/50 bg-card/40 hover:border-primary/30"
@@ -675,7 +675,7 @@ export default function Landing() {
       {/* CTA */}
       <Section className="relative z-10 px-4 sm:px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-8 sm:p-14 backdrop-blur-xl shadow-xl">
+          <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-8 sm:p-14 md:backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
             <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -693,7 +693,7 @@ export default function Landing() {
       </Section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border/40 bg-background/60 backdrop-blur-xl">
+      <footer className="relative z-10 border-t border-border/40 bg-background/60 md:backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-primary" />
