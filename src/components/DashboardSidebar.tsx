@@ -13,6 +13,7 @@ import {
   LogOut,
   Bot,
   Sparkles,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const navItems = [
   { icon: ScrollText, label: "Logs", path: "/logs" },
   { icon: Shield, label: "API Docs", path: "/api-docs" },
   { icon: Bot, label: "Bot Guide", path: "/bot-guide" },
+  { icon: Crown, label: "My Plan", path: "/admin/billing" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
