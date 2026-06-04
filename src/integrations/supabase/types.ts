@@ -299,6 +299,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          banned: boolean
+          banned_at: string | null
+          banned_reason: string | null
           created_at: string
           email: string | null
           id: string
@@ -307,6 +310,9 @@ export type Database = {
           username: string
         }
         Insert: {
+          banned?: boolean
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -315,6 +321,9 @@ export type Database = {
           username: string
         }
         Update: {
+          banned?: boolean
+          banned_at?: string | null
+          banned_reason?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -467,29 +476,38 @@ export type Database = {
       }
       tenants: {
         Row: {
+          billing_cycle: string
           created_at: string
           id: string
           name: string
           owner_user_id: string
           plan: string
+          plan_expires_at: string | null
+          plan_started_at: string
           suspended: boolean
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string
           created_at?: string
           id?: string
           name: string
           owner_user_id: string
           plan?: string
+          plan_expires_at?: string | null
+          plan_started_at?: string
           suspended?: boolean
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string
           created_at?: string
           id?: string
           name?: string
           owner_user_id?: string
           plan?: string
+          plan_expires_at?: string | null
+          plan_started_at?: string
           suspended?: boolean
           updated_at?: string
         }
