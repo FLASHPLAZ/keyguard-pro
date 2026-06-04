@@ -5,11 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PLAN_LIMITS: Record<string, { apps: number; keys: number; resellers: number }> = {
-  free: { apps: 3, keys: 50, resellers: 0 },
-  developer: { apps: 10, keys: 10000, resellers: 5 },
-  seller: { apps: -1, keys: -1, resellers: -1 }, // -1 = unlimited
-  platform: { apps: -1, keys: -1, resellers: -1 },
+const PLAN_LIMITS: Record<string, { apps: number; keys: number; resellers: number; managers: number }> = {
+  // Free (a.k.a. Tester) — 1 app, 10 users, no resellers/managers
+  free: { apps: 1, keys: 10, resellers: 0, managers: 0 },
+  // Developer — 8 apps, 10,000 users, 5 resellers, 2 managers
+  developer: { apps: 8, keys: 10000, resellers: 5, managers: 2 },
+  // Seller — unlimited everything
+  seller: { apps: -1, keys: -1, resellers: -1, managers: -1 },
+  // Platform (internal/staff)
+  platform: { apps: -1, keys: -1, resellers: -1, managers: -1 },
 };
 
 Deno.serve(async (req) => {
@@ -43,7 +47,7 @@ Deno.serve(async (req) => {
     // Get tenant
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("id, plan")
+      .select("id, plan, plan_started_at, plan_expires_at, billing_cycle, suspended")
       .eq("owner_user_id", user.id)
       .single();
 
@@ -54,19 +58,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    const limits = PLAN_LIMITS[tenant.plan] || PLAN_LIMITS.free;
+    // If subscription expired, treat as free
+    let effectivePlan = tenant.plan;
+    const expired = tenant.plan_expires_at && new Date(tenant.plan_expires_at) < new Date();
+    if (expired && tenant.plan !== "free" && tenant.plan !== "platform") {
+      effectivePlan = "free";
+    }
+    const limits = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.free;
 
     // Count current usage
-    const [appsRes, keysRes, resellersRes] = await Promise.all([
+    const [appsRes, keysRes, resellersRes, managersRes] = await Promise.all([
       supabase.from("applications").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
       supabase.from("licenses").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
       supabase.from("resellers").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
+      supabase.from("manager_permissions").select("id", { count: "exact", head: true }).eq("tenant_id", tenant.id),
     ]);
 
     const usage = {
       apps: appsRes.count ?? 0,
       keys: keysRes.count ?? 0,
       resellers: resellersRes.count ?? 0,
+      managers: managersRes.count ?? 0,
     };
 
     const body = await req.json().catch(() => ({}));
@@ -81,12 +93,18 @@ Deno.serve(async (req) => {
         allowed,
         current,
         limit: limit === -1 ? "unlimited" : limit,
-        plan: tenant.plan,
+        plan: effectivePlan,
+        original_plan: tenant.plan,
+        expired,
+        plan_expires_at: tenant.plan_expires_at,
+        billing_cycle: tenant.billing_cycle,
+        suspended: tenant.suspended,
         usage,
         limits: {
           apps: limits.apps === -1 ? "unlimited" : limits.apps,
           keys: limits.keys === -1 ? "unlimited" : limits.keys,
           resellers: limits.resellers === -1 ? "unlimited" : limits.resellers,
+          managers: limits.managers === -1 ? "unlimited" : limits.managers,
         },
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -95,12 +113,19 @@ Deno.serve(async (req) => {
 
     // Return full usage + limits
     return new Response(JSON.stringify({
-      plan: tenant.plan,
+      plan: effectivePlan,
+      original_plan: tenant.plan,
+      expired,
+      plan_started_at: tenant.plan_started_at,
+      plan_expires_at: tenant.plan_expires_at,
+      billing_cycle: tenant.billing_cycle,
+      suspended: tenant.suspended,
       usage,
       limits: {
         apps: limits.apps === -1 ? "unlimited" : limits.apps,
         keys: limits.keys === -1 ? "unlimited" : limits.keys,
         resellers: limits.resellers === -1 ? "unlimited" : limits.resellers,
+        managers: limits.managers === -1 ? "unlimited" : limits.managers,
       },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
