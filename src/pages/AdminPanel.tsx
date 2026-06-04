@@ -16,8 +16,12 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area,
@@ -153,9 +157,53 @@ export default function AdminPanel() {
   }
 
   async function updateTenantPlan(id: string, plan: string) {
-    await supabase.from("tenants").update({ plan }).eq("id", id);
+    // When upgrading off free, default to 30-day cycle; platform/seller = lifetime
+    const patch: any = { plan };
+    if (plan === "platform" || plan === "seller") {
+      patch.billing_cycle = "lifetime";
+      patch.plan_expires_at = null;
+    } else if (plan === "developer") {
+      patch.billing_cycle = "monthly";
+      patch.plan_expires_at = new Date(Date.now() + 30 * 86_400_000).toISOString();
+      patch.plan_started_at = new Date().toISOString();
+    } else if (plan === "free") {
+      patch.billing_cycle = "lifetime";
+      patch.plan_expires_at = null;
+    }
+    await supabase.from("tenants").update(patch).eq("id", id);
     toast.success(`Plan updated to ${plan}`);
     loadTenants();
+    loadOverview();
+  }
+
+  async function extendTenant(id: string, days: number) {
+    const { data: t } = await supabase.from("tenants").select("plan_expires_at").eq("id", id).single();
+    const base = t?.plan_expires_at && new Date(t.plan_expires_at) > new Date() ? new Date(t.plan_expires_at) : new Date();
+    const newDate = new Date(base.getTime() + days * 86_400_000);
+    await supabase.from("tenants").update({ plan_expires_at: newDate.toISOString(), billing_cycle: days >= 365 ? "yearly" : "monthly" }).eq("id", id);
+    toast.success(`Extended by ${days} days`);
+    loadTenants();
+  }
+
+  async function makeLifetime(id: string) {
+    await supabase.from("tenants").update({ plan_expires_at: null, billing_cycle: "lifetime" }).eq("id", id);
+    toast.success("Set to lifetime");
+    loadTenants();
+  }
+
+  // ─── User ban / delete ───
+  const [pendingUser, setPendingUser] = useState<{ id: string; email: string; action: "ban" | "delete" } | null>(null);
+
+  async function manageUser(action: "ban" | "unban" | "delete", userId: string) {
+    const { data, error } = await supabase.functions.invoke("manage-user", {
+      body: { action, userId },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Failed");
+      return;
+    }
+    toast.success(`User ${action}${action === "ban" ? "ned" : action === "unban" ? "ned" : "d"}`);
+    loadUsers();
     loadOverview();
   }
 
@@ -375,7 +423,12 @@ export default function AdminPanel() {
                           const roleStr = roles.length > 0 ? roles.map((r: any) => r.role).join(", ") : u.role || "unknown";
                           return (
                             <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                              <td className="px-4 py-3 font-medium text-foreground">{u.username}</td>
+                              <td className="px-4 py-3 font-medium text-foreground">
+                                <div className="flex items-center gap-2">
+                                  {u.username}
+                                  {u.banned && <Badge variant="destructive" className="text-[9px]">BANNED</Badge>}
+                                </div>
+                              </td>
                               <td className="px-4 py-3 text-muted-foreground text-xs">{u.email}</td>
                               <td className="px-4 py-3">
                                 <Badge variant={roleStr.includes("admin") ? "default" : "secondary"} className="text-[10px]">
@@ -383,11 +436,35 @@ export default function AdminPanel() {
                                 </Badge>
                               </td>
                               <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(u.created_at)}</td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex justify-end gap-1">
+                                  {u.user_id === user?.id ? (
+                                    <span className="text-[10px] text-muted-foreground">You</span>
+                                  ) : roleStr.includes("admin") ? (
+                                    <span className="text-[10px] text-muted-foreground">—</span>
+                                  ) : (
+                                    <>
+                                      {u.banned ? (
+                                        <Button size="sm" variant="ghost" className="h-7 px-2 text-emerald-400" onClick={() => manageUser("unban", u.user_id)}>
+                                          <UserCheck className="h-3 w-3 mr-1" />Unban
+                                        </Button>
+                                      ) : (
+                                        <Button size="sm" variant="ghost" className="h-7 px-2 text-yellow-500" onClick={() => setPendingUser({ id: u.user_id, email: u.email, action: "ban" })}>
+                                          <Ban className="h-3 w-3 mr-1" />Ban
+                                        </Button>
+                                      )}
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => setPendingUser({ id: u.user_id, email: u.email, action: "delete" })}>
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
                             </tr>
                           );
                         })}
                         {paginatedUsers.length === 0 && (
-                          <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">No users found</td></tr>
+                          <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No users found</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -432,13 +509,18 @@ export default function AdminPanel() {
                         <tr className="border-b border-border bg-secondary/50">
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">Workspace</th>
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expiry</th>
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
                           <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedTenants.map((t: any) => (
+                        {paginatedTenants.map((t: any) => {
+                          const exp = t.plan_expires_at ? new Date(t.plan_expires_at) : null;
+                          const days = exp ? Math.ceil((exp.getTime() - Date.now()) / 86_400_000) : null;
+                          const expired = exp && exp < new Date();
+                          return (
                           <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                             <td className="px-4 py-3 font-medium text-foreground">{t.name}</td>
                             <td className="px-4 py-3">
@@ -453,6 +535,15 @@ export default function AdminPanel() {
                                 <option value="platform">Platform</option>
                               </select>
                             </td>
+                            <td className="px-4 py-3 text-xs">
+                              {!exp ? (
+                                <span className="inline-flex items-center gap-1 text-primary"><InfinityIcon className="h-3 w-3" /> Lifetime</span>
+                              ) : expired ? (
+                                <Badge variant="destructive" className="text-[10px]">Expired</Badge>
+                              ) : (
+                                <span className={days! <= 7 ? "text-yellow-500" : "text-muted-foreground"}>{days}d ({exp.toLocaleDateString()})</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3">
                               {t.suspended ? (
                                 <Badge variant="destructive" className="text-[10px]">Suspended</Badge>
@@ -462,19 +553,24 @@ export default function AdminPanel() {
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
                             <td className="px-4 py-3 text-right">
-                              <Button
-                                variant="ghost" size="sm"
-                                onClick={() => suspendTenant(t.id, t.suspended)}
-                                className={t.suspended ? "text-emerald-400 hover:text-emerald-300" : "text-destructive hover:text-destructive/80"}
-                              >
-                                {t.suspended ? <UserCheck className="h-3.5 w-3.5 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
-                                {t.suspended ? "Unsuspend" : "Suspend"}
-                              </Button>
+                              <div className="flex justify-end gap-1 flex-wrap">
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 30)}><Calendar className="h-3 w-3 mr-1" />+30d</Button>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 365)}>+1y</Button>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => makeLifetime(t.id)}><InfinityIcon className="h-3 w-3" /></Button>
+                                <Button
+                                  variant="ghost" size="sm"
+                                  onClick={() => suspendTenant(t.id, t.suspended)}
+                                  className={`h-7 px-2 text-xs ${t.suspended ? "text-emerald-400" : "text-destructive"}`}
+                                >
+                                  {t.suspended ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                                </Button>
+                              </div>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                         {paginatedTenants.length === 0 && (
-                          <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No tenants found</td></tr>
+                          <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No tenants found</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -486,6 +582,34 @@ export default function AdminPanel() {
           </TabsContent>
         </Tabs>
       </PageTransition>
+      {/* Ban/Delete confirmation */}
+      <AlertDialog open={!!pendingUser} onOpenChange={(o) => !o && setPendingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingUser?.action === "delete" ? "Permanently delete user?" : "Ban user account?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{pendingUser?.email}</strong>
+              {pendingUser?.action === "delete"
+                ? " — this will permanently remove the account, all roles, workspaces and tenant data. Cannot be undone."
+                : " — the user will be immediately signed out and blocked from logging in until unbanned."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (pendingUser) manageUser(pendingUser.action, pendingUser.id);
+                setPendingUser(null);
+              }}
+            >
+              {pendingUser?.action === "delete" ? "Delete forever" : "Ban user"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

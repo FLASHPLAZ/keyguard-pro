@@ -56,7 +56,7 @@ const FEATURE_TABLE: FeatureSection[] = [
     category: "Core Authentication",
     rows: [
       { name: "Applications", tester: 1, developer: 8, seller: "Unlimited" },
-      { name: "Users per App", tester: 10, developer: "10,000", seller: "Unlimited" },
+      { name: "License Keys (Total)", tester: 10, developer: "10,000", seller: "Unlimited" },
       { name: "All Authentication Methods", tester: true, developer: true, seller: true },
       { name: "Token System", tester: true, developer: true, seller: true },
       { name: "Hash Checks", tester: true, developer: true, seller: true },
@@ -102,8 +102,8 @@ const FEATURE_TABLE: FeatureSection[] = [
   {
     category: "Team & Business",
     rows: [
-      { name: "Team Management", tester: false, developer: true, seller: true },
-      { name: "Resellers / Managers", tester: false, developer: true, seller: true },
+      { name: "Resellers", tester: 0, developer: 5, seller: "Unlimited" },
+      { name: "Managers", tester: 0, developer: 2, seller: "Unlimited" },
       { name: "Customer Panel", tester: false, developer: false, seller: true },
     ],
   },

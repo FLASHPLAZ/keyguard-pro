@@ -4,8 +4,19 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface PlanLimits {
   plan: string;
-  usage: { apps: number; keys: number; resellers: number };
-  limits: { apps: number | "unlimited"; keys: number | "unlimited"; resellers: number | "unlimited" };
+  original_plan?: string;
+  expired?: boolean;
+  plan_started_at?: string | null;
+  plan_expires_at?: string | null;
+  billing_cycle?: string;
+  suspended?: boolean;
+  usage: { apps: number; keys: number; resellers: number; managers: number };
+  limits: {
+    apps: number | "unlimited";
+    keys: number | "unlimited";
+    resellers: number | "unlimited";
+    managers: number | "unlimited";
+  };
 }
 
 export function usePlanLimits() {
@@ -29,24 +40,30 @@ export function usePlanLimits() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const canCreate = (resource: "apps" | "keys" | "resellers") => {
+  const canCreate = (resource: "apps" | "keys" | "resellers" | "managers") => {
     if (!data) return true; // allow while loading
     const limit = data.limits[resource];
     if (limit === "unlimited") return true;
     return data.usage[resource] < limit;
   };
 
-  const getLimit = (resource: "apps" | "keys" | "resellers") => {
+  const getLimit = (resource: "apps" | "keys" | "resellers" | "managers") => {
     if (!data) return "—";
     const l = data.limits[resource];
     return l === "unlimited" ? "∞" : l;
   };
 
-  const getUsage = (resource: "apps" | "keys" | "resellers") => {
+  const getUsage = (resource: "apps" | "keys" | "resellers" | "managers") => {
     return data?.usage[resource] ?? 0;
   };
 
   const planName = data?.plan ?? "free";
 
-  return { data, loading, refresh, canCreate, getLimit, getUsage, planName };
+  const daysRemaining = (() => {
+    if (!data?.plan_expires_at) return null;
+    const diff = new Date(data.plan_expires_at).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
+
+  return { data, loading, refresh, canCreate, getLimit, getUsage, planName, daysRemaining };
 }

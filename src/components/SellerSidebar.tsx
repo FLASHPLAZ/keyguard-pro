@@ -14,6 +14,7 @@ import {
   Bot,
   Sparkles,
   Code2,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -37,6 +38,7 @@ function useSellerNavItems() {
     { icon: ScrollText, label: "Logs", path: "/dashboard/logs", always: true },
     { icon: Code2, label: "API Docs", path: "/dashboard/api-docs", always: true },
     { icon: Bot, label: "Bot Guide", path: "/dashboard/bot-guide", always: false, minPlan: "developer" },
+    { icon: Crown, label: "Plan & Billing", path: "/dashboard/billing", always: true },
     { icon: Settings, label: "Settings", path: "/dashboard/settings", always: true },
   ];
 

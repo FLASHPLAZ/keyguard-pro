@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type UserRole = "admin" | "reseller" | "manager" | "seller" | null;
 
@@ -27,6 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
 
   const fetchRole = async (userId: string) => {
+    // Check ban status first — banned users get signed out immediately
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("banned, banned_reason")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (profile?.banned) {
+      toast.error(`Account banned: ${profile.banned_reason || "Contact support"}`);
+      await supabase.auth.signOut();
+      setRole(null);
+      return;
+    }
     const { data } = await supabase
       .from("user_roles")
       .select("role")

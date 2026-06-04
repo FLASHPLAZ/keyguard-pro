@@ -18,6 +18,7 @@ import Logs from "./pages/Logs";
 import ApiDocs from "./pages/ApiDocs";
 import BotGuide from "./pages/BotGuide";
 import SettingsPage from "./pages/Settings";
+import Billing from "./pages/Billing";
 import ResellerDashboard from "./pages/ResellerDashboard";
 import ResellerKeys from "./pages/ResellerKeys";
 import ResellerLogs from "./pages/ResellerLogs";
@@ -64,6 +65,8 @@ const App = () => (
             <Route path="/dashboard/settings" element={<ProtectedRoute requiredRole="seller"><SettingsPage /></ProtectedRoute>} />
             <Route path="/dashboard/resellers" element={<ProtectedRoute requiredRole="seller"><Resellers /></ProtectedRoute>} />
             <Route path="/dashboard/managers" element={<ProtectedRoute requiredRole="seller"><Managers /></ProtectedRoute>} />
+            <Route path="/dashboard/billing" element={<ProtectedRoute requiredRole="seller"><Billing /></ProtectedRoute>} />
+            <Route path="/admin/billing" element={<ProtectedRoute requiredRole="admin"><Billing /></ProtectedRoute>} />
             {/* Reseller routes */}
             <Route path="/reseller" element={<ProtectedRoute requiredRole="reseller"><ResellerDashboard /></ProtectedRoute>} />
             <Route path="/reseller/keys" element={<ProtectedRoute requiredRole="reseller"><ResellerKeys /></ProtectedRoute>} />
