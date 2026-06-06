@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Key, UserPlus, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { notifyDiscord } from "@/lib/discord-notify";
+import { getClientMeta } from "@/lib/client-meta";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -54,6 +56,15 @@ export default function Signup() {
       if (error) throw error;
       setDone(true);
       toast.success("Account created! Check your email to verify.");
+      try {
+        const meta = await getClientMeta();
+        notifyDiscord("New user signup", {
+          Username: username.trim(),
+          Email: email.trim(),
+          IP: meta.ip,
+          Country: meta.country,
+        });
+      } catch { /* best-effort */ }
     } catch (err: any) {
       toast.error(err.message || "Sign up failed");
     } finally {

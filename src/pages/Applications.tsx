@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { getClientMeta } from "@/lib/client-meta";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Applications() {
@@ -51,17 +52,27 @@ export default function Applications() {
       user_id: user.id,
     } as any).select().single();
     if (error) { toast.error(error.message); return; }
+    const meta = await getClientMeta();
     await supabase.from("activity_logs").insert({
       user_id: user.id,
       action: "Application created",
       application_id: data?.id,
       application_name: newAppName.trim(),
+      ip: meta.ip,
+      country: meta.country,
     } as any);
     setNewAppName("");
     setNewAppDesc("");
     setDialogOpen(false);
     toast.success(`Application "${newAppName}" created`);
-    notifyDiscord("Application created", { Name: newAppName.trim(), "App ID": data?.id, Description: newAppDesc.trim() || "None" });
+    notifyDiscord("Application created", {
+      Name: newAppName.trim(),
+      "App ID": data?.id,
+      Description: newAppDesc.trim() || "None",
+      "Created By": user.email || user.id,
+      IP: meta.ip,
+      Country: meta.country,
+    });
     if (data) setDetailApp(data);
     fetchApps();
     refreshLimits();
