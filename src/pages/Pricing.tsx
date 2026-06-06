@@ -228,7 +228,7 @@ export default function Pricing() {
                   </>
                 ) : (
                   <>
-                    <span className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                    <span className="text-4xl font-bold text-foreground">
                       ${yearly ? plan.yearlyPrice.toFixed(2) : plan.monthlyPrice.toFixed(2)}
                     </span>
                     <span className="text-sm text-muted-foreground">/{yearly ? "year" : "month"}</span>
