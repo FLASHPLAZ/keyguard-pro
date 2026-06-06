@@ -34,14 +34,28 @@ const PAGE_SIZE = 25;
 export default function Logs() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
+  const [profileMap, setProfileMap] = useState<Record<string, { username: string; email: string; role: string }>>({});
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000)
-      .then(({ data }) => { setLogs(data || []); setLoading(false); });
+    (async () => {
+      const { data: logsData } = await supabase
+        .from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000);
+      const list = logsData || [];
+      setLogs(list);
+      const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from("profiles").select("user_id, username, email, role").in("user_id", ids);
+        const map: Record<string, any> = {};
+        (profs || []).forEach((p: any) => { map[p.user_id] = p; });
+        setProfileMap(map);
+      }
+      setLoading(false);
+    })();
   }, [user]);
 
   const filtered = logs.filter(
@@ -52,17 +66,22 @@ export default function Logs() {
       (l.ip || "").includes(search) ||
       (l.country || "").toLowerCase().includes(search.toLowerCase()) ||
       (l.device_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.hwid || "").toLowerCase().includes(search.toLowerCase())
+      (l.hwid || "").toLowerCase().includes(search.toLowerCase()) ||
+      (profileMap[l.user_id]?.username || "").toLowerCase().includes(search.toLowerCase()) ||
+      (profileMap[l.user_id]?.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const exportCsv = () => {
-    const headers = ["Timestamp", "Action", "License Key", "Application", "IP", "Country", "Device", "HWID"];
+    const headers = ["Timestamp", "Action", "By User", "Email", "Role", "License Key", "Application", "IP", "Country", "Device", "HWID"];
     const rows = filtered.map(l => [
       l.created_at,
       l.action,
+      profileMap[l.user_id]?.username || "",
+      profileMap[l.user_id]?.email || "",
+      profileMap[l.user_id]?.role || "",
       l.license_key || "",
       l.application_name || "",
       l.ip || "",
