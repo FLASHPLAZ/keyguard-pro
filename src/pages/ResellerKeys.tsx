@@ -143,14 +143,7 @@ export default function ResellerKeys() {
       const { error } = await supabase.from("licenses").insert(inserts as any);
       if (error) throw error;
 
-      const creditRecord = appCredits.find(c => c.application_id === selectedApp);
-      if (creditRecord) {
-        await supabase.from("reseller_app_credits").update({
-          credits: creditRecord.credits - keyCount,
-          total_generated: creditRecord.total_generated + keyCount,
-        }).eq("id", creditRecord.id);
-      }
-
+      // reseller_app_credits is decremented atomically by a database trigger on insert.
       await Promise.all([
         supabase.from("resellers").update({
           credits: (reseller.credits || 0) - keyCount,

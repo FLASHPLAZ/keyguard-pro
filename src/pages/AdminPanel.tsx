@@ -12,6 +12,7 @@ import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { notifyDiscord } from "@/lib/discord-notify";
 import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
@@ -138,8 +139,27 @@ export default function AdminPanel() {
 
   async function loadUsers() {
     setUsersLoading(true);
-    const { data } = await supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false });
-    setUsers(data || []);
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Failed to load users: " + error.message);
+      setUsersLoading(false);
+      return;
+    }
+    const { data: rolesData } = await supabase.from("user_roles").select("user_id, role");
+    const roleMap = new Map<string, string[]>();
+    (rolesData || []).forEach((r: any) => {
+      const arr = roleMap.get(r.user_id) || [];
+      arr.push(r.role);
+      roleMap.set(r.user_id, arr);
+    });
+    const enriched = (profiles || []).map((p: any) => ({
+      ...p,
+      user_roles: (roleMap.get(p.user_id) || []).map((role) => ({ role })),
+    }));
+    setUsers(enriched);
     setUsersLoading(false);
   }
 
@@ -203,6 +223,11 @@ export default function AdminPanel() {
       return;
     }
     toast.success(`User ${action}${action === "ban" ? "ned" : action === "unban" ? "ned" : "d"}`);
+    const target = users.find((u) => u.user_id === userId);
+    notifyDiscord(
+      action === "ban" ? "Admin banned user" : action === "unban" ? "Admin unbanned user" : "Admin deleted user",
+      { User: target?.email || target?.username || userId, "User ID": userId, Action: action }
+    );
     loadUsers();
     loadOverview();
   }
