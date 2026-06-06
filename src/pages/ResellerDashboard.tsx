@@ -28,7 +28,7 @@ export default function ResellerDashboard() {
             : Promise.resolve({ data: [] }),
           supabase.from("licenses").select("*, applications(name)")
             .eq("created_by_reseller", resellerData.id)
-            .order("created_at", { ascending: false }).limit(10),
+            .order("created_at", { ascending: false }).limit(1000),
           supabase.from("reseller_app_credits").select("*").eq("reseller_id", resellerData.id),
         ]);
         setAllowedApps(appsRes.data || []);
