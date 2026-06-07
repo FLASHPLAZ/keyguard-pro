@@ -186,6 +186,10 @@ export type Database = {
           hwid: string | null
           id: string
           ip: string | null
+          last_seen: string | null
+          last_seen_country: string | null
+          last_seen_hwid: string | null
+          last_seen_ip: string | null
           last_used: string | null
           license_key: string
           notes: string | null
@@ -206,6 +210,10 @@ export type Database = {
           hwid?: string | null
           id?: string
           ip?: string | null
+          last_seen?: string | null
+          last_seen_country?: string | null
+          last_seen_hwid?: string | null
+          last_seen_ip?: string | null
           last_used?: string | null
           license_key: string
           notes?: string | null
@@ -226,6 +234,10 @@ export type Database = {
           hwid?: string | null
           id?: string
           ip?: string | null
+          last_seen?: string | null
+          last_seen_country?: string | null
+          last_seen_hwid?: string | null
+          last_seen_ip?: string | null
           last_used?: string | null
           license_key?: string
           notes?: string | null
