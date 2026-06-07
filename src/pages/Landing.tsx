@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import { AnimatedCodeBlock, type CodeTab } from "@/components/AnimatedCodeBlock";
 
 /* ── Animation helpers ── */
 const fadeUp = {
@@ -141,6 +142,48 @@ if data["valid"]:
     print(f"✅ Welcome — expires {data['expires_readable']}")
 else:
     print(f"❌ {data['error']}")`;
+
+const SAMPLE_JS = `import crypto from "crypto";
+
+const hwid = crypto.createHash("sha256")
+  .update(require("os").networkInterfaces().eth0?.[0]?.mac || "x")
+  .digest("hex");
+
+const res = await fetch("https://license.galacticboosts.online/api/validate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    license_key: "GX-XXXX-XXXX-XXXX-XXXX",
+    application_id: "your-app-id",
+    hwid,
+  }),
+});
+
+const data = await res.json();
+console.log(data.valid ? "✅ " + data.expires_readable : "❌ " + data.error);`;
+
+const SAMPLE_CS = `using System.Net.Http.Json;
+
+var client = new HttpClient();
+var payload = new {
+    license_key = "GX-XXXX-XXXX-XXXX-XXXX",
+    application_id = "your-app-id",
+    hwid = HwidHelper.Get()
+};
+
+var res = await client.PostAsJsonAsync(
+    "https://license.galacticboosts.online/api/validate", payload);
+var data = await res.Content.ReadFromJsonAsync<ValidateResponse>();
+
+Console.WriteLine(data.valid
+    ? $"✅ Welcome — expires {data.expires_readable}"
+    : $"❌ {data.error}");`;
+
+const CODE_TABS: CodeTab[] = [
+  { label: "Python", filename: "validate.py", code: SAMPLE_PY },
+  { label: "Node.js", filename: "validate.mjs", code: SAMPLE_JS },
+  { label: "C#", filename: "Validate.cs", code: SAMPLE_CS },
+];
 
 export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
