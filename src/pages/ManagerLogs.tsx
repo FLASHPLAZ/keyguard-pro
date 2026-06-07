@@ -9,6 +9,8 @@ import { TablePagination } from "@/components/TablePagination";
 
 function getActionBadge(action: string) {
   const lower = action.toLowerCase();
+  if (lower.includes("tool online")) return { color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", label: action };
+  if (lower.includes("heartbeat — active")) return { color: "bg-teal-500/15 text-teal-400 border-teal-500/20", label: action };
   if (lower.includes("login") && !lower.includes("reject")) return { color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20", label: action };
   if (lower.includes("first login") || lower.includes("hwid bound")) return { color: "bg-teal-500/15 text-teal-400 border-teal-500/20", label: action };
   if (lower.includes("banned") && !lower.includes("unbanned")) return { color: "bg-red-500/15 text-red-400 border-red-500/20", label: action };
