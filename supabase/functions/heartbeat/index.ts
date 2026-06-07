@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ active: false, reason: "Invalid JSON body" }, 400);
     }
 
-    const { license_key, application_id } = parsed;
+    const { license_key, application_id, hwid, device_name } = parsed;
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return jsonResponse({ active: false, reason: "Invalid license_key" }, 400);
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       getHeartbeatSettings(supabase),
       supabase
         .from("licenses")
-        .select("id, banned, status, expires_at, application_id, applications(name, suspended, kill_switch)")
+        .select("id, banned, status, expires_at, application_id, last_seen, hwid, device_name, applications(name, suspended, kill_switch)")
         .eq("license_key", license_key)
         .single(),
       lookupCountry(clientIp),
@@ -162,7 +162,42 @@ Deno.serve(async (req) => {
       return jsonResponse({ active: false, reason: "License expired" }, 200);
     }
 
-    return jsonResponse({ active: true, app: app?.name, country }, 200);
+    // ── Success: track last_seen and log "Tool Online" on transitions ──
+    const now = new Date();
+    const prevSeen = license.last_seen ? new Date(license.last_seen) : null;
+    const offlineFor = prevSeen ? (now.getTime() - prevSeen.getTime()) / 60000 : Infinity;
+    const effHwid = hwid || (license as any).hwid || null;
+    const effDevice = device_name || (license as any).device_name || null;
+
+    // Fire-and-forget: bump last_seen on every successful heartbeat
+    supabase.from("licenses").update({
+      last_seen: now.toISOString(),
+      last_seen_ip: clientIp,
+      last_seen_country: country,
+      last_seen_hwid: effHwid,
+    }).eq("id", (license as any).id).then(() => {});
+
+    // Log "Tool Online" when transitioning from offline (>5 min gap or never seen),
+    // and a lightweight "Heartbeat — Active" ping at most every 5 minutes for admin trail
+    if (offlineFor >= 5) {
+      supabase.from("activity_logs").insert({
+        license_key,
+        action: prevSeen ? "Tool Online" : "Tool Online — First Connect",
+        ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+        hwid: effHwid, device_name: effDevice,
+      }).then(() => {});
+    } else if (offlineFor >= 1) {
+      // Periodic heartbeat trail (every ~1 min minimum) — keeps ActiveSessionsWidget fresh
+      supabase.from("activity_logs").insert({
+        license_key, action: "Heartbeat — Active",
+        ip: clientIp, country,
+        application_id: license.application_id, application_name: app?.name,
+        hwid: effHwid, device_name: effDevice,
+      }).then(() => {});
+    }
+
+    return jsonResponse({ active: true, app: app?.name, country, last_seen: now.toISOString() }, 200);
 
   } catch {
     return jsonResponse({ active: false, reason: "Internal server error" }, 500);
