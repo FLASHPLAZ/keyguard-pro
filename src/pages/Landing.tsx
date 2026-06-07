@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import { AnimatedCodeBlock, type CodeTab } from "@/components/AnimatedCodeBlock";
 
 /* ── Animation helpers ── */
 const fadeUp = {
@@ -141,6 +142,48 @@ if data["valid"]:
     print(f"✅ Welcome — expires {data['expires_readable']}")
 else:
     print(f"❌ {data['error']}")`;
+
+const SAMPLE_JS = `import crypto from "crypto";
+
+const hwid = crypto.createHash("sha256")
+  .update(require("os").networkInterfaces().eth0?.[0]?.mac || "x")
+  .digest("hex");
+
+const res = await fetch("https://license.galacticboosts.online/api/validate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    license_key: "GX-XXXX-XXXX-XXXX-XXXX",
+    application_id: "your-app-id",
+    hwid,
+  }),
+});
+
+const data = await res.json();
+console.log(data.valid ? "✅ " + data.expires_readable : "❌ " + data.error);`;
+
+const SAMPLE_CS = `using System.Net.Http.Json;
+
+var client = new HttpClient();
+var payload = new {
+    license_key = "GX-XXXX-XXXX-XXXX-XXXX",
+    application_id = "your-app-id",
+    hwid = HwidHelper.Get()
+};
+
+var res = await client.PostAsJsonAsync(
+    "https://license.galacticboosts.online/api/validate", payload);
+var data = await res.Content.ReadFromJsonAsync<ValidateResponse>();
+
+Console.WriteLine(data.valid
+    ? $"✅ Welcome — expires {data.expires_readable}"
+    : $"❌ {data.error}");`;
+
+const CODE_TABS: CodeTab[] = [
+  { label: "Python", filename: "validate.py", code: SAMPLE_PY },
+  { label: "Node.js", filename: "validate.mjs", code: SAMPLE_JS },
+  { label: "C#", filename: "Validate.cs", code: SAMPLE_CS },
+];
 
 export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -295,23 +338,10 @@ export default function Landing() {
           className="mx-auto mt-16 max-w-5xl px-2 sm:px-0 relative will-change-transform"
         >
           <div className="absolute -inset-x-6 -inset-y-10 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent blur-3xl opacity-60 hidden md:block" />
-          <div className="relative rounded-2xl border border-border/60 bg-card/70 md:backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)]">
-            <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-r from-card/80 to-card/40 px-4 py-3">
-              <div className="flex items-center gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/70" />
-                <div className="h-2.5 w-2.5 rounded-full bg-green-500/70" />
-                <span className="ml-3 text-xs text-muted-foreground font-mono hidden sm:inline">api/validate.py</span>
-              </div>
-              <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary/90 font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" /> live
-              </span>
-            </div>
-            <div className="grid md:grid-cols-[1fr_280px]">
-              <pre className="overflow-x-auto p-4 sm:p-6 text-[11px] sm:text-xs leading-relaxed font-mono">
-                <code className="text-foreground/90">{SAMPLE_PY}</code>
-              </pre>
-              <div className="border-t md:border-t-0 md:border-l border-border/50 p-4 sm:p-5 space-y-3 bg-background/30">
+          <AnimatedCodeBlock
+            tabs={CODE_TABS}
+            responseSlot={
+              <>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Response</div>
                 <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2">
                   <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
@@ -334,9 +364,9 @@ export default function Landing() {
                     <div className="text-muted-foreground">India · login_success</div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          />
         </motion.div>
       </section>
 
@@ -529,19 +559,8 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">One API call. That's it.</h2>
             <p className="mt-3 text-muted-foreground">Validate, bind HWIDs, and detect sharing — one request.</p>
           </motion.div>
-          <motion.div variants={fadeUp} className="rounded-xl border border-primary/20 bg-card/60 md:backdrop-blur overflow-hidden shadow-2xl shadow-primary/10">
-            <div className="flex items-center justify-between border-b border-border/50 bg-primary/5 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
-                <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
-                <div className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
-                <span className="ml-3 text-xs text-muted-foreground">validate.py</span>
-              </div>
-              <Lock className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <pre className="overflow-x-auto p-5 text-xs sm:text-sm leading-relaxed font-mono">
-              <code className="text-foreground/90">{SAMPLE_PY}</code>
-            </pre>
+          <motion.div variants={fadeUp}>
+            <AnimatedCodeBlock tabs={CODE_TABS} />
           </motion.div>
         </div>
       </Section>
