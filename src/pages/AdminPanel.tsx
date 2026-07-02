@@ -52,7 +52,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({
     totalUsers: 0, totalApps: 0, totalLicenses: 0, activeLicenses: 0,
     expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0, totalManagers: 0,
-    totalTenants: 0, freeTenants: 0, devTenants: 0, sellerTenants: 0,
+    totalTenants: 0, freeTenants: 0, lifetimeTenants: 0, platformTenants: 0,
   });
   const [barData, setBarData] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -115,8 +115,8 @@ export default function AdminPanel() {
       totalManagers: managersRes.count || 0,
       totalTenants: tenantData.length,
       freeTenants: tenantData.filter(t => t.plan === "free").length,
-      devTenants: tenantData.filter(t => t.plan === "developer").length,
-      sellerTenants: tenantData.filter(t => t.plan === "seller").length,
+      lifetimeTenants: tenantData.filter(t => t.plan === "lifetime").length,
+      platformTenants: tenantData.filter(t => t.plan === "platform").length,
     });
 
     setRecentLogs(logsRes.data || []);
@@ -177,19 +177,13 @@ export default function AdminPanel() {
   }
 
   async function updateTenantPlan(id: string, plan: string) {
-    // When upgrading off free, default to 30-day cycle; platform/seller = lifetime
-    const patch: any = { plan };
-    if (plan === "platform" || plan === "seller") {
-      patch.billing_cycle = "lifetime";
-      patch.plan_expires_at = null;
-    } else if (plan === "developer") {
-      patch.billing_cycle = "monthly";
-      patch.plan_expires_at = new Date(Date.now() + 30 * 86_400_000).toISOString();
-      patch.plan_started_at = new Date().toISOString();
-    } else if (plan === "free") {
-      patch.billing_cycle = "lifetime";
-      patch.plan_expires_at = null;
-    }
+    // Only two tiers now (plus internal 'platform'). Both are lifetime — no expiry.
+    const patch: any = {
+      plan,
+      billing_cycle: "lifetime",
+      plan_expires_at: null,
+      plan_started_at: new Date().toISOString(),
+    };
     await supabase.from("tenants").update(patch).eq("id", id);
     toast.success(`Plan updated to ${plan}`);
     loadTenants();
@@ -246,8 +240,8 @@ export default function AdminPanel() {
 
   const pieData = [
     { name: "Free", value: stats.freeTenants || 1, color: "hsl(215, 20%, 50%)" },
-    { name: "Developer", value: stats.devTenants || 1, color: "hsl(262, 83%, 58%)" },
-    { name: "Seller", value: stats.sellerTenants || 1, color: "hsl(280, 80%, 60%)" },
+    { name: "Lifetime", value: stats.lifetimeTenants || 1, color: "hsl(0, 84%, 60%)" },
+    { name: "Platform", value: stats.platformTenants || 1, color: "hsl(280, 80%, 60%)" },
   ];
 
   const licensePie = [
@@ -514,8 +508,8 @@ export default function AdminPanel() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatMini label="Total Tenants" value={stats.totalTenants} icon={Globe} />
               <StatMini label="Free" value={stats.freeTenants} icon={Users} color="text-muted-foreground" />
-              <StatMini label="Developer" value={stats.devTenants} icon={AppWindow} color="text-primary" />
-              <StatMini label="Seller" value={stats.sellerTenants} icon={Crown} color="text-fuchsia-400" />
+              <StatMini label="Lifetime" value={stats.lifetimeTenants} icon={Crown} color="text-primary" />
+              <StatMini label="Platform" value={stats.platformTenants} icon={AppWindow} color="text-fuchsia-400" />
             </div>
 
             <div className="relative sm:max-w-sm">
@@ -555,8 +549,7 @@ export default function AdminPanel() {
                                 className="rounded border border-border bg-secondary px-2 py-1 text-xs text-foreground"
                               >
                                 <option value="free">Free</option>
-                                <option value="developer">Developer</option>
-                                <option value="seller">Seller</option>
+                                <option value="lifetime">Lifetime</option>
                                 <option value="platform">Platform</option>
                               </select>
                             </td>
