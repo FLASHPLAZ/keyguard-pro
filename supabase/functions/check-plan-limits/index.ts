@@ -6,13 +6,11 @@ const corsHeaders = {
 };
 
 const PLAN_LIMITS: Record<string, { apps: number; keys: number; resellers: number; managers: number }> = {
-  // Free (a.k.a. Tester) — 1 app, 10 users, no resellers/managers
-  free: { apps: 1, keys: 10, resellers: 0, managers: 0 },
-  // Developer — 8 apps, 10,000 users, 5 resellers, 2 managers
-  developer: { apps: 8, keys: 10000, resellers: 5, managers: 2 },
-  // Seller — unlimited everything
-  seller: { apps: -1, keys: -1, resellers: -1, managers: -1 },
-  // Platform (internal/staff)
+  // Free — very limited
+  free: { apps: 1, keys: 25, resellers: 0, managers: 0 },
+  // Lifetime — unlimited everything (one-time purchase)
+  lifetime: { apps: -1, keys: -1, resellers: -1, managers: -1 },
+  // Platform (internal/admin)
   platform: { apps: -1, keys: -1, resellers: -1, managers: -1 },
 };
 
@@ -58,10 +56,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If subscription expired, treat as free
     let effectivePlan = tenant.plan;
-    const expired = tenant.plan_expires_at && new Date(tenant.plan_expires_at) < new Date();
-    if (expired && tenant.plan !== "free" && tenant.plan !== "platform") {
+    // Only paid plans with an explicit expiry can expire. Lifetime never expires.
+    const expired = !!(tenant.plan_expires_at && new Date(tenant.plan_expires_at) < new Date());
+    if (expired && !["free", "lifetime", "platform"].includes(tenant.plan)) {
+      effectivePlan = "free";
+    }
+    // Migrate any legacy plan names to the new two-tier model
+    if (!(effectivePlan in PLAN_LIMITS)) {
       effectivePlan = "free";
     }
     const limits = PLAN_LIMITS[effectivePlan] || PLAN_LIMITS.free;
