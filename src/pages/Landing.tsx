@@ -85,9 +85,8 @@ const FEATURE_GROUPS = [
 ];
 
 const PRICING_TEASER = [
-  { name: "Tester", price: "Free", desc: "1 app, 50 keys, all core features.", cta: "Start free", highlight: false },
-  { name: "Developer", price: "$2.99", desc: "8 apps, 10k keys, resellers, webhooks.", cta: "Go Developer", highlight: true },
-  { name: "Seller", price: "$4.99", desc: "Unlimited apps & keys, manager seats, priority support.", cta: "Go Seller", highlight: false },
+  { name: "Free", price: "$0", desc: "1 app · 25 keys · core auth & HWID binding.", cta: "Start free", highlight: false },
+  { name: "Lifetime", price: "$49", desc: "Unlimited apps & keys, resellers, webhooks, priority support — pay once.", cta: "Get Lifetime", highlight: true },
 ];
 
 const COMPARISONS = [
