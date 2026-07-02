@@ -12,11 +12,11 @@ import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppW
 
 const PLAN_FEATURES: Record<string, { label: string; tagline: string; perks: { name: string; on: boolean }[] }> = {
   free: {
-    label: "Tester (Free)",
-    tagline: "Perfect for testing and tiny projects.",
+    label: "Free",
+    tagline: "Try the platform with limited features.",
     perks: [
       { name: "1 Application", on: true },
-      { name: "10 license keys", on: true },
+      { name: "25 license keys", on: true },
       { name: "HWID protection", on: true },
       { name: "Account logs", on: true },
       { name: "Resellers / Managers", on: false },
@@ -25,31 +25,17 @@ const PLAN_FEATURES: Record<string, { label: string; tagline: string; perks: { n
       { name: "Priority support", on: false },
     ],
   },
-  developer: {
-    label: "Developer",
-    tagline: "For serious developers and growing projects.",
-    perks: [
-      { name: "8 Applications", on: true },
-      { name: "10,000 license keys", on: true },
-      { name: "HWID protection + anti-sharing", on: true },
-      { name: "Up to 5 Resellers, 2 Managers", on: true },
-      { name: "Event logs & Live analytics", on: true },
-      { name: "Webhooks & Webhook testing", on: true },
-      { name: "Priority support", on: true },
-      { name: "Discord / Telegram bot", on: false },
-    ],
-  },
-  seller: {
-    label: "Seller",
-    tagline: "For businesses, resellers, and large operations.",
+  lifetime: {
+    label: "Lifetime",
+    tagline: "Every feature unlocked, forever. One-time payment.",
     perks: [
       { name: "Unlimited Applications", on: true },
       { name: "Unlimited license keys", on: true },
       { name: "Unlimited Resellers & Managers", on: true },
-      { name: "All security: Global Blacklist + Request Signing", on: true },
-      { name: "Discord & Telegram bot", on: true },
-      { name: "Customer Panel + Seller API", on: true },
-      { name: "Web Loader", on: true },
+      { name: "HWID + anti-sharing + auto-ban", on: true },
+      { name: "Discord Webhook alerts", on: true },
+      { name: "Advanced analytics & full logs", on: true },
+      { name: "HMAC-signed API + Webhooks", on: true },
       { name: "Priority support", on: true },
     ],
   },
@@ -57,7 +43,7 @@ const PLAN_FEATURES: Record<string, { label: string; tagline: string; perks: { n
     label: "Platform (Staff)",
     tagline: "Internal platform account with full access.",
     perks: [
-      { name: "Everything in Seller", on: true },
+      { name: "Everything in Lifetime", on: true },
       { name: "Admin control center", on: true },
     ],
   },
