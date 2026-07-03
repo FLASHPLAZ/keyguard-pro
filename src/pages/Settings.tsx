@@ -249,8 +249,8 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Row: General + Rate Limiting */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Row: General + Rate Limiting — admin only */}
+        {isAdmin && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* General */}
           <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up">
             <div className="mb-4 flex items-center gap-2">
@@ -262,16 +262,16 @@ export default function SettingsPage() {
                 <label className="mb-1 block text-xs text-muted-foreground">System Name</label>
                 <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow" defaultValue="GrazeXauth" readOnly />
               </div>
-              {isAdmin && <div>
+              <div>
                 <label className="mb-1 block text-xs text-muted-foreground">API Base URL</label>
                 <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
                   value="https://license.galacticboosts.online/api/validate" readOnly />
-              </div>}
+              </div>
             </div>
           </div>
 
           {/* Rate Limiting — admin only */}
-          {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "100ms" }}>
             <div className="mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Rate Limiting</h3>
@@ -343,8 +343,8 @@ export default function SettingsPage() {
                   value={settings.resethwid_rate_limit_window} onChange={(e) => updateSetting("resethwid_rate_limit_window", e.target.value)} />
               </div>
             </div>
-          </div>}
-        </div>
+          </div>
+        </div>}
 
         {/* Row: Discord + Anti-Sharing */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -352,9 +352,11 @@ export default function SettingsPage() {
           <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "200ms" }}>
             <div className="mb-4 flex items-center gap-2">
               <Bell className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Discord Notifications</h3>
+              <h3 className="text-sm font-semibold text-foreground">Discord Notifications {isAdmin ? "(Global)" : "(Your Logs)"}</h3>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">Receive real-time license validation alerts in your Discord channel.</p>
+            <p className="mb-4 text-xs text-muted-foreground">{isAdmin
+              ? "Receive every activity across all users, managers, and resellers."
+              : "Receive real-time alerts for your own activity plus your managers' and resellers' actions."}</p>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">Webhook URL</label>
               <input type="url"
@@ -382,8 +384,8 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Anti-Sharing */}
-          <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+          {/* Anti-Sharing — admin only */}
+          {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
             <div className="mb-4 flex items-center gap-2">
               <Lock className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Anti-Sharing Protection</h3>
@@ -410,7 +412,7 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* IP/HWID Blacklist */}

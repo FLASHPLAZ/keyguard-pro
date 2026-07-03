@@ -1,5 +1,5 @@
 import { RoleLayout } from "@/components/RoleLayout";
-import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2 } from "lucide-react";
+import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -190,7 +190,16 @@ export default function ApiDocs() {
     <RoleLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
-        <p className="text-sm text-muted-foreground">Complete guide to integrate GrazeXauth into your software</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-muted-foreground">Complete guide to integrate GrazeXauth into your software</p>
+          <a
+            href="/openapi.json"
+            download="galactic-boosts-openapi.json"
+            className="inline-flex items-center gap-2 self-start rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" /> Download OpenAPI Spec (v3.0)
+          </a>
+        </div>
       </div>
 
       {/* Table of Contents */}
