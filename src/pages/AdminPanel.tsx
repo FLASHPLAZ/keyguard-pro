@@ -171,38 +171,31 @@ export default function AdminPanel() {
   }
 
   async function suspendTenant(id: string, suspended: boolean) {
-    await supabase.from("tenants").update({ suspended: !suspended }).eq("id", id);
-    toast.success(suspended ? "Tenant unsuspended" : "Tenant suspended");
-    loadTenants();
-  }
-
-  async function updateTenantPlan(id: string, plan: string) {
-    // Only two tiers now (plus internal 'platform'). Both are lifetime — no expiry.
-    const patch: any = {
-      plan,
-      billing_cycle: "lifetime",
-      plan_expires_at: null,
-      plan_started_at: new Date().toISOString(),
-    };
-    await supabase.from("tenants").update(patch).eq("id", id);
-    toast.success(`Plan updated to ${plan}`);
+    const { error } = await supabase.from("tenants").update({ suspended: !suspended }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(suspended ? "Workspace re-activated" : "Workspace suspended");
+    const t = tenants.find(x => x.id === id);
+    notifyDiscord(suspended ? "Admin re-activated workspace" : "Admin suspended workspace", { Workspace: t?.name || id, "Tenant ID": id });
     loadTenants();
     loadOverview();
   }
 
-  async function extendTenant(id: string, days: number) {
-    const { data: t } = await supabase.from("tenants").select("plan_expires_at").eq("id", id).single();
-    const base = t?.plan_expires_at && new Date(t.plan_expires_at) > new Date() ? new Date(t.plan_expires_at) : new Date();
-    const newDate = new Date(base.getTime() + days * 86_400_000);
-    await supabase.from("tenants").update({ plan_expires_at: newDate.toISOString(), billing_cycle: days >= 365 ? "yearly" : "monthly" }).eq("id", id);
-    toast.success(`Extended by ${days} days`);
+  async function updateTenantPlan(id: string, plan: string) {
+    // Two-tier model: free & lifetime never expire. 'platform' is internal.
+    const cycleMap: Record<string, string> = { free: "free", lifetime: "lifetime", platform: "lifetime" };
+    const patch: any = {
+      plan,
+      billing_cycle: cycleMap[plan] || "lifetime",
+      plan_expires_at: null,
+      plan_started_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("tenants").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Plan updated to ${plan}`);
+    const t = tenants.find(x => x.id === id);
+    notifyDiscord("Admin changed workspace plan", { Workspace: t?.name || id, "New Plan": plan, "Tenant ID": id });
     loadTenants();
-  }
-
-  async function makeLifetime(id: string) {
-    await supabase.from("tenants").update({ plan_expires_at: null, billing_cycle: "lifetime" }).eq("id", id);
-    toast.success("Set to lifetime");
-    loadTenants();
+    loadOverview();
   }
 
   // ─── User ban / delete ───
@@ -239,15 +232,15 @@ export default function AdminPanel() {
   const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
 
   const pieData = [
-    { name: "Free", value: stats.freeTenants || 1, color: "hsl(215, 20%, 50%)" },
-    { name: "Lifetime", value: stats.lifetimeTenants || 1, color: "hsl(0, 84%, 60%)" },
-    { name: "Platform", value: stats.platformTenants || 1, color: "hsl(280, 80%, 60%)" },
+    { name: "Free", value: stats.freeTenants || 0, color: "hsl(215, 15%, 45%)" },
+    { name: "Lifetime", value: stats.lifetimeTenants || 0, color: "hsl(var(--primary))" },
+    { name: "Platform", value: stats.platformTenants || 0, color: "hsl(var(--primary-glow))" },
   ];
 
   const licensePie = [
-    { name: "Active", value: stats.activeLicenses || 1, color: "hsl(142, 72%, 45%)" },
-    { name: "Expired", value: stats.expiredLicenses || 1, color: "hsl(0, 72%, 55%)" },
-    { name: "Banned", value: stats.bannedLicenses || 1, color: "hsl(38, 92%, 55%)" },
+    { name: "Active", value: stats.activeLicenses || 0, color: "hsl(142, 72%, 45%)" },
+    { name: "Expired", value: stats.expiredLicenses || 0, color: "hsl(38, 92%, 55%)" },
+    { name: "Banned", value: stats.bannedLicenses || 0, color: "hsl(0, 72%, 55%)" },
   ];
 
   return (
@@ -572,15 +565,23 @@ export default function AdminPanel() {
                             <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-1 flex-wrap">
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 30)}><Calendar className="h-3 w-3 mr-1" />+30d</Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 365)}>+1y</Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => makeLifetime(t.id)}><InfinityIcon className="h-3 w-3" /></Button>
+                                {t.plan !== "lifetime" && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => updateTenantPlan(t.id, "lifetime")}>
+                                    <InfinityIcon className="h-3 w-3 mr-1" />Grant Lifetime
+                                  </Button>
+                                )}
+                                {t.plan !== "free" && t.plan !== "platform" && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => updateTenantPlan(t.id, "free")}>
+                                    Reset to Free
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => suspendTenant(t.id, t.suspended)}
                                   className={`h-7 px-2 text-xs ${t.suspended ? "text-emerald-400" : "text-destructive"}`}
+                                  title={t.suspended ? "Re-activate workspace" : "Suspend workspace"}
                                 >
-                                  {t.suspended ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                                  {t.suspended ? <><UserCheck className="h-3 w-3 mr-1" />Activate</> : <><UserX className="h-3 w-3 mr-1" />Suspend</>}
                                 </Button>
                               </div>
                             </td>
