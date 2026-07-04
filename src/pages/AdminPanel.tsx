@@ -565,15 +565,23 @@ export default function AdminPanel() {
                             <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(t.created_at)}</td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-1 flex-wrap">
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 30)}><Calendar className="h-3 w-3 mr-1" />+30d</Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => extendTenant(t.id, 365)}>+1y</Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => makeLifetime(t.id)}><InfinityIcon className="h-3 w-3" /></Button>
+                                {t.plan !== "lifetime" && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => updateTenantPlan(t.id, "lifetime")}>
+                                    <InfinityIcon className="h-3 w-3 mr-1" />Grant Lifetime
+                                  </Button>
+                                )}
+                                {t.plan !== "free" && t.plan !== "platform" && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => updateTenantPlan(t.id, "free")}>
+                                    Reset to Free
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost" size="sm"
                                   onClick={() => suspendTenant(t.id, t.suspended)}
                                   className={`h-7 px-2 text-xs ${t.suspended ? "text-emerald-400" : "text-destructive"}`}
+                                  title={t.suspended ? "Re-activate workspace" : "Suspend workspace"}
                                 >
-                                  {t.suspended ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+                                  {t.suspended ? <><UserCheck className="h-3 w-3 mr-1" />Activate</> : <><UserX className="h-3 w-3 mr-1" />Suspend</>}
                                 </Button>
                               </div>
                             </td>
