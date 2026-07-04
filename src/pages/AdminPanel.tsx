@@ -232,15 +232,15 @@ export default function AdminPanel() {
   const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
 
   const pieData = [
-    { name: "Free", value: stats.freeTenants || 1, color: "hsl(215, 20%, 50%)" },
-    { name: "Lifetime", value: stats.lifetimeTenants || 1, color: "hsl(0, 84%, 60%)" },
-    { name: "Platform", value: stats.platformTenants || 1, color: "hsl(280, 80%, 60%)" },
+    { name: "Free", value: stats.freeTenants || 0, color: "hsl(215, 15%, 45%)" },
+    { name: "Lifetime", value: stats.lifetimeTenants || 0, color: "hsl(var(--primary))" },
+    { name: "Platform", value: stats.platformTenants || 0, color: "hsl(var(--primary-glow))" },
   ];
 
   const licensePie = [
-    { name: "Active", value: stats.activeLicenses || 1, color: "hsl(142, 72%, 45%)" },
-    { name: "Expired", value: stats.expiredLicenses || 1, color: "hsl(0, 72%, 55%)" },
-    { name: "Banned", value: stats.bannedLicenses || 1, color: "hsl(38, 92%, 55%)" },
+    { name: "Active", value: stats.activeLicenses || 0, color: "hsl(142, 72%, 45%)" },
+    { name: "Expired", value: stats.expiredLicenses || 0, color: "hsl(38, 92%, 55%)" },
+    { name: "Banned", value: stats.bannedLicenses || 0, color: "hsl(0, 72%, 55%)" },
   ];
 
   return (
