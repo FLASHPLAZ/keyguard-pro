@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown } from "lucide-react";
+import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown, ShieldCheck, Infinity as InfinityIcon, Zap, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PLANS = [
   {
     name: "Free",
     price: "$0",
-    subtitle: "Try the platform with limited features",
+    priceSuffix: "forever",
+    subtitle: "Everything you need to launch your first licensed app.",
     cta: "Get Started",
     ctaLink: "/signup",
     highlight: false,
@@ -15,20 +16,21 @@ const PLANS = [
     features: [
       { text: "1 Application", ok: true },
       { text: "25 License Keys (total)", ok: true },
-      { text: "HWID Binding", ok: true },
-      { text: "Standard API access", ok: true },
+      { text: "HWID Binding & Anti-Sharing", ok: true },
+      { text: "Full Validation & Heartbeat API", ok: true },
+      { text: "HMAC-signed requests", ok: true },
       { text: "Community support", ok: true },
       { text: "Resellers & Managers", ok: false },
-      { text: "Discord Webhook alerts", ok: false },
-      { text: "Advanced Analytics", ok: false },
-      { text: "Priority Support", ok: false },
+      { text: "Personal Discord webhook", ok: false },
+      { text: "Advanced logs & analytics", ok: false },
+      { text: "Priority support", ok: false },
     ],
   },
   {
     name: "Lifetime",
     price: "$49",
     priceSuffix: "one-time",
-    subtitle: "Pay once. Every feature. Forever.",
+    subtitle: "Pay once. Every feature, every future update — yours forever.",
     cta: "Get Lifetime Access",
     ctaLink: "/signup",
     highlight: true,
@@ -36,15 +38,38 @@ const PLANS = [
     features: [
       { text: "Unlimited Applications", ok: true },
       { text: "Unlimited License Keys", ok: true },
-      { text: "HWID Binding + Anti-sharing", ok: true },
-      { text: "Full API + Webhooks", ok: true },
-      { text: "Resellers & Managers", ok: true },
-      { text: "Discord Webhook alerts", ok: true },
-      { text: "Advanced Analytics & Logs", ok: true },
-      { text: "Priority Support", ok: true },
+      { text: "Unlimited Resellers & Managers", ok: true },
+      { text: "HWID Binding & Anti-Sharing", ok: true },
+      { text: "Full API + Webhooks + Discord Bot", ok: true },
+      { text: "HMAC-signed requests", ok: true },
+      { text: "Personal Discord webhook logs", ok: true },
+      { text: "Advanced logs & analytics", ok: true },
+      { text: "Priority support", ok: true },
       { text: "Free updates forever", ok: true },
     ],
   },
+];
+
+const COMPARE_ROWS: { label: string; free: string | boolean; lifetime: string | boolean }[] = [
+  { label: "Applications", free: "1", lifetime: "Unlimited" },
+  { label: "License keys", free: "25", lifetime: "Unlimited" },
+  { label: "Resellers", free: false, lifetime: "Unlimited" },
+  { label: "Managers", free: false, lifetime: "Unlimited" },
+  { label: "HWID binding & anti-sharing", free: true, lifetime: true },
+  { label: "Validation & heartbeat API", free: true, lifetime: true },
+  { label: "HMAC request signing", free: true, lifetime: true },
+  { label: "Discord bot integration", free: false, lifetime: true },
+  { label: "Personal Discord webhook", free: false, lifetime: true },
+  { label: "Advanced analytics & logs", free: false, lifetime: true },
+  { label: "Priority support", free: false, lifetime: true },
+  { label: "Free lifetime updates", free: false, lifetime: true },
+];
+
+const FAQS = [
+  { q: "Is Lifetime really a single payment?", a: "Yes. Pay $49 once — no monthly bill, no seat fees, no per-app charges. Every current and future core feature is included forever." },
+  { q: "Can I start free and upgrade later?", a: "Absolutely. Every account starts on Free. When you're ready, upgrade to Lifetime and all your existing apps, keys, resellers and logs carry over instantly." },
+  { q: "Do you offer refunds?", a: "If the platform doesn't work for you, contact support within 7 days of purchase and we'll issue a full refund — no questions asked." },
+  { q: "What happens if I hit the Free limit?", a: "Creation calls return a friendly upgrade prompt. Existing keys keep working — your users are never affected, only new key generation is paused until you upgrade." },
 ];
 
 export default function Pricing() {
