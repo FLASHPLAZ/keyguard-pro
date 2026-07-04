@@ -185,9 +185,85 @@ export default function Pricing() {
           ))}
         </div>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
-          All plans include HWID binding, HMAC-signed API, IP tracking, and auto-ban protection. Lifetime is a one-time payment — no subscriptions, no renewals.
-        </p>
+        {/* Trust strip */}
+        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            { icon: InfinityIcon, label: "No renewals" },
+            { icon: ShieldCheck, label: "7-day money back" },
+            { icon: Zap, label: "Instant activation" },
+            { icon: Lock, label: "Secure Paddle checkout" },
+          ].map((t) => (
+            <div key={t.label} className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
+              <t.icon className="h-4 w-4 text-primary" />
+              <span>{t.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Full feature comparison */}
+      <section className="px-4 pb-20 sm:px-6">
+        <div className="mx-auto max-w-4xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold sm:text-3xl">Full feature comparison</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Everything on the platform, side by side.</p>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 bg-secondary/40">
+                  <th className="px-5 py-4 text-left font-medium text-muted-foreground">Feature</th>
+                  <th className="px-5 py-4 text-center font-medium text-muted-foreground">Free</th>
+                  <th className="px-5 py-4 text-center font-medium text-primary">Lifetime</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE_ROWS.map((row, i) => (
+                  <tr key={row.label} className={`border-b border-border/30 ${i % 2 === 0 ? "bg-primary/[0.015]" : ""}`}>
+                    <td className="px-5 py-3 text-foreground/90">{row.label}</td>
+                    <td className="px-5 py-3 text-center text-xs">
+                      {row.free === true ? <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-400" /> :
+                       row.free === false ? <X className="mx-auto h-4 w-4 text-muted-foreground/40" /> :
+                       <span className="font-medium text-foreground/80">{row.free}</span>}
+                    </td>
+                    <td className="px-5 py-3 text-center text-xs">
+                      {row.lifetime === true ? <CheckCircle2 className="mx-auto h-4 w-4 text-primary" /> :
+                       row.lifetime === false ? <X className="mx-auto h-4 w-4 text-muted-foreground/40" /> :
+                       <span className="font-medium text-primary">{row.lifetime}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="px-4 pb-24 sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold sm:text-3xl">Frequently asked</h2>
+          </div>
+          <div className="space-y-3">
+            {FAQS.map((f) => (
+              <div key={f.q} className="rounded-xl border border-border/50 bg-card/40 p-5">
+                <div className="font-semibold text-foreground text-sm mb-1.5">{f.q}</div>
+                <div className="text-sm text-muted-foreground leading-relaxed">{f.a}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-8 text-center">
+            <Crown className="mx-auto h-6 w-6 text-primary mb-3" />
+            <h3 className="text-xl font-bold">Ready to own it forever?</h3>
+            <p className="mt-2 text-sm text-muted-foreground">One payment, every feature, no expiration.</p>
+            <Link to="/signup" className="mt-5 inline-block">
+              <Button size="lg" className="bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
+                Get Lifetime — $49 <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   );
