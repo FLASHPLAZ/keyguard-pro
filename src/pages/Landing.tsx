@@ -85,8 +85,8 @@ const FEATURE_GROUPS = [
 ];
 
 const PRICING_TEASER = [
-  { name: "Free", price: "$0", desc: "1 app · 25 keys · core auth & HWID binding.", cta: "Start free", highlight: false },
-  { name: "Lifetime", price: "$49", desc: "Unlimited apps & keys, resellers, webhooks, priority support — pay once.", cta: "Get Lifetime", highlight: true },
+  { name: "Free", price: "$0", suffix: "forever", desc: "1 app · 25 keys · HWID binding · full validation API.", cta: "Start free", highlight: false },
+  { name: "Lifetime", price: "$49", suffix: "one-time", desc: "Unlimited apps & keys, resellers, managers, webhooks & priority support — pay once, own it forever.", cta: "Get Lifetime", highlight: true },
 ];
 
 const COMPARISONS = [
@@ -108,16 +108,17 @@ const TESTIMONIALS = [
   { name: "DevKing", role: "Bot Developer", stars: 4, text: "Using 1 year — stable 99% uptime. The Discord bot integration is seamless and my users love the HWID system." },
   { name: "JCrick", role: "Tool Developer", stars: 5, text: "Docs complete, API clean, support responsive. Would recommend to anyone building licensed software." },
   { name: "NeoBytes", role: "Security Researcher", stars: 5, text: "The request signing and anti-tamper detection are top-notch. Finally a licensing system that takes security seriously." },
-  { name: "Luna", role: "Indie Developer", stars: 4, text: "Free tier is incredibly generous. I'm running 3 apps with full features and haven't paid a cent yet." },
+  { name: "Luna", role: "Indie Developer", stars: 5, text: "One-time $49 for unlimited everything — no monthly bill anxiety. Best value in the licensing space, hands down." },
 ];
 
 const FAQS = [
   { q: "How fast can I get started?", a: "Sign up takes 30 seconds. Create an application, grab your API key, and integrate with our copy-paste code snippets. Most developers are live in under 5 minutes." },
-  { q: "Is there a free plan?", a: "Yes! Our free tier includes up to 3 applications, 50 license keys, and all core features including HWID binding and anti-sharing. No credit card required." },
+  { q: "Is there a free plan?", a: "Yes. The Free tier includes 1 application and up to 25 license keys, plus HWID binding, anti-sharing and the full validation API. No credit card required — upgrade to Lifetime any time to unlock unlimited apps, keys, resellers and managers." },
   { q: "How does HWID binding work?", a: "Your application sends a hardware fingerprint with each validation request. We bind the license to that device on first use, preventing unauthorized sharing across multiple machines." },
   { q: "What programming languages are supported?", a: "We provide official SDKs and code examples for Python, C#, Node.js, C++, Go, Rust, and Java. Our REST API works with any language that can make HTTP requests." },
   { q: "Can I migrate from KeyAuth?", a: "Absolutely. Our API is designed to be a drop-in replacement. Most migrations take under an hour. We also offer migration guides and direct support." },
   { q: "Is my data secure?", a: "All requests use HMAC-SHA256 signing with replay protection. Data is encrypted at rest and in transit. Our infrastructure runs on enterprise-grade serverless edge nodes." },
+  { q: "Is Lifetime really one payment?", a: "Yes. Pay $49 once and every current and future platform feature is yours — no renewals, no seat fees, no per-app charges. If we release a paid add-on later, Lifetime users are grandfathered in." },
 ];
 
 const THREATS = [
