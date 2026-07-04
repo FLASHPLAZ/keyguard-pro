@@ -575,7 +575,7 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, transparent pricing</h2>
             <p className="mt-3 text-muted-foreground">Free forever for solo devs. Pay only when you scale.</p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
             {PRICING_TEASER.map((p, i) => (
               <motion.div
                 key={p.name}
@@ -595,7 +595,7 @@ export default function Landing() {
                 <div className="text-sm font-medium text-muted-foreground mb-2">{p.name}</div>
                 <div className="mb-3 flex items-baseline gap-1">
                   <span className="text-4xl font-bold">{p.price}</span>
-                  {p.price !== "Free" && <span className="text-xs text-muted-foreground">/mo</span>}
+                  <span className="text-xs text-muted-foreground">{p.suffix}</span>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6">{p.desc}</p>
                 <Link to="/pricing">
