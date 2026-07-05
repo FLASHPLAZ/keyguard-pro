@@ -180,7 +180,7 @@ export default function Applications() {
       </div>
 
       {/* App Details Dialog */}
-      <Dialog open={!!detailApp} onOpenChange={() => setDetailApp(null)}>
+      <Dialog open={!!detailApp} onOpenChange={(o) => { if (!o) setDetailApp(null); else setDownloadUrlInput(detailApp?.download_url || ""); }}>
         <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Application Details</DialogTitle></DialogHeader>
           {detailApp && (
