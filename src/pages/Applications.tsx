@@ -19,7 +19,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Applications() {
   const { user } = useAuth();
-  const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits, planName } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -28,6 +28,23 @@ export default function Applications() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
   const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
+  const [downloadUrlInput, setDownloadUrlInput] = useState("");
+  const [savingDownload, setSavingDownload] = useState(false);
+
+  const isPremium = planName === "lifetime" || planName === "platform";
+
+  const saveDownloadUrl = async () => {
+    if (!detailApp || !user) return;
+    setSavingDownload(true);
+    const url = downloadUrlInput.trim() || null;
+    const { error } = await supabase.from("applications").update({ download_url: url } as any).eq("id", detailApp.id);
+    if (error) { toast.error(error.message); setSavingDownload(false); return; }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: url ? "Download URL updated" : "Download URL removed", application_id: detailApp.id, application_name: detailApp.name } as any);
+    setDetailApp({ ...detailApp, download_url: url });
+    toast.success("Download link saved");
+    fetchApps();
+    setSavingDownload(false);
+  };
 
   const fetchApps = async () => {
     if (!user) return;
