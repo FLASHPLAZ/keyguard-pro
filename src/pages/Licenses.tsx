@@ -415,7 +415,11 @@ export default function Licenses() {
                 <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
                 <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
               </div>
-              <Button onClick={generateKeys} className="w-full btn-glow">Generate</Button>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(optional — required if buyer will use download portal)</span></label>
+                <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="buyer@example.com" className="bg-secondary border-border" />
+              </div>
+              <Button onClick={generateKeys} disabled={generating} className="w-full btn-glow">{generating ? "Generating..." : "Generate"}</Button>
             </div>
           </DialogContent>
         </Dialog>
