@@ -275,6 +275,32 @@ export default function Applications() {
                 <label className="text-xs font-medium text-muted-foreground">Created</label>
                 <p className="text-sm text-muted-foreground">{formatDate(detailApp.created_at)}</p>
               </div>
+
+              {/* Download Link (Lifetime plan only) */}
+              <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-foreground">Customer Download Link</label>
+                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Lifetime only</span>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Buyers verify their license at <code className="text-primary">/download</code> and get this file. Leave blank to disable.
+                </p>
+                {isPremium ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={downloadUrlInput}
+                      onChange={(e) => setDownloadUrlInput(e.target.value)}
+                      placeholder="https://your-cdn.com/tool.zip"
+                      className="bg-secondary border-border flex-1"
+                    />
+                    <Button onClick={saveDownloadUrl} disabled={savingDownload} className="btn-glow">
+                      {savingDownload ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Upgrade to Lifetime to publish downloadable files for your buyers.</p>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
