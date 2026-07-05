@@ -39,6 +39,8 @@ export default function Licenses() {
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -193,10 +195,12 @@ export default function Licenses() {
 
   const generateKeys = async () => {
     if (!selectedApp || !user) return;
+    if (generating) return;
     if (!canCreate("keys")) {
       toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan.`);
       return;
     }
+    setGenerating(true);
     const days = Number(duration);
     const inserts = Array.from({ length: keyCount }, () => ({
       license_key: generateLicenseKey(),
@@ -205,9 +209,10 @@ export default function Licenses() {
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
       owner_name: ownerName.trim() || null,
+      owner_email: ownerEmail.trim() || null,
     }));
     const { error } = await supabase.from("licenses").insert(inserts as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setGenerating(false); return; }
 
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
     await supabase.from("activity_logs").insert({
@@ -219,10 +224,12 @@ export default function Licenses() {
 
     setDialogOpen(false);
     setOwnerName("");
+    setOwnerEmail("");
     refreshLimits();
     toast.success(`Generated ${keyCount} license key(s)`);
     notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
+    setGenerating(false);
   };
 
   const banKey = async (id: string, licenseKey: string) => {
@@ -408,7 +415,11 @@ export default function Licenses() {
                 <label className="mb-1 block text-xs text-muted-foreground">Buyer / Owner Name <span className="text-muted-foreground/60">(optional)</span></label>
                 <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
               </div>
-              <Button onClick={generateKeys} className="w-full btn-glow">Generate</Button>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(optional — required if buyer will use download portal)</span></label>
+                <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="buyer@example.com" className="bg-secondary border-border" />
+              </div>
+              <Button onClick={generateKeys} disabled={generating} className="w-full btn-glow">{generating ? "Generating..." : "Generate"}</Button>
             </div>
           </DialogContent>
         </Dialog>

@@ -74,6 +74,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          download_url: string | null
           id: string
           kill_switch: boolean
           name: string
@@ -86,6 +87,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          download_url?: string | null
           id?: string
           kill_switch?: boolean
           name: string
@@ -98,6 +100,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          download_url?: string | null
           id?: string
           kill_switch?: boolean
           name?: string
@@ -193,6 +196,7 @@ export type Database = {
           last_used: string | null
           license_key: string
           notes: string | null
+          owner_email: string | null
           owner_name: string | null
           status: string
           tags: string[] | null
@@ -217,6 +221,7 @@ export type Database = {
           last_used?: string | null
           license_key: string
           notes?: string | null
+          owner_email?: string | null
           owner_name?: string | null
           status?: string
           tags?: string[] | null
@@ -241,6 +246,7 @@ export type Database = {
           last_used?: string | null
           license_key?: string
           notes?: string | null
+          owner_email?: string | null
           owner_name?: string | null
           status?: string
           tags?: string[] | null

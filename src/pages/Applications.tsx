@@ -19,7 +19,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Applications() {
   const { user } = useAuth();
-  const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits, planName } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -28,6 +28,23 @@ export default function Applications() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
   const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
+  const [downloadUrlInput, setDownloadUrlInput] = useState("");
+  const [savingDownload, setSavingDownload] = useState(false);
+
+  const isPremium = planName === "lifetime" || planName === "platform";
+
+  const saveDownloadUrl = async () => {
+    if (!detailApp || !user) return;
+    setSavingDownload(true);
+    const url = downloadUrlInput.trim() || null;
+    const { error } = await supabase.from("applications").update({ download_url: url } as any).eq("id", detailApp.id);
+    if (error) { toast.error(error.message); setSavingDownload(false); return; }
+    await supabase.from("activity_logs").insert({ user_id: user.id, action: url ? "Download URL updated" : "Download URL removed", application_id: detailApp.id, application_name: detailApp.name } as any);
+    setDetailApp({ ...detailApp, download_url: url });
+    toast.success("Download link saved");
+    fetchApps();
+    setSavingDownload(false);
+  };
 
   const fetchApps = async () => {
     if (!user) return;
@@ -37,6 +54,7 @@ export default function Applications() {
   };
 
   useEffect(() => { fetchApps(); }, [user]);
+  useEffect(() => { if (detailApp) setDownloadUrlInput(detailApp.download_url || ""); }, [detailApp?.id]);
 
   const filtered = apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -163,7 +181,7 @@ export default function Applications() {
       </div>
 
       {/* App Details Dialog */}
-      <Dialog open={!!detailApp} onOpenChange={() => setDetailApp(null)}>
+      <Dialog open={!!detailApp} onOpenChange={(o) => { if (!o) setDetailApp(null); else setDownloadUrlInput(detailApp?.download_url || ""); }}>
         <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Application Details</DialogTitle></DialogHeader>
           {detailApp && (
@@ -256,6 +274,32 @@ export default function Applications() {
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Created</label>
                 <p className="text-sm text-muted-foreground">{formatDate(detailApp.created_at)}</p>
+              </div>
+
+              {/* Download Link (Lifetime plan only) */}
+              <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-foreground">Customer Download Link</label>
+                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Lifetime only</span>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Buyers verify their license at <code className="text-primary">/download</code> and get this file. Leave blank to disable.
+                </p>
+                {isPremium ? (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      value={downloadUrlInput}
+                      onChange={(e) => setDownloadUrlInput(e.target.value)}
+                      placeholder="https://your-cdn.com/tool.zip"
+                      className="bg-secondary border-border flex-1"
+                    />
+                    <Button onClick={saveDownloadUrl} disabled={savingDownload} className="btn-glow">
+                      {savingDownload ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Upgrade to Lifetime to publish downloadable files for your buyers.</p>
+                )}
               </div>
             </div>
           )}

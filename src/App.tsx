@@ -28,6 +28,7 @@ import ManagerLicenses from "./pages/ManagerLicenses";
 
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
+import Download from "./pages/Download";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/download" element={<Download />} />
             {/* Admin routes (platform owner) */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><Dashboard /></ProtectedRoute>} />
             <Route path="/admin/panel" element={<ProtectedRoute requiredRole="admin"><AdminPanel /></ProtectedRoute>} />
