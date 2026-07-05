@@ -193,10 +193,12 @@ export default function Licenses() {
 
   const generateKeys = async () => {
     if (!selectedApp || !user) return;
+    if (generating) return;
     if (!canCreate("keys")) {
       toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan.`);
       return;
     }
+    setGenerating(true);
     const days = Number(duration);
     const inserts = Array.from({ length: keyCount }, () => ({
       license_key: generateLicenseKey(),
@@ -205,9 +207,10 @@ export default function Licenses() {
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
       owner_name: ownerName.trim() || null,
+      owner_email: ownerEmail.trim() || null,
     }));
     const { error } = await supabase.from("licenses").insert(inserts as any);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setGenerating(false); return; }
 
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
     await supabase.from("activity_logs").insert({
@@ -219,10 +222,12 @@ export default function Licenses() {
 
     setDialogOpen(false);
     setOwnerName("");
+    setOwnerEmail("");
     refreshLimits();
     toast.success(`Generated ${keyCount} license key(s)`);
     notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
+    setGenerating(false);
   };
 
   const banKey = async (id: string, licenseKey: string) => {
