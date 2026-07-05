@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.check-plan-limits]
 verify_jwt = false
+
+[functions.get-download]
+verify_jwt = false
