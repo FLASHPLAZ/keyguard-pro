@@ -54,6 +54,7 @@ export default function Applications() {
   };
 
   useEffect(() => { fetchApps(); }, [user]);
+  useEffect(() => { if (detailApp) setDownloadUrlInput(detailApp.download_url || ""); }, [detailApp?.id]);
 
   const filtered = apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
 
