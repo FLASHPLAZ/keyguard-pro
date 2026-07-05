@@ -39,6 +39,8 @@ export default function Licenses() {
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
