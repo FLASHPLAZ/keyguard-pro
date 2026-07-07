@@ -7,8 +7,10 @@ const corsHeaders = {
 };
 
 function json(body: unknown, status = 200) {
+  // Always return 200 so supabase-js exposes the JSON payload to the client;
+  // the client checks `data.error` to display the real message.
   return new Response(JSON.stringify(body), {
-    status,
+    status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
