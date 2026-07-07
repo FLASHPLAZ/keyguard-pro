@@ -182,6 +182,22 @@ export default function AdminPanel() {
 
   async function updateTenantPlan(id: string, plan: string) {
     // Two-tier model: free & lifetime never expire. 'platform' is internal.
+    const allowed = ["free", "lifetime", "platform"] as const;
+    if (!allowed.includes(plan as any)) {
+      toast.error("Invalid plan");
+      return;
+    }
+    const t = tenants.find(x => x.id === id);
+    if (t?.plan === "platform" && plan !== "platform") {
+      toast.error("Cannot change the platform workspace plan");
+      return;
+    }
+    if (t?.plan === "lifetime" && plan === "free") {
+      const ok = window.confirm(
+        `Downgrade "${t?.name || id}" from Lifetime to Free?\n\nThe seller will immediately lose access to resellers, managers, and premium features, and be capped at 1 app / 25 keys.`
+      );
+      if (!ok) return;
+    }
     const cycleMap: Record<string, string> = { free: "free", lifetime: "lifetime", platform: "lifetime" };
     const patch: any = {
       plan,
@@ -192,7 +208,6 @@ export default function AdminPanel() {
     const { error } = await supabase.from("tenants").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Plan updated to ${plan}`);
-    const t = tenants.find(x => x.id === id);
     notifyDiscord("Admin changed workspace plan", { Workspace: t?.name || id, "New Plan": plan, "Tenant ID": id });
     loadTenants();
     loadOverview();
