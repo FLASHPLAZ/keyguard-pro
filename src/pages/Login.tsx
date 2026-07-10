@@ -78,7 +78,7 @@ export default function Login() {
               <Key className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">GrazeXauth</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">GX Auth</h1>
           <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 text-primary/60" />
             <span>License Management System</span>

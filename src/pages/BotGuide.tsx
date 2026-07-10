@@ -40,7 +40,7 @@ async def log_action(action: str, user: discord.User, details: dict):
     embed.add_field(name="Performed By", value=f"{user} ({user.id})", inline=False)
     for k, v in details.items():
         embed.add_field(name=k, value=str(v), inline=True)
-    embed.set_footer(text="GrazeXauth Bot Logs")
+    embed.set_footer(text="GX Auth Bot Logs")
     try:
         await channel.send(embed=embed)
     except Exception:
@@ -49,7 +49,7 @@ async def log_action(action: str, user: discord.User, details: dict):
 
 # ─── API Helper ───
 async def api_request(endpoint: str, payload: dict, auth: bool = True):
-    """Make a request to the GrazeXauth API."""
+    """Make a request to the GX Auth API."""
     headers = {"Content-Type": "application/json"}
     if auth:
         headers["X-API-Key"] = BOT_API_KEY
@@ -91,7 +91,7 @@ class HWIDResetModal(discord.ui.Modal, title="🔄 Reset HWID"):
                 )
                 embed.add_field(name="License Key", value=f"\`{key}\`", inline=False)
                 embed.add_field(name="Previous HWID", value=f"\`{data.get('previous_hwid', 'N/A')}\`", inline=True)
-                embed.set_footer(text="GrazeXauth")
+                embed.set_footer(text="GX Auth")
                 await interaction.followup.send(embed=embed, ephemeral=True)
 
                 await log_action("HWID Reset", interaction.user, {
@@ -179,7 +179,7 @@ class CheckLicenseModal(discord.ui.Modal, title="🔍 Check License"):
                 embed.add_field(name="Key", value=f"\`{key}\`", inline=False)
                 embed.add_field(name="Reason", value=data.get("error", "Unknown"), inline=True)
 
-            embed.set_footer(text="GrazeXauth")
+            embed.set_footer(text="GX Auth")
             embed.timestamp = datetime.datetime.utcnow()
             await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -208,7 +208,7 @@ class CheckLicenseModal(discord.ui.Modal, title="🔍 Check License"):
 @app_commands.default_permissions(administrator=True)
 async def panel_cmd(interaction: discord.Interaction, channel: discord.TextChannel):
     embed = discord.Embed(
-        title="🛡️ GrazeXauth — License Manager",
+        title="🛡️ GX Auth — License Manager",
         description=(
             "Use the buttons below to manage your license.\\n\\n"
             "🔄 **Reset HWID** — Unbind your hardware ID\\n"
@@ -216,7 +216,7 @@ async def panel_cmd(interaction: discord.Interaction, channel: discord.TextChann
         ),
         color=0x5865f2
     )
-    embed.set_footer(text="GrazeXauth • Powered by our API")
+    embed.set_footer(text="GX Auth • Powered by our API")
     embed.timestamp = datetime.datetime.utcnow()
 
     await channel.send(embed=embed, view=PanelView())
@@ -246,7 +246,7 @@ async def reset_cmd(interaction: discord.Interaction, license_key: str):
             )
             embed.add_field(name="License Key", value=f"\`{license_key}\`", inline=False)
 
-        embed.set_footer(text="GrazeXauth")
+        embed.set_footer(text="GX Auth")
         embed.timestamp = datetime.datetime.utcnow()
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -278,7 +278,7 @@ async def check_cmd(interaction: discord.Interaction, license_key: str):
             embed.add_field(name="Key", value=f"\`{license_key}\`", inline=False)
             embed.add_field(name="Reason", value=data.get("error", "Unknown"), inline=True)
 
-        embed.set_footer(text="GrazeXauth")
+        embed.set_footer(text="GX Auth")
         embed.timestamp = datetime.datetime.utcnow()
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -321,7 +321,7 @@ async def help_cmd(interaction: discord.Interaction):
         value="Show this help message",
         inline=False
     )
-    embed.set_footer(text="GrazeXauth")
+    embed.set_footer(text="GX Auth")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
@@ -336,7 +336,7 @@ async def info_cmd(interaction: discord.Interaction):
     embed.add_field(name="Servers", value=str(len(client.guilds)), inline=True)
     embed.add_field(name="API", value=f"\`{API_BASE}\`", inline=False)
     embed.add_field(name="Latency", value=f"{round(client.latency * 1000)}ms", inline=True)
-    embed.set_footer(text="GrazeXauth")
+    embed.set_footer(text="GX Auth")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
@@ -379,7 +379,7 @@ async function logAction(action, user, details) {
     .setColor(0x2f3136)
     .addFields({ name: "Performed By", value: \`\${user.tag} (\${user.id})\`, inline: false })
     .setTimestamp()
-    .setFooter({ text: "GrazeXauth Bot Logs" });
+    .setFooter({ text: "GX Auth Bot Logs" });
   for (const [k, v] of Object.entries(details)) {
     embed.addFields({ name: k, value: String(v), inline: true });
   }
@@ -487,7 +487,7 @@ client.on("interactionCreate", async (interaction) => {
             .setDescription(data.error || "Unknown error")
             .addFields({ name: "License Key", value: \`\\\`\${key}\\\`\` });
         }
-        embed.setFooter({ text: "GrazeXauth" }).setTimestamp();
+        embed.setFooter({ text: "GX Auth" }).setTimestamp();
         await interaction.followUp({ embeds: [embed], ephemeral: true });
         await logAction("HWID Reset (Panel)", interaction.user, {
           "License Key": key,
@@ -524,7 +524,7 @@ client.on("interactionCreate", async (interaction) => {
               { name: "Reason", value: data.error || "Unknown", inline: true }
             );
         }
-        embed.setFooter({ text: "GrazeXauth" }).setTimestamp();
+        embed.setFooter({ text: "GX Auth" }).setTimestamp();
         await interaction.followUp({ embeds: [embed], ephemeral: true });
         await logAction("License Check (Panel)", interaction.user, { "License Key": key });
       } catch (err) {
@@ -542,14 +542,14 @@ client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "panel") {
     const channel = interaction.options.getChannel("channel");
     const panelEmbed = new EmbedBuilder()
-      .setTitle("🛡️ GrazeXauth — License Manager")
+      .setTitle("🛡️ GX Auth — License Manager")
       .setDescription(
         "Use the buttons below to manage your license.\\n\\n" +
         "🔄 **Reset HWID** — Unbind your hardware ID\\n" +
         "🔍 **Check License** — View your license status & details"
       )
       .setColor(0x5865f2)
-      .setFooter({ text: "GrazeXauth • Powered by our API" })
+      .setFooter({ text: "GX Auth • Powered by our API" })
       .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
@@ -589,7 +589,7 @@ client.on("interactionCreate", async (interaction) => {
           .setDescription(data.error || "Unknown error")
           .addFields({ name: "License Key", value: \`\\\`\${licenseKey}\\\`\` });
       }
-      embed.setFooter({ text: "GrazeXauth" }).setTimestamp();
+      embed.setFooter({ text: "GX Auth" }).setTimestamp();
       await interaction.followUp({ embeds: [embed], ephemeral: true });
       await logAction("HWID Reset (Slash)", interaction.user, {
         "License Key": licenseKey,
@@ -625,7 +625,7 @@ client.on("interactionCreate", async (interaction) => {
             { name: "Reason", value: data.error || "Unknown", inline: true }
           );
       }
-      embed.setFooter({ text: "GrazeXauth" }).setTimestamp();
+      embed.setFooter({ text: "GX Auth" }).setTimestamp();
       await interaction.followUp({ embeds: [embed], ephemeral: true });
       await logAction("License Check (Slash)", interaction.user, { "License Key": licenseKey });
     } catch (err) {
@@ -647,7 +647,7 @@ client.on("interactionCreate", async (interaction) => {
         { name: "/info", value: "Show bot and API connection info", inline: false },
         { name: "/help", value: "Show this help message", inline: false }
       )
-      .setFooter({ text: "GrazeXauth" });
+      .setFooter({ text: "GX Auth" });
     await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
@@ -662,7 +662,7 @@ client.on("interactionCreate", async (interaction) => {
         { name: "Latency", value: \`\${client.ws.ping}ms\`, inline: true }
       )
       .setTimestamp()
-      .setFooter({ text: "GrazeXauth" });
+      .setFooter({ text: "GX Auth" });
     await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 });
