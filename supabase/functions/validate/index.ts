@@ -126,7 +126,7 @@ function fireDiscordWebhook(webhookUrl: string, action: string, details: Record<
       .filter(([_, v]) => v != null)
       .map(([k, v]) => ({ name: k, value: String(v), inline: true })),
     timestamp: new Date().toISOString(),
-    footer: { text: "Galactic Boosts License System" },
+    footer: { text: "GX Auth License System" },
   };
   // Fire and forget — don't await
   fetch(webhookUrl, {

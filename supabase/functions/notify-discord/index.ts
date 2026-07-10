@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       color,
       fields,
       timestamp: new Date().toISOString(),
-      footer: { text: `Galactic Boosts • Activity Log` },
+      footer: { text: `GX Auth • Activity Log` },
     };
 
     // Fan out to: acting user's own webhook, their tenant owner's webhook (if

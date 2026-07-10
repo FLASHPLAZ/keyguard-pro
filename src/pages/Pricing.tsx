@@ -82,7 +82,7 @@ export default function Pricing() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 ring-1 ring-primary/30">
               <Key className="h-5 w-5 text-primary" />
             </div>
-            <span className="text-lg font-bold">GrazeXauth</span>
+            <span className="text-lg font-bold">GX Auth</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <Link to="/login"><Button variant="ghost" size="sm">Login</Button></Link>

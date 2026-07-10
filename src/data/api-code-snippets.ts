@@ -1,4 +1,4 @@
-const API_BASE = "https://license.galacticboosts.online/api";
+const API_BASE = "https://gxauth.xyz/api";
 
 export const pythonSnippet = `import requests
 import subprocess

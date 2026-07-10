@@ -260,12 +260,12 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">System Name</label>
-                <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow" defaultValue="GrazeXauth" readOnly />
+                <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow" defaultValue="GX Auth" readOnly />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">API Base URL</label>
                 <input className="w-full rounded-md border border-border bg-secondary px-3 py-2 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-shadow"
-                  value="https://license.galacticboosts.online/api/validate" readOnly />
+                  value="https://gxauth.xyz/api/validate" readOnly />
               </div>
             </div>
           </div>

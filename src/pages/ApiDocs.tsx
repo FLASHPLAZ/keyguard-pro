@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
 
-const API_BASE = "https://license.galacticboosts.online/api";
+const API_BASE = "https://gxauth.xyz/api";
 
 const endpoints = [
   {
@@ -191,7 +191,7 @@ export default function ApiDocs() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">API Documentation</h1>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-muted-foreground">Complete guide to integrate GrazeXauth into your software</p>
+          <p className="text-sm text-muted-foreground">Complete guide to integrate GX Auth into your software</p>
           <a
             href="/openapi.json"
             download="galactic-boosts-openapi.json"

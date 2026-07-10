@@ -77,7 +77,7 @@ export function ResellerSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <span className="block text-sm font-bold tracking-tight text-foreground truncate">GrazeXauth</span>
+              <span className="block text-sm font-bold tracking-tight text-foreground truncate">GX Auth</span>
               <div className="flex items-center gap-1">
                 <Sparkles className="h-2.5 w-2.5 text-primary/60" />
                 <span className="text-[10px] text-muted-foreground">Reseller Panel</span>

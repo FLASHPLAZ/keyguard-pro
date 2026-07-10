@@ -1,13 +1,13 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Galactic Boosts License API",
+    "title": "GX Auth License API",
     "version": "1.0.0",
-    "description": "Public license-management API used by client tools, Discord bots, and web portals. Base URL: https://license.galacticboosts.online/api",
-    "contact": { "name": "Galactic Boosts", "url": "https://license.galacticboosts.online" }
+    "description": "Public license-management API used by client tools, Discord bots, and web portals. Base URL: https://gxauth.xyz/api",
+    "contact": { "name": "GX Auth", "url": "https://gxauth.xyz" }
   },
   "servers": [
-    { "url": "https://license.galacticboosts.online/api", "description": "Production" }
+    { "url": "https://gxauth.xyz/api", "description": "Production" }
   ],
   "tags": [
     { "name": "Licenses", "description": "License validation & lifecycle" },

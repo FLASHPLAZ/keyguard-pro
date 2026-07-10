@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
                 { name: "🌍 Country", value: country, inline: true },
               ],
               timestamp: new Date().toISOString(),
-              footer: { text: "Galactic Boosts License System" },
+              footer: { text: "GX Auth License System" },
             }],
           }),
         });

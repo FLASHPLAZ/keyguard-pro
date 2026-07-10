@@ -129,7 +129,7 @@ const THREATS = [
 
 const SAMPLE_PY = `import requests, hashlib, uuid
 
-r = requests.post("https://license.galacticboosts.online/api/validate", json={
+r = requests.post("https://gxauth.xyz/api/validate", json={
     "license_key": "GX-XXXX-XXXX-XXXX-XXXX",
     "application_id": "your-app-id",
     "hwid": hashlib.sha256(
@@ -149,7 +149,7 @@ const hwid = crypto.createHash("sha256")
   .update(require("os").networkInterfaces().eth0?.[0]?.mac || "x")
   .digest("hex");
 
-const res = await fetch("https://license.galacticboosts.online/api/validate", {
+const res = await fetch("https://gxauth.xyz/api/validate", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -172,7 +172,7 @@ var payload = new {
 };
 
 var res = await client.PostAsJsonAsync(
-    "https://license.galacticboosts.online/api/validate", payload);
+    "https://gxauth.xyz/api/validate", payload);
 var data = await res.Content.ReadFromJsonAsync<ValidateResponse>();
 
 Console.WriteLine(data.valid
@@ -212,7 +212,7 @@ export default function Landing() {
                 <Key className="h-5 w-5 text-white" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">GrazeXauth</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">GX Auth</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -261,7 +261,7 @@ export default function Landing() {
             className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 md:backdrop-blur px-4 py-1.5 text-xs sm:text-sm text-foreground/90 shadow-lg shadow-primary/5"
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="font-medium">Introducing GrazeXauth</span>
+            <span className="font-medium">Introducing GX Auth</span>
           </motion.div>
 
           <motion.h1
@@ -281,7 +281,7 @@ export default function Landing() {
             transition={{ delay: 0.25, duration: 0.6 }}
             className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed px-2"
           >
-            GrazeXauth is the all-in-one auth platform that helps you generate keys,
+            GX Auth is the all-in-one auth platform that helps you generate keys,
             bind hardware, block sharing, and watch every login in real time.
           </motion.p>
 
@@ -525,7 +525,7 @@ export default function Landing() {
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary mb-4 mx-auto">
               <Eye className="h-3 w-3 text-primary" /> Compare
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to GrazeXauth?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Why switch to GX Auth?</h2>
           </motion.div>
           <motion.div variants={fadeUp} className="rounded-xl border border-border/50 bg-card/40 md:backdrop-blur overflow-hidden">
             <div className="overflow-x-auto">
@@ -533,7 +533,7 @@ export default function Landing() {
                 <thead>
                   <tr className="border-b border-border/50 bg-primary/5">
                     <th className="px-5 py-3.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Feature</th>
-                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-primary">GrazeXauth</th>
+                    <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-primary">GX Auth</th>
                     <th className="px-5 py-3.5 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Others</th>
                   </tr>
                 </thead>
@@ -696,7 +696,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl text-center">
           <motion.div variants={fadeUp} className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-8 sm:p-14 md:backdrop-blur-xl shadow-xl">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to protect your software?</h2>
-            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GrazeXauth. Start free today.</p>
+            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">Join developers who trust GX Auth. Start free today.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/signup">
                 <Button size="lg" className="h-12 px-8 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/70 text-white border-0 shadow-lg shadow-primary/25 transition-shadow hover:shadow-2xl hover:shadow-primary/30">
@@ -716,7 +716,7 @@ export default function Landing() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-primary" />
-            <span>&copy; {new Date().getFullYear()} GrazeXauth. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} GX Auth. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
