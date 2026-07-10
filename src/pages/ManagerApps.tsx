@@ -109,7 +109,7 @@ export default function ManagerApps() {
     toast.success(`${label} copied`);
   };
 
-  const validateEndpoint = "https://license.galacticboosts.online/api/validate";
+  const validateEndpoint = "https://gxauth.xyz/api/validate";
 
   return (
     <ManagerLayout>

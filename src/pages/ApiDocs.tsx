@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
 
-const API_BASE = "https://license.galacticboosts.online/api";
+const API_BASE = "https://gxauth.xyz/api";
 
 const endpoints = [
   {

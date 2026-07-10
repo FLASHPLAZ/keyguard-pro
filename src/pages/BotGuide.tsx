@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const API_BASE = "https://license.galacticboosts.online/api";
+const API_BASE = "https://gxauth.xyz/api";
 
 const pythonBot = `import discord
 from discord import app_commands

@@ -129,7 +129,7 @@ const THREATS = [
 
 const SAMPLE_PY = `import requests, hashlib, uuid
 
-r = requests.post("https://license.galacticboosts.online/api/validate", json={
+r = requests.post("https://gxauth.xyz/api/validate", json={
     "license_key": "GX-XXXX-XXXX-XXXX-XXXX",
     "application_id": "your-app-id",
     "hwid": hashlib.sha256(
@@ -149,7 +149,7 @@ const hwid = crypto.createHash("sha256")
   .update(require("os").networkInterfaces().eth0?.[0]?.mac || "x")
   .digest("hex");
 
-const res = await fetch("https://license.galacticboosts.online/api/validate", {
+const res = await fetch("https://gxauth.xyz/api/validate", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -172,7 +172,7 @@ var payload = new {
 };
 
 var res = await client.PostAsJsonAsync(
-    "https://license.galacticboosts.online/api/validate", payload);
+    "https://gxauth.xyz/api/validate", payload);
 var data = await res.Content.ReadFromJsonAsync<ValidateResponse>();
 
 Console.WriteLine(data.valid
