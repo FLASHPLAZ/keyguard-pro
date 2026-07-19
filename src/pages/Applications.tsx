@@ -35,7 +35,7 @@ export default function Applications() {
   const [pendingDeleteApp, setPendingDeleteApp] = useState<any>(null);
 
   const isPremium = planName === "lifetime" || planName === "platform";
-  const isAdminRoute = location.pathname.startsWith("/admin") || location.pathname === "/apps";
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   const saveDownloadUrl = async () => {
     if (!detailApp || !user) return;

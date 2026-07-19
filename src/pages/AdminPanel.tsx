@@ -250,7 +250,9 @@ export default function AdminPanel() {
   const paginatedUsers = filteredUsers.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE);
 
   const filteredTenants = tenants.filter(t =>
-    (t.name || "").toLowerCase().includes(tenantsSearch.toLowerCase())
+    (t.name || "").toLowerCase().includes(tenantsSearch.toLowerCase()) ||
+    (t.owner_profile?.email || "").toLowerCase().includes(tenantsSearch.toLowerCase()) ||
+    (t.owner_profile?.username || "").toLowerCase().includes(tenantsSearch.toLowerCase())
   );
   const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
 
@@ -274,6 +276,20 @@ export default function AdminPanel() {
             Platform Command
           </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Admin Control Center</h1>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-3">
+              <p className="text-xs font-semibold text-emerald-300">Admin-only global view</p>
+              <p className="mt-1 text-xs text-muted-foreground">Personal pages show only the signed-in owner.</p>
+            </div>
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
+              <p className="text-xs font-semibold text-primary">Owner cleanup active</p>
+              <p className="mt-1 text-xs text-muted-foreground">Subscriptions without a real owner are hidden here.</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-secondary/30 p-3">
+              <p className="text-xs font-semibold text-foreground">Fast controls</p>
+              <p className="mt-1 text-xs text-muted-foreground">Grant lifetime, suspend, search and refresh in one place.</p>
+            </div>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">Complete platform management — users, subscriptions, apps, licenses & analytics</p>
         </div>
 

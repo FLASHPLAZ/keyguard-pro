@@ -4,7 +4,7 @@ import {
   Key, Shield, Webhook, Users, Database, Zap, Globe, ArrowRight,
   Sparkles, CheckCircle2, Code2, Lock, Activity, Rocket, Terminal,
   Eye, Star, ChevronDown, ChevronUp, Cpu, Gauge, Server,
-  MonitorSmartphone, Menu, X,
+  MonitorSmartphone, Menu, X, AppWindow,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
@@ -185,6 +185,105 @@ const CODE_TABS: CodeTab[] = [
   { label: "C#", filename: "Validate.cs", code: SAMPLE_CS },
 ];
 
+function ProductConsoleMock() {
+  const queue = [
+    { label: "License validation", state: "DONE", width: "92%" },
+    { label: "HWID binding", state: "DONE", width: "86%" },
+    { label: "Webhook delivery", state: "QUEUED", width: "35%" },
+  ];
+
+  return (
+    <div className="relative mx-auto w-full max-w-[620px]">
+      <div className="absolute -right-4 top-8 z-10 hidden rounded-lg border border-border/70 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur md:block">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Shield className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Login approved</p>
+            <p className="text-xs text-muted-foreground">+1 active session</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border/80 bg-[#090a0d]/95 shadow-[0_30px_90px_-50px_hsl(var(--primary)/0.7)] backdrop-blur">
+        <div className="flex h-12 items-center gap-3 border-b border-border/70 px-5">
+          <div className="flex gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
+            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
+            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
+          </div>
+          <p className="font-mono text-xs text-muted-foreground">app.gxauth.xyz/dashboard</p>
+          <span className="ml-auto hidden rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 sm:inline-flex">Live</span>
+        </div>
+
+        <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1fr]">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ["Apps", "12", AppWindow],
+                ["Licenses", "2.4k", Key],
+                ["Success", "99.2%", CheckCircle2],
+                ["Latency", "46ms", Gauge],
+              ].map(([label, value, Icon]: any) => (
+                <div key={label} className="rounded-lg border border-border/70 bg-card/60 p-4">
+                  <Icon className="mb-3 h-4 w-4 text-primary" />
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-border/70 bg-card/60 p-4">
+              <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+                <span>Validations · 24h</span>
+                <span className="text-emerald-300">+18%</span>
+              </div>
+              <div className="flex h-24 items-end gap-2">
+                {[28, 42, 35, 55, 47, 68, 61, 82, 75, 96, 88, 108].map((h, i) => (
+                  <span key={i} className="flex-1 rounded-t bg-gradient-to-t from-primary/25 to-primary" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border/70 bg-black/35">
+              <div className="flex items-center gap-2 border-b border-border/70 px-4 py-3">
+                <Terminal className="h-4 w-4 text-primary" />
+                <span className="font-mono text-xs text-muted-foreground">validate.http</span>
+              </div>
+              <pre className="overflow-hidden p-4 font-mono text-[12px] leading-relaxed text-muted-foreground">
+<span className="text-primary">POST</span> /api/validate{"\n"}
+{"{"}{"\n"}
+  "license_key": "GALACTIC-...",{"\n"}
+  "hwid": "device_hash"{"\n"}
+{"}"}{"\n\n"}
+<span className="text-emerald-300">valid: true</span>{"\n"}
+expires: lifetime
+              </pre>
+            </div>
+
+            <div className="space-y-3">
+              {queue.map((item) => (
+                <div key={item.label} className="rounded-lg border border-border/70 bg-card/60 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">{item.label}</span>
+                    <span className={item.state === "DONE" ? "text-[10px] font-semibold text-emerald-300" : "text-[10px] font-semibold text-muted-foreground"}>{item.state}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: item.width }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -194,12 +293,21 @@ export default function Landing() {
     <div className="relative min-h-screen bg-background overflow-x-hidden">
       {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
-        <div className="absolute inset-0 opacity-[0.025] hidden sm:block" style={{
-          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }} />
-        <div className="absolute -left-32 top-32 h-[400px] w-[400px] rounded-full bg-primary/[0.10] blur-[80px] hidden md:block" />
-        <div className="absolute -right-32 top-[600px] h-[350px] w-[350px] rounded-full bg-primary/[0.08] blur-[80px] hidden md:block" />
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 22% 18%, hsl(var(--primary) / 0.45), transparent 24%), radial-gradient(circle at 78% 36%, hsl(var(--accent) / 0.28), transparent 28%), linear-gradient(hsl(var(--primary) / 0.12) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.12) 1px, transparent 1px)",
+            backgroundSize: "100% 100%, 100% 100%, 48px 48px, 48px 48px",
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.22]"
+          style={{
+            backgroundImage: "radial-gradient(circle, hsl(var(--foreground) / 0.55) 1px, transparent 1.5px)",
+            backgroundSize: "92px 92px",
+          }}
+        />
       </div>
 
       {/* Navigation */}
@@ -253,42 +361,46 @@ export default function Landing() {
           <div className="absolute left-1/2 top-[120px] h-px w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/45 to-accent/25" />
         </div>
 
-        <div className="mx-auto max-w-4xl text-center">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+          <div>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/75 px-4 py-1.5 text-xs text-foreground/90 shadow-lg shadow-primary/5 md:backdrop-blur sm:text-sm"
           >
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span className="font-medium">Introducing GX Auth</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-300" />
+            <span className="font-medium">Protected changes are live</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 font-extrabold leading-[0.98] text-foreground text-[2.6rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-[5.25rem]"
+            className="mt-7 max-w-3xl font-extrabold leading-[0.96] text-foreground text-[3.15rem] xs:text-5xl sm:text-6xl lg:text-[5.7rem]"
           >
-            The license API <br className="hidden sm:block" />
-            built <span className="gradient-text">for scale.</span>
+            Licensing,
+            <br />
+            locked down in
+            <span className="block bg-gradient-to-r from-primary via-blue-300 to-accent bg-clip-text text-transparent">seconds.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.6 }}
-            className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed px-2"
+            className="mt-6 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed"
           >
-            GX Auth is the all-in-one auth platform that helps you generate keys,
-            bind hardware, block sharing, and watch every login in real time.
+            GX Auth gives software owners a clean license system for apps, users,
+            HWID binding, subscriptions, and security events without touching your
+            production data.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
+            className="mt-10 flex flex-col gap-3 sm:flex-row"
           >
             <Link to="/signup" className="w-full sm:w-auto">
               <Button
@@ -319,24 +431,25 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="mt-7 flex flex-wrap items-center justify-center gap-2"
+            className="mt-7 flex flex-wrap gap-2"
           >
-            {["Python", "C#", "Node.js", "C++", "Go", "Rust", "Java"].map((lang) => (
-              <span key={lang} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 md:backdrop-blur font-mono text-[11px] text-muted-foreground/80">
-                {lang}
+            {["Safe delete", "Owner scoped", "Admin controls", "Live logs"].map((item) => (
+              <span key={item} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 md:backdrop-blur font-mono text-[11px] text-muted-foreground/80">
+                {item}
               </span>
             ))}
           </motion.div>
-        </div>
+          </div>
 
         {/* Dashboard / code preview */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 34 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto mt-16 max-w-5xl px-2 sm:px-0 relative will-change-transform"
+          transition={{ delay: 0.32, duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+          className="relative"
         >
-          <div className="absolute -inset-x-6 -inset-y-10 -z-10 bg-gradient-to-b from-primary/12 via-accent/5 to-transparent opacity-70 hidden md:block" />
+          <ProductConsoleMock />
+          {false && (
           <AnimatedCodeBlock
             tabs={CODE_TABS}
             responseSlot={
@@ -366,7 +479,9 @@ export default function Landing() {
               </>
             }
           />
+          )}
         </motion.div>
+        </div>
       </section>
 
       {/* Stats */}
