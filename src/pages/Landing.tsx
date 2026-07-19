@@ -208,11 +208,11 @@ export default function Landing() {
           <Link to="/" className="flex items-center gap-2.5">
             <div className="relative">
               <div className="absolute -inset-1.5 rounded-lg bg-primary/30 blur-md" />
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
-                <Key className="h-5 w-5 text-white" />
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/10">
+                <Key className="h-5 w-5 text-primary-foreground" />
               </div>
             </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">GX Auth</span>
+            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">GX Auth</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -223,7 +223,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <Link to="/login"><Button variant="ghost" size="sm" className="hidden sm:inline-flex">Sign in</Button></Link>
             <Link to="/signup">
-              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/70 text-white border-0">
+              <Button size="sm" className="gap-1.5 rounded-md bg-gradient-to-r from-primary to-accent text-primary-foreground border-0">
                 Get started <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -249,8 +249,8 @@ export default function Landing() {
       <section className="relative z-10 px-4 sm:px-6 pt-14 pb-12 md:pt-24 md:pb-20">
         {/* dramatic radial backdrop */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[700px] overflow-hidden">
-          <div className="absolute left-1/2 top-[-200px] h-[700px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.25),transparent_60%)]" />
-          <div className="absolute left-1/2 top-[120px] h-[2px] w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-[520px] bg-[linear-gradient(180deg,hsl(var(--primary)/0.16),transparent_68%)]" />
+          <div className="absolute left-1/2 top-[120px] h-px w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/45 to-accent/25" />
         </div>
 
         <div className="mx-auto max-w-4xl text-center">
@@ -258,7 +258,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 md:backdrop-blur px-4 py-1.5 text-xs sm:text-sm text-foreground/90 shadow-lg shadow-primary/5"
+            className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/75 px-4 py-1.5 text-xs text-foreground/90 shadow-lg shadow-primary/5 md:backdrop-blur sm:text-sm"
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             <span className="font-medium">Introducing GX Auth</span>
@@ -268,8 +268,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 font-extrabold tracking-tight leading-[0.95] text-foreground text-[2.6rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-[5.25rem]"
-            style={{ letterSpacing: "-0.035em" }}
+            className="mt-7 font-extrabold leading-[0.98] text-foreground text-[2.6rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-[5.25rem]"
           >
             The license API <br className="hidden sm:block" />
             built <span className="gradient-text">for scale.</span>
@@ -294,7 +293,7 @@ export default function Landing() {
             <Link to="/signup" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="group relative h-14 w-full sm:w-[280px] rounded-full bg-gradient-to-r from-primary via-primary to-primary-glow text-primary-foreground font-semibold text-base border-0 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.6)] hover:shadow-[0_0_60px_-6px_hsl(var(--primary)/0.8)] hover:scale-[1.02] transition-all duration-300"
+                className="group relative h-14 w-full rounded-md border-0 bg-gradient-to-r from-primary to-accent text-base font-semibold text-primary-foreground shadow-[0_18px_45px_-24px_hsl(var(--primary)/0.65)] transition-all duration-300 hover:scale-[1.01] sm:w-[280px]"
               >
                 Get started
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 group-hover:translate-x-0.5 transition-transform">
@@ -306,7 +305,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="group h-14 w-full sm:w-[280px] rounded-full border-border/60 bg-card/40 md:backdrop-blur hover:bg-card/70 hover:border-primary/40 text-foreground font-semibold text-base"
+                className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[280px]"
               >
                 More details
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
@@ -337,7 +336,7 @@ export default function Landing() {
           transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto mt-16 max-w-5xl px-2 sm:px-0 relative will-change-transform"
         >
-          <div className="absolute -inset-x-6 -inset-y-10 -z-10 rounded-[2rem] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent blur-3xl opacity-60 hidden md:block" />
+          <div className="absolute -inset-x-6 -inset-y-10 -z-10 bg-gradient-to-b from-primary/12 via-accent/5 to-transparent opacity-70 hidden md:block" />
           <AnimatedCodeBlock
             tabs={CODE_TABS}
             responseSlot={
@@ -380,9 +379,9 @@ export default function Landing() {
               { label: "Languages", value: 7, suffix: "+", icon: Code2 },
               { label: "Setup", value: 30, suffix: "s", icon: Rocket },
             ].map((s, i) => (
-              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-xl border border-primary/20 bg-card/30 md:backdrop-blur py-5 px-4 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 md:hover:-translate-y-0.5">
+              <motion.div key={s.label} variants={fadeUp} custom={i} className="group flex flex-col items-center rounded-lg border border-border/70 bg-card/70 px-4 py-5 shadow-[var(--shadow-card)] transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 md:backdrop-blur md:hover:-translate-y-0.5">
                 <s.icon className="h-5 w-5 text-primary mb-2" />
-                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent font-mono">
+                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-mono">
                   <Counter value={s.value} suffix={s.suffix} prefix={s.prefix} />
                 </span>
                 <span className="text-xs text-muted-foreground mt-1">{s.label}</span>
