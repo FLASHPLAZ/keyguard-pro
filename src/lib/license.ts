@@ -11,10 +11,14 @@ export const DURATION_OPTIONS = [
 
 export function generateLicenseKey(): string {
   const segments: string[] = ['GALACTIC'];
+  const randomValues = new Uint32Array(20);
+  crypto.getRandomValues(randomValues);
+  let randomCursor = 0;
+
   for (let s = 0; s < 4; s++) {
     let segment = '';
     for (let i = 0; i < 5; i++) {
-      const randomIndex = Math.floor(Math.random() * CHARSET.length);
+      const randomIndex = randomValues[randomCursor++] % CHARSET.length;
       segment += CHARSET[randomIndex];
     }
     segments.push(segment);
