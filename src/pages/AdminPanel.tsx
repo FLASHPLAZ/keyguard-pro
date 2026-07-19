@@ -71,6 +71,7 @@ export default function AdminPanel() {
 
   // ─── Recent logs ───
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [logsSearch, setLogsSearch] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -94,8 +95,8 @@ export default function AdminPanel() {
       supabase.from("licenses").select("id, status", { count: "exact" }),
       supabase.from("resellers").select("id", { count: "exact", head: true }),
       supabase.from("manager_permissions").select("id", { count: "exact", head: true }),
-      supabase.from("tenants").select("id, plan"),
-      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
+      supabase.from("tenants").select("id, plan, owner_user_id"),
+      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(75),
       supabase.from("activity_logs")
         .select("created_at")
         .in("action", ["License Login", "First Login — HWID Bound"])
@@ -105,7 +106,7 @@ export default function AdminPanel() {
 
     const licenses = licensesRes.data || [];
     const activeUserIds = new Set((activeProfilesRes.data || []).map((p: any) => p.user_id));
-    const tenantData = (tenantsRes.data || []).filter((t: any) => !t.owner_user_id || activeUserIds.has(t.owner_user_id));
+    const tenantData = (tenantsRes.data || []).filter((t: any) => t.owner_user_id && activeUserIds.has(t.owner_user_id));
     setStats({
       totalUsers: profilesRes.count || 0,
       totalApps: appsRes.count || 0,
@@ -173,7 +174,7 @@ export default function AdminPanel() {
     ]);
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     setTenants((data || [])
-      .filter((t: any) => !t.owner_user_id || profileMap.has(t.owner_user_id))
+      .filter((t: any) => t.owner_user_id && profileMap.has(t.owner_user_id))
       .map((t: any) => ({ ...t, owner_profile: t.owner_user_id ? profileMap.get(t.owner_user_id) : null })));
     setTenantsLoading(false);
   }
@@ -255,6 +256,20 @@ export default function AdminPanel() {
     (t.owner_profile?.username || "").toLowerCase().includes(tenantsSearch.toLowerCase())
   );
   const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
+  const filteredLogs = recentLogs.filter((log: any) => {
+    const s = logsSearch.toLowerCase();
+    return (log.action || "").toLowerCase().includes(s) ||
+      (log.application_name || "").toLowerCase().includes(s) ||
+      (log.license_key || "").toLowerCase().includes(s);
+  });
+
+  const getLogTone = (action = "") => {
+    const lower = action.toLowerCase();
+    if (lower.includes("delete") || lower.includes("ban") || lower.includes("suspend")) return "border-destructive/25 bg-destructive/10 text-destructive";
+    if (lower.includes("created") || lower.includes("generated") || lower.includes("activated")) return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
+    if (lower.includes("reset") || lower.includes("updated") || lower.includes("changed")) return "border-primary/25 bg-primary/10 text-primary";
+    return "border-border/70 bg-secondary/50 text-muted-foreground";
+  };
 
   const pieData = [
     { name: "Free", value: stats.freeTenants || 0, color: "hsl(215, 15%, 45%)" },
@@ -298,6 +313,7 @@ export default function AdminPanel() {
             <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
+            <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Audit Logs</TabsTrigger>
           </TabsList>
 
           {/* ─── OVERVIEW TAB ─── */}
@@ -643,6 +659,39 @@ export default function AdminPanel() {
                 <TablePagination currentPage={tenantsPage} totalItems={filteredTenants.length} pageSize={PAGE_SIZE} onPageChange={setTenantsPage} />
               </>
             )}
+          </TabsContent>
+          <TabsContent value="logs" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Audit Logs</h2>
+                <p className="text-xs text-muted-foreground">Recent platform activity, license actions and admin events</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadOverview}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+            </div>
+            <div className="relative sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search logs..." value={logsSearch} onChange={e => setLogsSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+            </div>
+            <div className="rounded-lg border border-border/70 bg-card/70">
+              {filteredLogs.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-muted-foreground">No logs found</p>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {filteredLogs.map((log: any) => (
+                    <div key={log.id} className="grid gap-3 px-4 py-3 transition-colors hover:bg-secondary/30 md:grid-cols-[1fr_auto]">
+                      <div className="min-w-0">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className={`text-[10px] ${getLogTone(log.action)}`}>{log.action || "Activity"}</Badge>
+                          {log.application_name && <span className="text-xs text-muted-foreground">{log.application_name}</span>}
+                        </div>
+                        {log.license_key && <p className="truncate font-mono text-xs text-primary">{log.license_key}</p>}
+                      </div>
+                      <p className="text-xs text-muted-foreground md:text-right">{formatDate(log.created_at)}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </PageTransition>
