@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature, x-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-signature, x-timestamp, x-nonce, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -10,7 +10,11 @@ const DEFAULT_RATE_LIMIT_MAX = 10;
 const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 5;
 const DEFAULT_IP_THRESHOLD = 5;
 const SIGNATURE_MAX_AGE_SECONDS = 60;
+const MAX_BODY_BYTES = 16_384;
 const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const NONCE_PATTERN = /^[A-Za-z0-9._:-]{16,128}$/;
+const SIGNATURE_PATTERN = /^[a-f0-9]{64}$/i;
 
 // ── Cache for admin settings (avoid DB hit on every request) ──
 let settingsCache: { data: AdminSettings; expiry: number } | null = null;
@@ -175,10 +179,11 @@ async function trackIpAndCheckSharing(
   return { shouldBan: false, uniqueIpCount };
 }
 
-async function checkBlacklist(supabase: any, ip: string, hwid: string | null): Promise<{ blocked: boolean; type: string; reason: string }> {
+async function checkBlacklist(supabase: any, ip: string, hwid: string | null, licenseKey: string): Promise<{ blocked: boolean; type: string; reason: string }> {
   // Check IP and HWID blacklists in parallel
   const checks = [
     supabase.from("blacklist").select("reason").eq("type", "ip").eq("value", ip).maybeSingle(),
+    supabase.from("blacklist").select("reason").eq("type", "license_key").eq("value", licenseKey).maybeSingle(),
   ];
   if (hwid) {
     checks.push(supabase.from("blacklist").select("reason").eq("type", "hwid").eq("value", hwid).maybeSingle());
@@ -186,25 +191,66 @@ async function checkBlacklist(supabase: any, ip: string, hwid: string | null): P
   const results = await Promise.all(checks);
 
   if (results[0]?.data) return { blocked: true, type: "ip", reason: results[0].data.reason || "IP is blacklisted" };
-  if (hwid && results[1]?.data) return { blocked: true, type: "hwid", reason: results[1].data.reason || "HWID is blacklisted" };
+  if (results[1]?.data) return { blocked: true, type: "license_key", reason: results[1].data.reason || "License key is blacklisted" };
+  if (hwid && results[2]?.data) return { blocked: true, type: "hwid", reason: results[2].data.reason || "HWID is blacklisted" };
   return { blocked: false, type: "", reason: "" };
 }
 
-async function verifyHmacSignature(
-  body: string, signature: string, timestamp: string, secret: string
-): Promise<boolean> {
+async function hmacSha256Hex(payload: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(`${timestamp}.${body}`));
-  const expected = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  const expectedBytes = encoder.encode(expected);
-  const providedBytes = encoder.encode(signature.toLowerCase());
-  if (expectedBytes.length !== providedBytes.length) return false;
+  const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+  return Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function constantTimeEqualHex(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const left = encoder.encode(a.toLowerCase());
+  const right = encoder.encode(b.toLowerCase());
+  if (left.length !== right.length) return false;
   let mismatch = 0;
-  for (let i = 0; i < expectedBytes.length; i++) {
-    mismatch |= expectedBytes[i] ^ providedBytes[i];
-  }
+  for (let i = 0; i < left.length; i++) mismatch |= left[i] ^ right[i];
   return mismatch === 0;
+}
+
+async function verifyHmacSignature(
+  body: string, signature: string, timestamp: string, nonce: string, secret: string
+): Promise<boolean> {
+  if (!SIGNATURE_PATTERN.test(signature)) return false;
+  const expected = await hmacSha256Hex(`${timestamp}.${nonce}.${body}`, secret);
+  return constantTimeEqualHex(expected, signature);
+}
+
+async function recordNonce(
+  supabase: any,
+  applicationId: string,
+  nonce: string,
+  signature: string,
+  ip: string,
+  licenseKey: string
+): Promise<boolean> {
+  const expiresAt = new Date(Date.now() + SIGNATURE_MAX_AGE_SECONDS * 1000).toISOString();
+  supabase.from("api_nonces").delete().lt("expires_at", new Date().toISOString()).then(() => {});
+  const { error } = await supabase.from("api_nonces").insert({
+    application_id: applicationId,
+    nonce,
+    signature_hash: await hmacSha256Hex(signature, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "local"),
+    ip,
+    license_key_hash: await hmacSha256Hex(licenseKey, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "local"),
+    expires_at: expiresAt,
+  });
+  return !error;
+}
+
+async function signedJsonResponse(body: Record<string, any>, status: number, secret?: string) {
+  const responseBody = JSON.stringify(body);
+  const headers: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
+  if (secret) {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    headers["X-Response-Timestamp"] = timestamp;
+    headers["X-Response-Signature"] = await hmacSha256Hex(`${timestamp}.${responseBody}`, secret);
+  }
+  return new Response(responseBody, { status, headers });
 }
 
 // ── Helper: log + webhook fire-and-forget ──
@@ -233,7 +279,14 @@ Deno.serve(async (req) => {
 
   try {
     const startTime = Date.now();
+    const contentLength = Number(req.headers.get("content-length") || "0");
+    if (contentLength > MAX_BODY_BYTES) {
+      return jsonResponse({ valid: false, error: "Request body too large" }, 413);
+    }
     const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return jsonResponse({ valid: false, error: "Request body too large" }, 413);
+    }
     let parsed: any;
     try {
       parsed = JSON.parse(rawBody);
@@ -243,6 +296,11 @@ Deno.serve(async (req) => {
 
     const { hwid, device_name, application_id } = parsed;
     const license_key = typeof parsed.license_key === "string" ? parsed.license_key.trim().toUpperCase() : parsed.license_key;
+    const allowedFields = new Set(["license_key", "hwid", "device_name", "application_id"]);
+    const unexpectedFields = Object.keys(parsed).filter((key) => !allowedFields.has(key));
+    if (unexpectedFields.length > 0) {
+      return jsonResponse({ valid: false, error: "Unexpected request fields" }, 400);
+    }
 
     // ── Input validation ──
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
@@ -254,6 +312,9 @@ Deno.serve(async (req) => {
     if (hwid && (typeof hwid !== "string" || hwid.length > 100)) {
       return jsonResponse({ valid: false, error: "Invalid hwid" }, 400);
     }
+    if (application_id && (typeof application_id !== "string" || !UUID_PATTERN.test(application_id))) {
+      return jsonResponse({ valid: false, error: "Invalid application_id" }, 400);
+    }
 
     const sanitizedDeviceName = (device_name && typeof device_name === "string")
       ? device_name.slice(0, 100).trim() : null;
@@ -262,12 +323,13 @@ Deno.serve(async (req) => {
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
     const providedSignature = req.headers.get("x-signature");
     const providedTimestamp = req.headers.get("x-timestamp");
+    const providedNonce = req.headers.get("x-nonce");
 
     // ── Phase 1: Parallel — settings, blacklist, rate limit, license lookup, country ──
     // All independent queries run simultaneously for maximum speed
     const [settings, blacklistResult, license_result, country] = await Promise.all([
       getAdminSettings(supabase),
-      checkBlacklist(supabase, clientIp, hwid || null),
+      checkBlacklist(supabase, clientIp, hwid || null, license_key),
       supabase
         .from("licenses")
         .select("*, applications(name, suspended, kill_switch, signing_secret, signature_required)")
@@ -332,13 +394,22 @@ Deno.serve(async (req) => {
 
     // ── HMAC Signature verification ──
     if (app?.signature_required && app?.signing_secret) {
-      if (!providedSignature || !providedTimestamp) {
+      if (!providedSignature || !providedTimestamp || !providedNonce) {
         logAndNotify(supabase, settings.discordWebhookUrl,
           { ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null },
           "⚠️ Invalid Signature — Rejected",
-          { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Missing signature or timestamp header" }
+          { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "Missing signature, timestamp, or nonce header" }
         , startTime, true);
-        return jsonResponse({ valid: false, error: "Signature required" }, 403);
+        return jsonResponse({ valid: false, error: "Signature, timestamp, and nonce required" }, 403);
+      }
+
+      if (!NONCE_PATTERN.test(providedNonce)) {
+        logAndNotify(supabase, settings.discordWebhookUrl,
+          { ...logBase, action: "Invalid Signature - Rejected", hwid: hwid || null },
+          "Invalid Signature - Rejected",
+          { ...embedBase, HWID: hwid || "N/A", Reason: "Invalid nonce format" }
+        , startTime, true);
+        return jsonResponse({ valid: false, error: "Invalid nonce" }, 403);
       }
 
       const requestTime = parseInt(providedTimestamp);
@@ -352,7 +423,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ valid: false, error: "Request expired" }, 403);
       }
 
-      const isValid = await verifyHmacSignature(rawBody, providedSignature, providedTimestamp, app.signing_secret);
+      const isValid = await verifyHmacSignature(rawBody, providedSignature, providedTimestamp, providedNonce, app.signing_secret);
       if (!isValid) {
         logAndNotify(supabase, settings.discordWebhookUrl,
           { ...logBase, action: "Invalid Signature — Rejected", hwid: hwid || null },
@@ -360,6 +431,16 @@ Deno.serve(async (req) => {
           { ...embedBase, "🖥️ HWID": hwid || "N/A", "📝 Reason": "HMAC signature mismatch" }
         , startTime, true);
         return jsonResponse({ valid: false, error: "Invalid signature" }, 403);
+      }
+
+      const nonceAccepted = await recordNonce(supabase, license.application_id, providedNonce, providedSignature, clientIp, license_key);
+      if (!nonceAccepted) {
+        logAndNotify(supabase, settings.discordWebhookUrl,
+          { ...logBase, action: "Replay Request - Rejected", hwid: hwid || null },
+          "Replay Request - Rejected",
+          { ...embedBase, HWID: hwid || "N/A", Reason: "Duplicate nonce replay attempt" }
+        , startTime, true);
+        return jsonResponse({ valid: false, error: "Replay detected" }, 409);
       }
     }
 
@@ -437,14 +518,11 @@ Deno.serve(async (req) => {
     , startTime);
 
     const responseTimeMs = Date.now() - startTime;
-    return new Response(JSON.stringify({
+    return signedJsonResponse({
       valid: true, expires: license.expires_at, expires_readable: formatExpiry(license.expires_at),
       hwid: updates.hwid || license.hwid, app: app?.name, country, device_name: sanitizedDeviceName,
       response_time_ms: responseTimeMs,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Response-Time": `${responseTimeMs}ms` },
-    });
+    }, 200, app?.signature_required ? app?.signing_secret : undefined);
 
   } catch (err) {
     console.error("Validate error:", err);

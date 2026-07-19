@@ -20,7 +20,8 @@
       "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" },
       "BotApiKey": { "type": "apiKey", "in": "header", "name": "X-API-Key" },
       "SignatureHmac": { "type": "apiKey", "in": "header", "name": "X-Signature" },
-      "SignatureTs": { "type": "apiKey", "in": "header", "name": "X-Timestamp" }
+      "SignatureTs": { "type": "apiKey", "in": "header", "name": "X-Timestamp" },
+      "SignatureNonce": { "type": "apiKey", "in": "header", "name": "X-Nonce" }
     },
     "schemas": {
       "Error": {
@@ -133,13 +134,15 @@
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidateRequest" } } }
         },
         "parameters": [
-          { "in": "header", "name": "X-Signature", "schema": { "type": "string" }, "description": "HMAC-SHA256 hex of `timestamp.body` using app signing secret. Required only when the app has signing enabled." },
-          { "in": "header", "name": "X-Timestamp", "schema": { "type": "string" }, "description": "Unix timestamp in seconds. Must be within 60s of server time." }
+          { "in": "header", "name": "X-Signature", "schema": { "type": "string" }, "description": "HMAC-SHA256 hex of `timestamp.nonce.body` using app signing secret. Required only when the app has signing enabled." },
+          { "in": "header", "name": "X-Timestamp", "schema": { "type": "string" }, "description": "Unix timestamp in seconds. Must be within 60s of server time." },
+          { "in": "header", "name": "X-Nonce", "schema": { "type": "string", "minLength": 16, "maxLength": 128 }, "description": "Unique nonce per request. Duplicate nonces are rejected for signed apps." }
         ],
         "responses": {
           "200": { "description": "License valid", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidateResponse" } } } },
           "400": { "description": "Invalid input", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "403": { "description": "Rejected (banned, expired, HWID mismatch, kill-switch, signature invalid)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Replay detected" },
           "404": { "description": "License not found" },
           "429": { "description": "Rate limit exceeded" },
           "500": { "description": "Server error" }
