@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TablePagination } from "@/components/TablePagination";
@@ -17,7 +18,7 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -72,6 +73,10 @@ export default function AdminPanel() {
   // ─── Recent logs ───
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [logsSearch, setLogsSearch] = useState("");
+  const [blacklistIp, setBlacklistIp] = useState("");
+  const [blacklistLicense, setBlacklistLicense] = useState("");
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
 
   useEffect(() => {
     if (!user) return;
@@ -243,6 +248,79 @@ export default function AdminPanel() {
     loadOverview();
   }
 
+  async function impersonateUser(target: any) {
+    const { data, error } = await supabase.functions.invoke("impersonate-user", {
+      body: { userId: target.user_id },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Impersonation backend is not deployed yet");
+      return;
+    }
+    if ((data as any)?.action_link) {
+      window.open((data as any).action_link, "_blank", "noopener,noreferrer");
+      toast.success("Opening secure admin login link");
+    }
+  }
+
+  async function addAdminIpBlacklist() {
+    if (!user || !blacklistIp.trim()) return;
+    const { error } = await supabase.from("blacklist").insert({
+      type: "ip",
+      value: blacklistIp.trim(),
+      reason: "Blocked by platform admin",
+      created_by: user.id,
+    } as any);
+    if (error) { toast.error(error.message); return; }
+    toast.success("IP added to blacklist");
+    notifyDiscord("Admin blacklisted IP", { IP: blacklistIp.trim() });
+    setBlacklistIp("");
+    loadOverview();
+  }
+
+  async function addAdminLicenseBlacklist() {
+    if (!user || !blacklistLicense.trim()) return;
+    const { data: lic, error: lookupError } = await supabase
+      .from("licenses")
+      .select("id, application_id, applications(name)")
+      .eq("license_key", blacklistLicense.trim())
+      .maybeSingle();
+    if (lookupError || !lic) {
+      toast.error("License key not found");
+      return;
+    }
+    const { error } = await supabase
+      .from("licenses")
+      .update({ banned: true, status: "banned", banned_by_admin: true })
+      .eq("id", (lic as any).id);
+    if (error) { toast.error(error.message); return; }
+    await supabase.from("activity_logs").insert({
+      user_id: user.id,
+      action: "Admin blacklisted license",
+      license_key: blacklistLicense.trim(),
+      application_id: (lic as any).application_id,
+      application_name: (lic as any).applications?.name || "Unknown",
+    } as any);
+    toast.success("License blacklisted by admin");
+    notifyDiscord("Admin blacklisted license", { Key: blacklistLicense.trim() });
+    setBlacklistLicense("");
+    loadOverview();
+  }
+
+  async function saveMaintenanceMode() {
+    if (!user) return;
+    const entries = [
+      ["maintenance_mode", maintenanceEnabled ? "true" : "false"],
+      ["maintenance_message", maintenanceMessage],
+    ];
+    const { error } = await supabase.from("settings").upsert(
+      entries.map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success(maintenanceEnabled ? "Maintenance mode enabled" : "Maintenance mode disabled");
+    notifyDiscord("Maintenance mode updated", { Enabled: maintenanceEnabled ? "Yes" : "No" });
+  }
+
   // Filtered data
   const filteredUsers = users.filter(u =>
     (u.username || "").toLowerCase().includes(usersSearch.toLowerCase()) ||
@@ -314,6 +392,7 @@ export default function AdminPanel() {
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Audit Logs</TabsTrigger>
+            <TabsTrigger value="ops" className="gap-1.5 text-xs"><ShieldBan className="h-3.5 w-3.5" />Security Ops</TabsTrigger>
           </TabsList>
 
           {/* ─── OVERVIEW TAB ─── */}
@@ -526,6 +605,9 @@ export default function AdminPanel() {
                                       <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => setPendingUser({ id: u.user_id, email: u.email, action: "delete" })}>
                                         <Trash2 className="h-3 w-3" />
                                       </Button>
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => impersonateUser(u)}>
+                                        <Eye className="h-3 w-3 mr-1" />View
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -691,6 +773,52 @@ export default function AdminPanel() {
                   ))}
                 </div>
               )}
+            </div>
+          </TabsContent>
+          <TabsContent value="ops" className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Security Operations</h2>
+              <p className="text-xs text-muted-foreground">Platform controls for admin-only blocks and maintenance mode</p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm"><ShieldBan className="h-4 w-4 text-destructive" />Blacklist IP</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input value={blacklistIp} onChange={(e) => setBlacklistIp(e.target.value)} placeholder="203.0.113.10" className="bg-secondary border-border" />
+                  <Button onClick={addAdminIpBlacklist} className="w-full" variant="destructive">Block IP</Button>
+                  <p className="text-xs text-muted-foreground">Validation already rejects blacklisted IP addresses.</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm"><Key className="h-4 w-4 text-destructive" />Blacklist License</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input value={blacklistLicense} onChange={(e) => setBlacklistLicense(e.target.value)} placeholder="GALACTIC-..." className="bg-secondary border-border" />
+                  <Button onClick={addAdminLicenseBlacklist} className="w-full" variant="destructive">Admin Ban Key</Button>
+                  <p className="text-xs text-muted-foreground">Seller/user unban is blocked for admin-banned keys.</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm"><Wrench className="h-4 w-4 text-primary" />Maintenance Mode</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <select
+                    value={maintenanceEnabled ? "true" : "false"}
+                    onChange={(e) => setMaintenanceEnabled(e.target.value === "true")}
+                    className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                  </select>
+                  <Textarea value={maintenanceMessage} onChange={(e) => setMaintenanceMessage(e.target.value)} className="min-h-[92px] bg-secondary border-border" />
+                  <Button onClick={saveMaintenanceMode} className="w-full">Save Mode</Button>
+                  <p className="text-xs text-muted-foreground">This stores the mode; the public gate needs the setting readable in Supabase policies.</p>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>

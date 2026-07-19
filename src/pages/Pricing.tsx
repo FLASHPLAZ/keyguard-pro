@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown, ShieldCheck, Infinity as InfinityIcon, Zap, Lock } from "lucide-react";
+import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown, ShieldCheck, Infinity as InfinityIcon, Zap, Lock, Coins } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const PLANS = [
   {
@@ -73,6 +75,27 @@ const FAQS = [
 ];
 
 export default function Pricing() {
+  const startOxaPayCheckout = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please sign in or create an account before checkout.");
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke("create-oxapay-checkout", {
+      body: { plan: "lifetime" },
+    });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Checkout is not configured yet");
+      return;
+    }
+    const url = (data as any)?.payment_url;
+    if (!url) {
+      toast.error("Payment link was not returned by OxaPay");
+      return;
+    }
+    window.location.href = url;
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
@@ -167,6 +190,18 @@ export default function Pricing() {
                   {plan.cta} <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
+              {plan.highlight && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={startOxaPayCheckout}
+                  className="mt-3 w-full border-primary/40 bg-primary/10 hover:bg-primary/15"
+                  size="lg"
+                >
+                  <Coins className="mr-2 h-4 w-4" />
+                  Pay with Litecoin / Crypto
+                </Button>
+              )}
               <ul className="mt-7 space-y-3 text-sm">
                 {plan.features.map((f) => (
                   <li key={f.text} className="flex items-start gap-2.5">

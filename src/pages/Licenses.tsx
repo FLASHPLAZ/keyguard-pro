@@ -263,6 +263,10 @@ export default function Licenses() {
 
   const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
     const lic = licenses.find(l => l.id === id);
+    if (lic?.banned_by_admin && !isAdminRoute) {
+      toast.error("This license was banned by an admin and only an admin can unban it.");
+      return;
+    }
     const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
     await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
@@ -342,7 +346,14 @@ export default function Licenses() {
         <RotateCcw className="h-4 w-4 text-warning" />
       </Button>
       {lic.banned ? (
-        <Button variant="ghost" size="icon" onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)} title="Unban" className="hover:bg-emerald-500/10 h-8 w-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={lic.banned_by_admin && !isAdminRoute}
+          onClick={() => unbanKey(lic.id, lic.license_key, lic.hwid)}
+          title={lic.banned_by_admin && !isAdminRoute ? "Admin-banned license" : "Unban"}
+          className="hover:bg-emerald-500/10 h-8 w-8 disabled:cursor-not-allowed disabled:opacity-40"
+        >
           <ShieldCheck className="h-4 w-4 text-emerald-400" />
         </Button>
       ) : (

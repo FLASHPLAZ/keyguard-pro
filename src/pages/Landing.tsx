@@ -193,7 +193,7 @@ function ProductConsoleMock() {
   ];
 
   return (
-    <div className="relative mx-auto w-full max-w-[620px]">
+    <div className="relative mx-auto w-full max-w-[660px]">
       <div className="absolute -right-4 top-8 z-10 hidden rounded-lg border border-border/70 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur md:block">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -221,7 +221,7 @@ function ProductConsoleMock() {
           <span className="ml-auto hidden rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 sm:inline-flex">Live</span>
         </div>
 
-        <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-5 p-5 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -230,10 +230,10 @@ function ProductConsoleMock() {
                 ["Uptime", "99.99%", CheckCircle2],
                 ["Latency", "46ms", Gauge],
               ].map(([label, value, Icon]: any) => (
-                <div key={label} className="rounded-lg border border-border/70 bg-card/60 p-4">
+                <div key={label} className="min-h-[108px] rounded-lg border border-border/70 bg-card/60 p-4">
                   <Icon className="mb-3 h-4 w-4 text-primary" />
                   <p className="text-xs text-muted-foreground">{label}</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{value}</p>
+                  <p className="mt-1 whitespace-nowrap text-xl font-bold text-foreground sm:text-2xl">{value}</p>
                 </div>
               ))}
             </div>
@@ -292,6 +292,7 @@ export default function Landing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [activeGroup, setActiveGroup] = useState(0);
+  const [showDiscordInvite, setShowDiscordInvite] = useState(true);
 
   return (
     <div className="relative min-h-screen bg-background overflow-x-hidden">
@@ -381,7 +382,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 max-w-3xl font-extrabold leading-[1.02] text-foreground text-[2.75rem] xs:text-5xl sm:text-6xl lg:text-[5.2rem]"
+            className="mt-7 max-w-3xl font-extrabold leading-[1.04] text-foreground text-[2.45rem] xs:text-5xl sm:text-[3.65rem] lg:text-[4.65rem]"
           >
             License your software.
             <span className="block bg-gradient-to-r from-primary via-blue-300 to-accent bg-clip-text text-transparent">Control every key.</span>
@@ -407,7 +408,7 @@ export default function Landing() {
             <Link to="/signup" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="group relative h-14 w-full rounded-md border-0 bg-gradient-to-r from-primary to-accent text-base font-semibold text-primary-foreground shadow-[0_18px_45px_-24px_hsl(var(--primary)/0.65)] transition-all duration-300 hover:scale-[1.01] sm:w-[280px]"
+                className="group relative h-14 w-full rounded-md border-0 bg-gradient-to-r from-primary to-accent text-base font-semibold text-primary-foreground shadow-[0_18px_45px_-24px_hsl(var(--primary)/0.65)] transition-all duration-300 hover:scale-[1.01] sm:w-[210px]"
               >
                 Get started
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 group-hover:translate-x-0.5 transition-transform">
@@ -419,7 +420,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[280px]"
+                className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[210px]"
               >
                 View features
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
@@ -431,7 +432,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="group h-14 w-full rounded-md border-[#5865F2]/40 bg-[#5865F2]/10 text-base font-semibold text-foreground hover:border-[#5865F2]/70 hover:bg-[#5865F2]/20 md:backdrop-blur sm:w-[220px]"
+                className="group h-14 w-full rounded-md border-[#5865F2]/50 bg-[#5865F2]/15 text-base font-semibold text-foreground shadow-[0_16px_44px_-30px_#5865F2] hover:border-[#5865F2]/80 hover:bg-[#5865F2]/25 md:backdrop-blur sm:w-[210px]"
               >
                 <MessageCircle className="mr-2 h-4 w-4 text-[#9aa0ff]" />
                 Discord
@@ -496,15 +497,14 @@ export default function Landing() {
         </div>
       </section>
 
-      <motion.a
-        href="https://discord.gg/galaticboosts"
-        target="_blank"
-        rel="noreferrer"
+      {showDiscordInvite && (
+      <motion.div
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9, duration: 0.5 }}
         className="fixed bottom-5 left-5 z-40 hidden items-center gap-3 rounded-lg border border-border/80 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur lg:flex"
       >
+        <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20 text-[#9aa0ff]">
           <MessageCircle className="h-5 w-5" />
         </div>
@@ -513,7 +513,17 @@ export default function Landing() {
           <p className="text-xs text-muted-foreground">Support, updates and community</p>
         </div>
         <span className="rounded-md border border-border/70 bg-secondary px-3 py-1 text-sm font-semibold text-foreground">Join</span>
-      </motion.a>
+        </a>
+        <button
+          type="button"
+          aria-label="Dismiss Discord invite"
+          onClick={() => setShowDiscordInvite(false)}
+          className="ml-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </motion.div>
+      )}
 
       {/* Stats */}
       <Section className="relative z-10 px-4 sm:px-6 py-14">
