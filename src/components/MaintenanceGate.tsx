@@ -9,17 +9,41 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.functions.invoke("public-settings")
-      .then(({ data }) => {
-        if (!mounted) return;
-        setMaintenance({
-          enabled: Boolean((data as any)?.maintenance_mode),
-          message: (data as any)?.maintenance_message || "GX Auth is currently under maintenance. Please check back soon.",
-        });
-      })
-      .catch(() => {
-        if (mounted) setMaintenance({ enabled: false, message: "" });
+    const fallback = {
+      enabled: localStorage.getItem("gxauth_maintenance_mode") === "true",
+      message: localStorage.getItem("gxauth_maintenance_message") || "GX Auth is currently under maintenance. Please check back soon.",
+    };
+
+    async function loadMaintenance() {
+      try {
+        const { data, error } = await supabase.functions.invoke("public-settings");
+        if (!error && data) {
+          if (!mounted) return;
+          setMaintenance({
+            enabled: Boolean((data as any)?.maintenance_mode),
+            message: (data as any)?.maintenance_message || fallback.message,
+          });
+          return;
+        }
+      } catch {
+        // Continue to database fallback below.
+      }
+
+      const { data } = await supabase
+        .from("settings")
+        .select("key, value")
+        .in("key", ["maintenance_mode", "maintenance_message"]);
+      const map = new Map((data || []).map((row: any) => [row.key, row.value]));
+      if (!mounted) return;
+      setMaintenance({
+        enabled: map.has("maintenance_mode") ? map.get("maintenance_mode") === "true" : fallback.enabled,
+        message: (map.get("maintenance_message") as string) || fallback.message,
       });
+    }
+
+    loadMaintenance().catch(() => {
+      if (mounted) setMaintenance(fallback.enabled ? fallback : { enabled: false, message: "" });
+    });
     return () => { mounted = false; };
   }, []);
 

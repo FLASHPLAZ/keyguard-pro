@@ -4,7 +4,7 @@ import {
   Key, Shield, Webhook, Users, Database, Zap, Globe, ArrowRight,
   Sparkles, CheckCircle2, Code2, Lock, Activity, Rocket, Terminal,
   Eye, Star, ChevronDown, ChevronUp, Cpu, Gauge, Server,
-  MonitorSmartphone, Menu, X, AppWindow, MessageCircle,
+  MonitorSmartphone, Menu, X, AppWindow,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
@@ -18,6 +18,14 @@ const fadeUp = {
     transition: { delay: i * 0.08, duration: 0.6, ease: "easeOut" as const },
   }),
 };
+
+function DiscordIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M20.3 4.4A16.3 16.3 0 0 0 16.2 3l-.2.4c1.5.4 2.2 1 2.2 1a14 14 0 0 0-12.4 0s.8-.6 2.3-1L7.8 3a16.5 16.5 0 0 0-4.1 1.4C1.1 8.3.4 12.1.8 15.9a16.7 16.7 0 0 0 5.1 2.6l.6-.9c-1.1-.4-2.1-1-2.1-1l.5-.3c4 1.9 8.3 1.9 12.2 0l.5.3s-1 .6-2.1 1l.6.9a16.7 16.7 0 0 0 5.1-2.6c.5-4.4-.8-8.1-2.9-11.5ZM8.3 13.6c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7Zm7.4 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7Z" />
+    </svg>
+  );
+}
 
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
 
@@ -434,7 +442,7 @@ export default function Landing() {
                 variant="outline"
                 className="group h-14 w-full rounded-md border-[#5865F2]/50 bg-[#5865F2]/15 text-base font-semibold text-foreground shadow-[0_16px_44px_-30px_#5865F2] hover:border-[#5865F2]/80 hover:bg-[#5865F2]/25 md:backdrop-blur sm:w-[210px]"
               >
-                <MessageCircle className="mr-2 h-4 w-4 text-[#9aa0ff]" />
+                <DiscordIcon className="mr-2 h-4 w-4 text-[#c7cbff]" />
                 Discord
               </Button>
             </a>
@@ -505,8 +513,8 @@ export default function Landing() {
         className="fixed bottom-5 left-5 z-40 hidden items-center gap-3 rounded-lg border border-border/80 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur lg:flex"
       >
         <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20 text-[#9aa0ff]">
-          <MessageCircle className="h-5 w-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20 text-[#c7cbff]">
+          <DiscordIcon className="h-5 w-5" />
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">Join our Discord</p>

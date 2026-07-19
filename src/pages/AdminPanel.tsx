@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TablePagination } from "@/components/TablePagination";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +78,9 @@ export default function AdminPanel() {
   const [blacklistLicense, setBlacklistLicense] = useState("");
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
+  const [blacklistRows, setBlacklistRows] = useState<any[]>([]);
+  const [adminBannedLicenses, setAdminBannedLicenses] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -86,6 +90,10 @@ export default function AdminPanel() {
   useEffect(() => {
     if (activeTab === "users" && users.length === 0) loadUsers();
     if (activeTab === "tenants" && tenants.length === 0) loadTenants();
+    if (activeTab === "ops") {
+      loadSecurityLists();
+      loadMaintenanceSettings();
+    }
   }, [activeTab]);
 
   async function loadOverview() {
@@ -248,18 +256,33 @@ export default function AdminPanel() {
     loadOverview();
   }
 
-  async function impersonateUser(target: any) {
-    const { data, error } = await supabase.functions.invoke("impersonate-user", {
-      body: { userId: target.user_id },
-    });
-    if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || error?.message || "Impersonation backend is not deployed yet");
-      return;
-    }
-    if ((data as any)?.action_link) {
-      window.open((data as any).action_link, "_blank", "noopener,noreferrer");
-      toast.success("Opening secure admin login link");
-    }
+  function viewUser(target: any) {
+    setSelectedUser(target);
+    toast.info("Opened admin user view. Full account login needs the impersonate-user Edge Function deployed.");
+  }
+
+  async function loadSecurityLists() {
+    const [{ data: blacklistData }, { data: bannedData }] = await Promise.all([
+      supabase.from("blacklist").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase
+        .from("licenses")
+        .select("id, license_key, status, banned, banned_by_admin, created_at, applications(name)")
+        .eq("banned_by_admin", true)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+    setBlacklistRows(blacklistData || []);
+    setAdminBannedLicenses(bannedData || []);
+  }
+
+  async function loadMaintenanceSettings() {
+    const { data } = await supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", ["maintenance_mode", "maintenance_message"]);
+    const map = new Map((data || []).map((row: any) => [row.key, row.value]));
+    if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
+    if (map.has("maintenance_message")) setMaintenanceMessage(map.get("maintenance_message") || maintenanceMessage);
   }
 
   async function addAdminIpBlacklist() {
@@ -274,6 +297,7 @@ export default function AdminPanel() {
     toast.success("IP added to blacklist");
     notifyDiscord("Admin blacklisted IP", { IP: blacklistIp.trim() });
     setBlacklistIp("");
+    loadSecurityLists();
     loadOverview();
   }
 
@@ -303,6 +327,7 @@ export default function AdminPanel() {
     toast.success("License blacklisted by admin");
     notifyDiscord("Admin blacklisted license", { Key: blacklistLicense.trim() });
     setBlacklistLicense("");
+    loadSecurityLists();
     loadOverview();
   }
 
@@ -319,6 +344,8 @@ export default function AdminPanel() {
     if (error) { toast.error(error.message); return; }
     toast.success(maintenanceEnabled ? "Maintenance mode enabled" : "Maintenance mode disabled");
     notifyDiscord("Maintenance mode updated", { Enabled: maintenanceEnabled ? "Yes" : "No" });
+    localStorage.setItem("gxauth_maintenance_mode", maintenanceEnabled ? "true" : "false");
+    localStorage.setItem("gxauth_maintenance_message", maintenanceMessage);
   }
 
   // Filtered data
@@ -605,7 +632,7 @@ export default function AdminPanel() {
                                       <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => setPendingUser({ id: u.user_id, email: u.email, action: "delete" })}>
                                         <Trash2 className="h-3 w-3" />
                                       </Button>
-                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => impersonateUser(u)}>
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-primary" onClick={() => viewUser(u)}>
                                         <Eye className="h-3 w-3 mr-1" />View
                                       </Button>
                                     </>
@@ -816,13 +843,94 @@ export default function AdminPanel() {
                   </select>
                   <Textarea value={maintenanceMessage} onChange={(e) => setMaintenanceMessage(e.target.value)} className="min-h-[92px] bg-secondary border-border" />
                   <Button onClick={saveMaintenanceMode} className="w-full">Save Mode</Button>
-                  <p className="text-xs text-muted-foreground">This stores the mode; the public gate needs the setting readable in Supabase policies.</p>
+                  <p className="text-xs text-muted-foreground">Public maintenance visibility is handled by the included Supabase policy migration.</p>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm"><ShieldBan className="h-4 w-4 text-destructive" />Blacklisted IP / HWID Entries</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {blacklistRows.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">No blacklist entries found</p>
+                  ) : (
+                    <div className="divide-y divide-border/60 rounded-lg border border-border/60">
+                      {blacklistRows.map((entry: any) => (
+                        <div key={entry.id} className="grid gap-2 px-3 py-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+                          <Badge variant="outline" className="w-fit uppercase text-[10px]">{entry.type}</Badge>
+                          <div className="min-w-0">
+                            <p className="truncate font-mono text-sm text-foreground">{entry.value}</p>
+                            <p className="truncate text-xs text-muted-foreground">{entry.reason || "No reason provided"}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{formatDate(entry.created_at)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="border-border/60">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm"><Key className="h-4 w-4 text-destructive" />Admin-Blacklisted Licenses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {adminBannedLicenses.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">No admin-banned license keys found</p>
+                  ) : (
+                    <div className="divide-y divide-border/60 rounded-lg border border-border/60">
+                      {adminBannedLicenses.map((lic: any) => (
+                        <div key={lic.id} className="grid gap-2 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                          <div className="min-w-0">
+                            <p className="truncate font-mono text-sm text-primary">{lic.license_key}</p>
+                            <p className="truncate text-xs text-muted-foreground">{lic.applications?.name || "Unknown app"}</p>
+                          </div>
+                          <Badge variant="destructive" className="w-fit text-[10px]">ADMIN LOCKED</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
         </Tabs>
       </PageTransition>
+      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Admin User View</DialogTitle>
+            <DialogDescription>
+              Inspect the selected account safely. Direct account login requires the secure impersonation Edge Function to be deployed.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-3 rounded-lg border border-border/60 bg-secondary/30 p-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Username</span>
+                <span className="font-medium text-foreground">{selectedUser.username || "Unknown"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Email</span>
+                <span className="font-medium text-foreground">{selectedUser.email || "Unknown"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">User ID</span>
+                <span className="max-w-[220px] truncate font-mono text-xs text-primary">{selectedUser.user_id}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Status</span>
+                <Badge variant={selectedUser.banned ? "destructive" : "secondary"}>{selectedUser.banned ? "Banned" : "Active"}</Badge>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">Joined</span>
+                <span className="text-foreground">{formatDate(selectedUser.created_at)}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       {/* Ban/Delete confirmation */}
       <AlertDialog open={!!pendingUser} onOpenChange={(o) => !o && setPendingUser(null)}>
         <AlertDialogContent>
