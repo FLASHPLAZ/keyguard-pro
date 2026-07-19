@@ -22,7 +22,7 @@ export function MobileNav({ children }: MobileNavProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm text-foreground shadow-lg md:hidden transition-all duration-200 hover:border-primary/30 active:scale-95"
+        className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-md border border-border/70 bg-card/90 text-foreground shadow-lg backdrop-blur-sm transition-all duration-200 hover:border-primary/35 active:scale-95 md:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -34,7 +34,7 @@ export function MobileNav({ children }: MobileNavProps) {
         }`}
       >
         <div
-          className={`absolute inset-0 bg-background/60 backdrop-blur-sm transition-opacity duration-300 ${
+          className={`absolute inset-0 bg-background/72 backdrop-blur-sm transition-opacity duration-300 ${
             open ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setOpen(false)}

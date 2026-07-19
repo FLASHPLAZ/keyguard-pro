@@ -27,6 +27,7 @@ function formatExpiry(expiresAt: string): string {
 
 const RATE_LIMIT_MAX = 15;
 const RATE_LIMIT_WINDOW_MINUTES = 5;
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
 
 async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
@@ -61,10 +62,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ valid: false, error: "Invalid JSON body" }, 400);
     }
 
-    const { license_key } = parsed;
+    const license_key = typeof parsed.license_key === "string" ? parsed.license_key.trim().toUpperCase() : parsed.license_key;
 
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return jsonResponse({ valid: false, error: "Invalid license_key" }, 400);
+    }
+    if (!LICENSE_KEY_PATTERN.test(license_key)) {
+      return jsonResponse({ valid: false, error: "Invalid license key format" }, 400);
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);

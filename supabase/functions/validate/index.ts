@@ -10,6 +10,7 @@ const DEFAULT_RATE_LIMIT_MAX = 10;
 const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 5;
 const DEFAULT_IP_THRESHOLD = 5;
 const SIGNATURE_MAX_AGE_SECONDS = 60;
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
 
 // ── Cache for admin settings (avoid DB hit on every request) ──
 let settingsCache: { data: AdminSettings; expiry: number } | null = null;
@@ -196,7 +197,14 @@ async function verifyHmacSignature(
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const mac = await crypto.subtle.sign("HMAC", key, encoder.encode(`${timestamp}.${body}`));
   const expected = Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  return expected === signature.toLowerCase();
+  const expectedBytes = encoder.encode(expected);
+  const providedBytes = encoder.encode(signature.toLowerCase());
+  if (expectedBytes.length !== providedBytes.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expectedBytes.length; i++) {
+    mismatch |= expectedBytes[i] ^ providedBytes[i];
+  }
+  return mismatch === 0;
 }
 
 // ── Helper: log + webhook fire-and-forget ──
@@ -233,11 +241,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ valid: false, error: "Invalid JSON body" }, 400);
     }
 
-    const { license_key, hwid, device_name, application_id } = parsed;
+    const { hwid, device_name, application_id } = parsed;
+    const license_key = typeof parsed.license_key === "string" ? parsed.license_key.trim().toUpperCase() : parsed.license_key;
 
     // ── Input validation ──
     if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
       return jsonResponse({ valid: false, error: "Invalid license_key" }, 400);
+    }
+    if (!LICENSE_KEY_PATTERN.test(license_key)) {
+      return jsonResponse({ valid: false, error: "Invalid license key format" }, 400);
     }
     if (hwid && (typeof hwid !== "string" || hwid.length > 100)) {
       return jsonResponse({ valid: false, error: "Invalid hwid" }, 400);

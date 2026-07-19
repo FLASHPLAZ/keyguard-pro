@@ -1,6 +1,7 @@
 // License key utility functions
 
 const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
 
 export const DURATION_OPTIONS = [
   { label: '1 Day', value: 1 },
@@ -27,11 +28,19 @@ export function generateLicenseKey(): string {
 }
 
 export function generateBulkKeys(count: number): string[] {
-  const keys: string[] = [];
-  for (let i = 0; i < count; i++) {
-    keys.push(generateLicenseKey());
+  const keys = new Set<string>();
+  while (keys.size < count) {
+    keys.add(generateLicenseKey());
   }
-  return keys;
+  return Array.from(keys);
+}
+
+export function normalizeLicenseKey(key: string): string {
+  return key.trim().toUpperCase();
+}
+
+export function isLicenseKeyFormatValid(key: string): boolean {
+  return LICENSE_KEY_PATTERN.test(normalizeLicenseKey(key));
 }
 
 export type LicenseStatus = 'active' | 'expired' | 'banned' | 'unused';
