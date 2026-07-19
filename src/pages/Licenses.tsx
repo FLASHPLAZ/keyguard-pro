@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton } from "@/components/TableSkeleton";
@@ -21,6 +22,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Licenses() {
   const { user } = useAuth();
+  const location = useLocation();
   const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
   const [licenses, setLicenses] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
@@ -42,19 +44,26 @@ export default function Licenses() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const isAdminRoute = location.pathname.startsWith("/admin") || location.pathname === "/licenses";
 
   const fetchData = async () => {
     if (!user) return;
+    let licenseQuery = supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false });
+    let appQuery = supabase.from("applications").select("*").eq("suspended", false);
+    if (!isAdminRoute) {
+      licenseQuery = licenseQuery.eq("user_id", user.id);
+      appQuery = appQuery.eq("user_id", user.id);
+    }
     const [licRes, appRes] = await Promise.all([
-      supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false }),
-      supabase.from("applications").select("*").eq("suspended", false),
+      licenseQuery,
+      appQuery,
     ]);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, [user]);
+  useEffect(() => { fetchData(); }, [user, isAdminRoute]);
 
   const filtered = licenses.filter((l) => {
     const s = search.toLowerCase();

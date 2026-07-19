@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
       // Cascade-clean related rows (FKs to auth.users are ON DELETE CASCADE for most)
       await supabase.from("manager_permissions").delete().eq("user_id", userId);
       await supabase.from("resellers").delete().eq("user_id", userId);
+      await supabase.from("tenants").delete().eq("owner_user_id", userId);
       await supabase.from("user_roles").delete().eq("user_id", userId);
       await supabase.from("profiles").delete().eq("user_id", userId);
       const { error: delErr } = await supabase.auth.admin.deleteUser(userId);

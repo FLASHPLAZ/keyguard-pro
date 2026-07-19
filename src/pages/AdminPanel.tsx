@@ -32,8 +32,8 @@ const PAGE_SIZE = 15;
 
 function StatMini({ label, value, icon: Icon, color = "text-primary" }: { label: string; value: number | string; icon: any; color?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-4 transition-all hover:border-primary/30">
-      <div className={`rounded-lg bg-primary/10 p-2`}>
+    <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-card/90 p-4 shadow-[var(--shadow-card)] transition-all hover:border-primary/35">
+      <div className="rounded-md border border-primary/15 bg-primary/10 p-2">
         <Icon className={`h-4 w-4 ${color}`} />
       </div>
       <div>
@@ -87,8 +87,9 @@ export default function AdminPanel() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const [profilesRes, appsRes, licensesRes, resellersRes, managersRes, tenantsRes, logsRes, validationLogsRes] = await Promise.all([
+    const [profilesRes, activeProfilesRes, appsRes, licensesRes, resellersRes, managersRes, tenantsRes, logsRes, validationLogsRes] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("user_id"),
       supabase.from("applications").select("id", { count: "exact", head: true }),
       supabase.from("licenses").select("id, status", { count: "exact" }),
       supabase.from("resellers").select("id", { count: "exact", head: true }),
@@ -103,7 +104,8 @@ export default function AdminPanel() {
     ]);
 
     const licenses = licensesRes.data || [];
-    const tenantData = tenantsRes.data || [];
+    const activeUserIds = new Set((activeProfilesRes.data || []).map((p: any) => p.user_id));
+    const tenantData = (tenantsRes.data || []).filter((t: any) => !t.owner_user_id || activeUserIds.has(t.owner_user_id));
     setStats({
       totalUsers: profilesRes.count || 0,
       totalApps: appsRes.count || 0,
@@ -165,8 +167,14 @@ export default function AdminPanel() {
 
   async function loadTenants() {
     setTenantsLoading(true);
-    const { data } = await supabase.from("tenants").select("*").order("created_at", { ascending: false });
-    setTenants(data || []);
+    const [{ data }, { data: profiles }] = await Promise.all([
+      supabase.from("tenants").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, email, username"),
+    ]);
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    setTenants((data || [])
+      .filter((t: any) => !t.owner_user_id || profileMap.has(t.owner_user_id))
+      .map((t: any) => ({ ...t, owner_profile: t.owner_user_id ? profileMap.get(t.owner_user_id) : null })));
     setTenantsLoading(false);
   }
 
@@ -261,7 +269,10 @@ export default function AdminPanel() {
   return (
     <DashboardLayout>
       <PageTransition>
-        <div className="mb-6">
+        <div className="mb-6 overflow-hidden rounded-lg border border-border/70 bg-card/90 p-5 shadow-[var(--shadow-card)]">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+            Platform Command
+          </div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Admin Control Center</h1>
           <p className="text-sm text-muted-foreground mt-1">Complete platform management — users, subscriptions, apps, licenses & analytics</p>
         </div>
@@ -549,7 +560,10 @@ export default function AdminPanel() {
                           const expired = exp && exp < new Date();
                           return (
                           <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                            <td className="px-4 py-3 font-medium text-foreground">{t.name}</td>
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{t.name}</p>
+                              {t.owner_profile?.email && <p className="text-[11px] text-muted-foreground">{t.owner_profile.email}</p>}
+                            </td>
                             <td className="px-4 py-3">
                               <select
                                 value={t.plan}

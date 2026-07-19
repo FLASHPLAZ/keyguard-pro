@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton, CardSkeleton } from "@/components/TableSkeleton";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +20,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 
 export default function Applications() {
   const { user } = useAuth();
+  const location = useLocation();
   const { canCreate, getUsage, getLimit, refresh: refreshLimits, planName } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +32,10 @@ export default function Applications() {
   const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
   const [downloadUrlInput, setDownloadUrlInput] = useState("");
   const [savingDownload, setSavingDownload] = useState(false);
+  const [pendingDeleteApp, setPendingDeleteApp] = useState<any>(null);
 
   const isPremium = planName === "lifetime" || planName === "platform";
+  const isAdminRoute = location.pathname.startsWith("/admin") || location.pathname === "/apps";
 
   const saveDownloadUrl = async () => {
     if (!detailApp || !user) return;
@@ -48,12 +52,14 @@ export default function Applications() {
 
   const fetchApps = async () => {
     if (!user) return;
-    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    let query = supabase.from("applications").select("*").order("created_at", { ascending: false });
+    if (!isAdminRoute) query = query.eq("user_id", user.id);
+    const { data } = await query;
     setApps(data || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchApps(); }, [user]);
+  useEffect(() => { fetchApps(); }, [user, isAdminRoute]);
   useEffect(() => { if (detailApp) setDownloadUrlInput(detailApp.download_url || ""); }, [detailApp?.id]);
 
   const filtered = apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
@@ -115,10 +121,15 @@ export default function Applications() {
   };
 
   const deleteApp = async (id: string, name: string) => {
-    await supabase.from("applications").delete().eq("id", id);
+    let query = supabase.from("applications").delete().eq("id", id);
+    if (!isAdminRoute && user) query = query.eq("user_id", user.id);
+    const { error } = await query;
+    if (error) { toast.error(error.message); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id });
+    if (detailApp?.id === id) setDetailApp(null);
+    setPendingDeleteApp(null);
     fetchApps();
   };
 
@@ -160,24 +171,29 @@ export default function Applications() {
   return (
     <RoleLayout>
       <PageTransition>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Applications</h1>
-          <p className="text-sm text-muted-foreground">Manage your software applications</p>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
-            <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-4">
-              <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
-              <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
-              <Button onClick={createApp} className="w-full btn-glow">Create</Button>
+      <div className="mb-6 overflow-hidden rounded-lg border border-border/70 bg-card/90 p-5 shadow-[var(--shadow-card)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+              App Vault
             </div>
-          </DialogContent>
-        </Dialog>
+            <h1 className="text-2xl font-bold text-foreground">Applications</h1>
+            <p className="text-sm text-muted-foreground">{isAdminRoute ? "Platform-wide application controls for admins" : "Your private software applications and signing settings"}</p>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
+              <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-4">
+                <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
+                <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
+                <Button onClick={createApp} className="w-full btn-glow">Create</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* App Details Dialog */}
@@ -324,11 +340,14 @@ export default function Applications() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search applications..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
         </div>
+        {!isAdminRoute && (
+          <p className="text-xs text-muted-foreground">Showing only apps owned by your account.</p>
+        )}
       </div>
 
       {loading ? (
@@ -364,7 +383,7 @@ export default function Applications() {
                       {app.suspended ? <PlayCircle className="h-4 w-4 text-emerald-400" /> : <PauseCircle className="h-4 w-4 text-warning" />}
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} className="hover:bg-destructive/10 h-8 w-8"><Power className="h-4 w-4 text-destructive" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} className="hover:bg-destructive/10 h-8 w-8"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setPendingDeleteApp(app)} className="hover:bg-destructive/10 h-8 w-8"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </div>
               ))
@@ -430,7 +449,7 @@ export default function Applications() {
                           <Button variant="ghost" size="icon" onClick={() => toggleKillSwitch(app.id, app.kill_switch, app.name)} title="Kill Switch" className="hover:bg-destructive/10">
                             <Power className="h-4 w-4 text-destructive" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
+                          <Button variant="ghost" size="icon" onClick={() => setPendingDeleteApp(app)} title="Delete" className="hover:bg-destructive/10">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -446,6 +465,28 @@ export default function Applications() {
           </div>
         </>
       )}
+      <AlertDialog open={!!pendingDeleteApp} onOpenChange={(open) => !open && setPendingDeleteApp(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-md border border-destructive/25 bg-destructive/10">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+            </div>
+            <AlertDialogTitle>Delete this application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove <strong>{pendingDeleteApp?.name}</strong> and its linked license records. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => pendingDeleteApp && deleteApp(pendingDeleteApp.id, pendingDeleteApp.name)}
+            >
+              Delete application
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </PageTransition>
     </RoleLayout>
   );
