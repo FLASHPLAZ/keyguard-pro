@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { MaintenanceGate } from "@/components/MaintenanceGate";
 import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Pricing from "./pages/Pricing";
@@ -39,6 +40,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <MaintenanceGate>
           <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
@@ -81,6 +83,7 @@ const App = () => (
             
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </MaintenanceGate>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
