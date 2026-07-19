@@ -4,7 +4,7 @@ import {
   Key, Shield, Webhook, Users, Database, Zap, Globe, ArrowRight,
   Sparkles, CheckCircle2, Code2, Lock, Activity, Rocket, Terminal,
   Eye, Star, ChevronDown, ChevronUp, Cpu, Gauge, Server,
-  MonitorSmartphone, Menu, X, AppWindow,
+  MonitorSmartphone, Menu, X, AppWindow, MessageCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
@@ -206,7 +206,11 @@ function ProductConsoleMock() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/80 bg-[#090a0d]/95 shadow-[0_30px_90px_-50px_hsl(var(--primary)/0.7)] backdrop-blur">
+      <motion.div
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        className="overflow-hidden rounded-xl border border-border/80 bg-[#090a0d]/95 shadow-[0_30px_90px_-50px_hsl(var(--primary)/0.7)] backdrop-blur"
+      >
         <div className="flex h-12 items-center gap-3 border-b border-border/70 px-5">
           <div className="flex gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-muted" />
@@ -223,7 +227,7 @@ function ProductConsoleMock() {
               {[
                 ["Apps", "12", AppWindow],
                 ["Licenses", "2.4k", Key],
-                ["Success", "99.2%", CheckCircle2],
+                ["Uptime", "99.99%", CheckCircle2],
                 ["Latency", "46ms", Gauge],
               ].map(([label, value, Icon]: any) => (
                 <div key={label} className="rounded-lg border border-border/70 bg-card/60 p-4">
@@ -279,7 +283,7 @@ expires: lifetime
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -377,12 +381,10 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-7 max-w-3xl font-extrabold leading-[0.96] text-foreground text-[3.15rem] xs:text-5xl sm:text-6xl lg:text-[5.7rem]"
+            className="mt-7 max-w-3xl font-extrabold leading-[1.02] text-foreground text-[2.75rem] xs:text-5xl sm:text-6xl lg:text-[5.2rem]"
           >
-            Licensing,
-            <br />
-            locked down in
-            <span className="block bg-gradient-to-r from-primary via-blue-300 to-accent bg-clip-text text-transparent">seconds.</span>
+            License your software.
+            <span className="block bg-gradient-to-r from-primary via-blue-300 to-accent bg-clip-text text-transparent">Control every key.</span>
           </motion.h1>
 
           <motion.p
@@ -419,10 +421,20 @@ export default function Landing() {
                 variant="outline"
                 className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[280px]"
               >
-                More details
+                View features
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
+              </Button>
+            </a>
+            <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                className="group h-14 w-full rounded-md border-[#5865F2]/40 bg-[#5865F2]/10 text-base font-semibold text-foreground hover:border-[#5865F2]/70 hover:bg-[#5865F2]/20 md:backdrop-blur sm:w-[220px]"
+              >
+                <MessageCircle className="mr-2 h-4 w-4 text-[#9aa0ff]" />
+                Discord
               </Button>
             </a>
           </motion.div>
@@ -433,7 +445,7 @@ export default function Landing() {
             transition={{ delay: 0.6, duration: 0.5 }}
             className="mt-7 flex flex-wrap gap-2"
           >
-            {["Safe delete", "Owner scoped", "Admin controls", "Live logs"].map((item) => (
+            {["Safe license deletes", "Owner scoped", "Admin controls", "Live logs"].map((item) => (
               <span key={item} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 md:backdrop-blur font-mono text-[11px] text-muted-foreground/80">
                 {item}
               </span>
@@ -483,6 +495,25 @@ export default function Landing() {
         </motion.div>
         </div>
       </section>
+
+      <motion.a
+        href="https://discord.gg/galaticboosts"
+        target="_blank"
+        rel="noreferrer"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.9, duration: 0.5 }}
+        className="fixed bottom-5 left-5 z-40 hidden items-center gap-3 rounded-lg border border-border/80 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur lg:flex"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20 text-[#9aa0ff]">
+          <MessageCircle className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Join our Discord</p>
+          <p className="text-xs text-muted-foreground">Support, updates and community</p>
+        </div>
+        <span className="rounded-md border border-border/70 bg-secondary px-3 py-1 text-sm font-semibold text-foreground">Join</span>
+      </motion.a>
 
       {/* Stats */}
       <Section className="relative z-10 px-4 sm:px-6 py-14">

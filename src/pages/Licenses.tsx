@@ -8,6 +8,10 @@ import { generateLicenseKey, getLicenseStatusColor, formatDate, DURATION_OPTIONS
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +48,7 @@ export default function Licenses() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<{ ids: string[]; keys: string[]; mode: "single" | "bulk" } | null>(null);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   const fetchData = async () => {
@@ -119,14 +124,19 @@ export default function Licenses() {
     fetchData();
   };
 
-  const bulkDelete = async () => {
+  const confirmBulkDelete = () => {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    const keys = selectedLicenses.map(l => l.license_key).join(", ");
+    const keys = selectedLicenses.map(l => l.license_key);
+    setPendingDelete({ ids, keys, mode: "bulk" });
+  };
+
+  const deleteSelectedLicenses = async (ids: string[], keys: string[]) => {
+    if (!user || ids.length === 0) return;
     await supabase.from("licenses").delete().in("id", ids);
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` } as any);
     toast.success(`Deleted ${ids.length} license(s)`);
-    notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.slice(0, 200) });
+    notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.join(", ").slice(0, 200) });
     clearSelection();
     fetchData();
   };
@@ -343,7 +353,7 @@ export default function Licenses() {
       <Button variant="ghost" size="icon" onClick={() => openDetails(lic)} title="Notes & Tags" className="hover:bg-accent/10 h-8 w-8">
         <StickyNote className="h-4 w-4 text-accent-foreground" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => deleteKey(lic.id, lic.license_key)} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
+      <Button variant="ghost" size="icon" onClick={() => setPendingDelete({ ids: [lic.id], keys: [lic.license_key], mode: "single" })} title="Delete" className="hover:bg-destructive/10 h-8 w-8">
         <Trash2 className="h-4 w-4 text-destructive" />
       </Button>
     </div>
@@ -368,7 +378,7 @@ export default function Licenses() {
           <Button size="sm" variant="outline" onClick={bulkBan} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
             <Ban className="h-3 w-3 mr-1" /> Ban
           </Button>
-          <Button size="sm" variant="outline" onClick={bulkDelete} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+          <Button size="sm" variant="outline" onClick={confirmBulkDelete} className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
             <Trash2 className="h-3 w-3 mr-1" /> Delete
           </Button>
           <Button size="sm" variant="ghost" onClick={clearSelection} className="h-8 text-xs">
@@ -652,6 +662,38 @@ export default function Licenses() {
           )}
         </DialogContent>
       </Dialog>
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDelete?.mode === "bulk" ? `Delete ${pendingDelete?.ids.length || 0} licenses?` : "Delete this license?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the license key data and cannot be undone.
+              {pendingDelete?.keys?.[0] && (
+                <span className="mt-2 block break-all font-mono text-xs text-foreground">
+                  {pendingDelete.mode === "bulk" ? pendingDelete.keys.slice(0, 4).join(", ") : pendingDelete.keys[0]}
+                  {pendingDelete.mode === "bulk" && pendingDelete.keys.length > 4 ? ` and ${pendingDelete.keys.length - 4} more` : ""}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!pendingDelete) return;
+                if (pendingDelete.mode === "single") deleteKey(pendingDelete.ids[0], pendingDelete.keys[0]);
+                else deleteSelectedLicenses(pendingDelete.ids, pendingDelete.keys);
+                setPendingDelete(null);
+              }}
+            >
+              Delete forever
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </RoleLayout>
   );
 }

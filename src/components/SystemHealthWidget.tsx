@@ -71,7 +71,7 @@ export function SystemHealthWidget() {
 
   const items = [
     { label: "Avg Response", value: `${stats.avgResponseTime}ms`, icon: Zap, color: stats.avgResponseTime < 200 ? "text-emerald-400" : stats.avgResponseTime < 500 ? "text-amber-400" : "text-destructive" },
-    { label: "Success Rate", value: `${stats.successRate}%`, icon: Activity, color: stats.successRate > 90 ? "text-emerald-400" : stats.successRate > 70 ? "text-amber-400" : "text-destructive" },
+    { label: "Uptime", value: `${stats.successRate}%`, icon: Activity, color: stats.successRate > 90 ? "text-emerald-400" : stats.successRate > 70 ? "text-amber-400" : "text-destructive" },
     { label: "Requests (24h)", value: stats.totalRequests24h.toLocaleString(), icon: Clock, color: "text-primary" },
     { label: "Errors (24h)", value: stats.errorCount24h.toLocaleString(), icon: AlertTriangle, color: stats.errorCount24h === 0 ? "text-emerald-400" : "text-destructive" },
   ];
