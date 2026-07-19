@@ -9,6 +9,8 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { AnimatedCodeBlock, type CodeTab } from "@/components/AnimatedCodeBlock";
+import { BrandLogo } from "@/components/BrandLogo";
+import discordIcon from "@/assets/discord-icon.png";
 
 /* ── Animation helpers ── */
 const fadeUp = {
@@ -18,14 +20,6 @@ const fadeUp = {
     transition: { delay: i * 0.08, duration: 0.6, ease: "easeOut" as const },
   }),
 };
-
-function DiscordIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-      <path d="M20.3 4.4A16.3 16.3 0 0 0 16.2 3l-.2.4c1.5.4 2.2 1 2.2 1a14 14 0 0 0-12.4 0s.8-.6 2.3-1L7.8 3a16.5 16.5 0 0 0-4.1 1.4C1.1 8.3.4 12.1.8 15.9a16.7 16.7 0 0 0 5.1 2.6l.6-.9c-1.1-.4-2.1-1-2.1-1l.5-.3c4 1.9 8.3 1.9 12.2 0l.5.3s-1 .6-2.1 1l.6.9a16.7 16.7 0 0 0 5.1-2.6c.5-4.4-.8-8.1-2.9-11.5ZM8.3 13.6c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7Zm7.4 0c-.8 0-1.5-.8-1.5-1.7s.7-1.7 1.5-1.7 1.5.8 1.5 1.7-.7 1.7-1.5 1.7Z" />
-    </svg>
-  );
-}
 
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
 
@@ -94,7 +88,8 @@ const FEATURE_GROUPS = [
 
 const PRICING_TEASER = [
   { name: "Free", price: "$0", suffix: "forever", desc: "1 app · 25 keys · HWID binding · full validation API.", cta: "Start free", highlight: false },
-  { name: "Lifetime", price: "$49", suffix: "one-time", desc: "Unlimited apps & keys, resellers, managers, webhooks & priority support — pay once, own it forever.", cta: "Get Lifetime", highlight: true },
+  { name: "Monthly", price: "$3.99", suffix: "per month", desc: "Unlimited premium access for 30 days with manual Litecoin activation.", cta: "Get Monthly", highlight: false },
+  { name: "Lifetime", price: "$24.99", suffix: "one-time", desc: "Unlimited apps and keys, resellers, managers, webhooks and priority support forever.", cta: "Get Lifetime", highlight: true },
 ];
 
 const COMPARISONS = [
@@ -116,7 +111,7 @@ const TESTIMONIALS = [
   { name: "DevKing", role: "Bot Developer", stars: 4, text: "Using 1 year — stable 99% uptime. The Discord bot integration is seamless and my users love the HWID system." },
   { name: "JCrick", role: "Tool Developer", stars: 5, text: "Docs complete, API clean, support responsive. Would recommend to anyone building licensed software." },
   { name: "NeoBytes", role: "Security Researcher", stars: 5, text: "The request signing and anti-tamper detection are top-notch. Finally a licensing system that takes security seriously." },
-  { name: "Luna", role: "Indie Developer", stars: 5, text: "One-time $49 for unlimited everything — no monthly bill anxiety. Best value in the licensing space, hands down." },
+  { name: "Luna", role: "Indie Developer", stars: 5, text: "The $24.99 lifetime plan is simple, and the $3.99 monthly option is great for testing premium features." },
 ];
 
 const FAQS = [
@@ -126,7 +121,7 @@ const FAQS = [
   { q: "What programming languages are supported?", a: "We provide official SDKs and code examples for Python, C#, Node.js, C++, Go, Rust, and Java. Our REST API works with any language that can make HTTP requests." },
   { q: "Can I migrate from KeyAuth?", a: "Absolutely. Our API is designed to be a drop-in replacement. Most migrations take under an hour. We also offer migration guides and direct support." },
   { q: "Is my data secure?", a: "All requests use HMAC-SHA256 signing with replay protection. Data is encrypted at rest and in transit. Our infrastructure runs on enterprise-grade serverless edge nodes." },
-  { q: "Is Lifetime really one payment?", a: "Yes. Pay $49 once and every current and future platform feature is yours — no renewals, no seat fees, no per-app charges. If we release a paid add-on later, Lifetime users are grandfathered in." },
+  { q: "Is Lifetime really one payment?", a: "Yes. Pay $24.99 once and premium access stays on your account. Monthly is also available for $3.99 per month." },
 ];
 
 const THREATS = [
@@ -221,11 +216,11 @@ function ProductConsoleMock() {
       >
         <div className="flex h-12 items-center gap-3 border-b border-border/70 px-5">
           <div className="flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
-            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
-            <span className="h-2.5 w-2.5 rounded-full bg-muted" />
+            <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
           </div>
-          <p className="font-mono text-xs text-muted-foreground">app.gxauth.xyz/dashboard</p>
+          <p className="font-mono text-xs text-muted-foreground">gxauth.xyz/dashboard</p>
           <span className="ml-auto hidden rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 sm:inline-flex">Live</span>
         </div>
 
@@ -233,7 +228,7 @@ function ProductConsoleMock() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               {[
-                ["Apps", "12", AppWindow],
+                ["Apps", "800+", AppWindow],
                 ["Licenses", "2.4k", Key],
                 ["Uptime", "99.99%", CheckCircle2],
                 ["Latency", "46ms", Gauge],
@@ -327,13 +322,7 @@ export default function Landing() {
       <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="sticky top-0 z-50 border-b border-border/40 md:backdrop-blur-xl bg-background/70">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="relative">
-              <div className="absolute -inset-1.5 rounded-lg bg-primary/30 blur-md" />
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-md border border-primary/20 bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/10">
-                <Key className="h-5 w-5 text-primary-foreground" />
-              </div>
-            </div>
-            <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">GX Auth</span>
+            <BrandLogo size="sm" />
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -442,7 +431,7 @@ export default function Landing() {
                 variant="outline"
                 className="group h-14 w-full rounded-md border-[#5865F2]/50 bg-[#5865F2]/15 text-base font-semibold text-foreground shadow-[0_16px_44px_-30px_#5865F2] hover:border-[#5865F2]/80 hover:bg-[#5865F2]/25 md:backdrop-blur sm:w-[210px]"
               >
-                <DiscordIcon className="mr-2 h-4 w-4 text-[#c7cbff]" />
+                <img src={discordIcon} alt="" className="mr-2 h-5 w-5" />
                 Discord
               </Button>
             </a>
@@ -513,8 +502,8 @@ export default function Landing() {
         className="fixed bottom-5 left-5 z-40 hidden items-center gap-3 rounded-lg border border-border/80 bg-card/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur lg:flex"
       >
         <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20 text-[#c7cbff]">
-          <DiscordIcon className="h-5 w-5" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-[#5865F2]/20">
+          <img src={discordIcon} alt="" className="h-6 w-6" />
         </div>
         <div>
           <p className="text-sm font-semibold text-foreground">Join our Discord</p>
@@ -738,7 +727,7 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Simple, transparent pricing</h2>
             <p className="mt-3 text-muted-foreground">Free forever for solo devs. Pay only when you scale.</p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {PRICING_TEASER.map((p, i) => (
               <motion.div
                 key={p.name}
@@ -878,7 +867,7 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/40 bg-background/60 md:backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Key className="h-4 w-4 text-primary" />
+            <BrandLogo size="sm" showText={false} />
             <span>&copy; {new Date().getFullYear()} GX Auth. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">

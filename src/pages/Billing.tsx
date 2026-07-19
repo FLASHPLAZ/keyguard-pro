@@ -39,6 +39,20 @@ const PLAN_FEATURES: Record<string, { label: string; tagline: string; perks: { n
       { name: "Priority support", on: true },
     ],
   },
+  monthly: {
+    label: "Monthly",
+    tagline: "Premium access for 30 days.",
+    perks: [
+      { name: "Unlimited Applications", on: true },
+      { name: "Unlimited license keys", on: true },
+      { name: "Unlimited Resellers & Managers", on: true },
+      { name: "HWID + anti-sharing + auto-ban", on: true },
+      { name: "Discord Webhook alerts", on: true },
+      { name: "Advanced analytics & full logs", on: true },
+      { name: "HMAC-signed API + Webhooks", on: true },
+      { name: "Priority support", on: true },
+    ],
+  },
   platform: {
     label: "Platform (Staff)",
     tagline: "Internal platform account with full access.",

@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Key, UserPlus, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
+import { UserPlus, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { notifyDiscord } from "@/lib/discord-notify";
 import { getClientMeta } from "@/lib/client-meta";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -95,9 +96,7 @@ export default function Signup() {
         <div className="mb-8 flex flex-col items-center">
           <div className="relative mb-5">
             <div className="absolute -inset-3 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
-              <Key className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <BrandLogo size="lg" showText={false} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Create your workspace</h1>
           <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">

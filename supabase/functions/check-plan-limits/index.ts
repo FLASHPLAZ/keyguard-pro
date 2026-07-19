@@ -8,6 +8,8 @@ const corsHeaders = {
 const PLAN_LIMITS: Record<string, { apps: number; keys: number; resellers: number; managers: number }> = {
   // Free — very limited
   free: { apps: 1, keys: 25, resellers: 0, managers: 0 },
+  // Monthly — unlimited everything for 30 days
+  monthly: { apps: -1, keys: -1, resellers: -1, managers: -1 },
   // Lifetime — unlimited everything (one-time purchase)
   lifetime: { apps: -1, keys: -1, resellers: -1, managers: -1 },
   // Platform (internal/admin)

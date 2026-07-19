@@ -54,7 +54,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({
     totalUsers: 0, totalApps: 0, totalLicenses: 0, activeLicenses: 0,
     expiredLicenses: 0, bannedLicenses: 0, totalResellers: 0, totalManagers: 0,
-    totalTenants: 0, freeTenants: 0, lifetimeTenants: 0, platformTenants: 0,
+    totalTenants: 0, freeTenants: 0, monthlyTenants: 0, lifetimeTenants: 0, platformTenants: 0,
   });
   const [barData, setBarData] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -70,6 +70,16 @@ export default function AdminPanel() {
   const [tenantsSearch, setTenantsSearch] = useState("");
   const [tenantsPage, setTenantsPage] = useState(1);
   const [tenantsLoading, setTenantsLoading] = useState(false);
+
+  const [allApps, setAllApps] = useState<any[]>([]);
+  const [appsSearch, setAppsSearch] = useState("");
+  const [appsPage, setAppsPage] = useState(1);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [allLicenses, setAllLicenses] = useState<any[]>([]);
+  const [licensesSearch, setLicensesSearch] = useState("");
+  const [licensesStatus, setLicensesStatus] = useState("all");
+  const [licensesPage, setLicensesPage] = useState(1);
+  const [licensesLoading, setLicensesLoading] = useState(false);
 
   // ─── Recent logs ───
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
@@ -90,6 +100,8 @@ export default function AdminPanel() {
   useEffect(() => {
     if (activeTab === "users" && users.length === 0) loadUsers();
     if (activeTab === "tenants" && tenants.length === 0) loadTenants();
+    if (activeTab === "all-apps" && allApps.length === 0) loadAllApps();
+    if (activeTab === "all-licenses" && allLicenses.length === 0) loadAllLicenses();
     if (activeTab === "ops") {
       loadSecurityLists();
       loadMaintenanceSettings();
@@ -131,6 +143,7 @@ export default function AdminPanel() {
       totalManagers: managersRes.count || 0,
       totalTenants: tenantData.length,
       freeTenants: tenantData.filter(t => t.plan === "free").length,
+      monthlyTenants: tenantData.filter(t => t.plan === "monthly").length,
       lifetimeTenants: tenantData.filter(t => t.plan === "lifetime").length,
       platformTenants: tenantData.filter(t => t.plan === "platform").length,
     });
@@ -192,6 +205,42 @@ export default function AdminPanel() {
     setTenantsLoading(false);
   }
 
+  async function loadAllApps() {
+    setAppsLoading(true);
+    const [{ data: appsData, error }, { data: profiles }] = await Promise.all([
+      supabase.from("applications").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("profiles").select("user_id, email, username"),
+    ]);
+    if (error) {
+      toast.error("Failed to load apps: " + error.message);
+      setAppsLoading(false);
+      return;
+    }
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    setAllApps((appsData || []).map((app: any) => ({ ...app, owner_profile: profileMap.get(app.user_id) || null })));
+    setAppsLoading(false);
+  }
+
+  async function loadAllLicenses() {
+    setLicensesLoading(true);
+    const [{ data: licensesData, error }, { data: profiles }] = await Promise.all([
+      supabase
+        .from("licenses")
+        .select("*, applications(name)")
+        .order("created_at", { ascending: false })
+        .limit(800),
+      supabase.from("profiles").select("user_id, email, username"),
+    ]);
+    if (error) {
+      toast.error("Failed to load licenses: " + error.message);
+      setLicensesLoading(false);
+      return;
+    }
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    setAllLicenses((licensesData || []).map((lic: any) => ({ ...lic, owner_profile: profileMap.get(lic.user_id) || null })));
+    setLicensesLoading(false);
+  }
+
   async function suspendTenant(id: string, suspended: boolean) {
     const { error } = await supabase.from("tenants").update({ suspended: !suspended }).eq("id", id);
     if (error) { toast.error(error.message); return; }
@@ -203,8 +252,7 @@ export default function AdminPanel() {
   }
 
   async function updateTenantPlan(id: string, plan: string) {
-    // Two-tier model: free & lifetime never expire. 'platform' is internal.
-    const allowed = ["free", "lifetime", "platform"] as const;
+    const allowed = ["free", "monthly", "lifetime", "platform"] as const;
     if (!allowed.includes(plan as any)) {
       toast.error("Invalid plan");
       return;
@@ -220,11 +268,13 @@ export default function AdminPanel() {
       );
       if (!ok) return;
     }
-    const cycleMap: Record<string, string> = { free: "free", lifetime: "lifetime", platform: "lifetime" };
+    const monthlyExpiry = new Date();
+    monthlyExpiry.setDate(monthlyExpiry.getDate() + 30);
+    const cycleMap: Record<string, string> = { free: "free", monthly: "monthly", lifetime: "lifetime", platform: "lifetime" };
     const patch: any = {
       plan,
       billing_cycle: cycleMap[plan] || "lifetime",
-      plan_expires_at: null,
+      plan_expires_at: plan === "monthly" ? monthlyExpiry.toISOString() : null,
       plan_started_at: new Date().toISOString(),
     };
     const { error } = await supabase.from("tenants").update(patch).eq("id", id);
@@ -361,6 +411,27 @@ export default function AdminPanel() {
     (t.owner_profile?.username || "").toLowerCase().includes(tenantsSearch.toLowerCase())
   );
   const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * PAGE_SIZE, tenantsPage * PAGE_SIZE);
+  const filteredApps = allApps.filter((app: any) => {
+    const s = appsSearch.toLowerCase();
+    return (app.name || "").toLowerCase().includes(s) ||
+      (app.description || "").toLowerCase().includes(s) ||
+      (app.owner_profile?.email || "").toLowerCase().includes(s) ||
+      (app.owner_profile?.username || "").toLowerCase().includes(s) ||
+      (app.id || "").toLowerCase().includes(s);
+  });
+  const paginatedApps = filteredApps.slice((appsPage - 1) * PAGE_SIZE, appsPage * PAGE_SIZE);
+  const filteredLicenses = allLicenses.filter((lic: any) => {
+    const s = licensesSearch.toLowerCase();
+    const matchesSearch = (lic.license_key || "").toLowerCase().includes(s) ||
+      (lic.owner_name || "").toLowerCase().includes(s) ||
+      (lic.owner_email || "").toLowerCase().includes(s) ||
+      (lic.applications?.name || "").toLowerCase().includes(s) ||
+      (lic.owner_profile?.email || "").toLowerCase().includes(s) ||
+      (lic.hwid || "").toLowerCase().includes(s);
+    const matchesStatus = licensesStatus === "all" || lic.status === licensesStatus || (licensesStatus === "banned" && lic.banned);
+    return matchesSearch && matchesStatus;
+  });
+  const paginatedLicenses = filteredLicenses.slice((licensesPage - 1) * PAGE_SIZE, licensesPage * PAGE_SIZE);
   const filteredLogs = recentLogs.filter((log: any) => {
     const s = logsSearch.toLowerCase();
     return (log.action || "").toLowerCase().includes(s) ||
@@ -378,7 +449,8 @@ export default function AdminPanel() {
 
   const pieData = [
     { name: "Free", value: stats.freeTenants || 0, color: "hsl(215, 15%, 45%)" },
-    { name: "Lifetime", value: stats.lifetimeTenants || 0, color: "hsl(var(--primary))" },
+    { name: "Monthly", value: stats.monthlyTenants || 0, color: "hsl(var(--primary))" },
+    { name: "Lifetime", value: stats.lifetimeTenants || 0, color: "hsl(var(--accent))" },
     { name: "Platform", value: stats.platformTenants || 0, color: "hsl(var(--primary-glow))" },
   ];
 
@@ -418,6 +490,8 @@ export default function AdminPanel() {
             <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
+            <TabsTrigger value="all-apps" className="gap-1.5 text-xs"><AppWindow className="h-3.5 w-3.5" />All Apps</TabsTrigger>
+            <TabsTrigger value="all-licenses" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" />All Licenses</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Audit Logs</TabsTrigger>
             <TabsTrigger value="ops" className="gap-1.5 text-xs"><ShieldBan className="h-3.5 w-3.5" />Security Ops</TabsTrigger>
           </TabsList>
@@ -668,8 +742,8 @@ export default function AdminPanel() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatMini label="Total Tenants" value={stats.totalTenants} icon={Globe} />
               <StatMini label="Free" value={stats.freeTenants} icon={Users} color="text-muted-foreground" />
+              <StatMini label="Monthly" value={stats.monthlyTenants} icon={Calendar} color="text-primary" />
               <StatMini label="Lifetime" value={stats.lifetimeTenants} icon={Crown} color="text-primary" />
-              <StatMini label="Platform" value={stats.platformTenants} icon={AppWindow} color="text-fuchsia-400" />
             </div>
 
             <div className="relative sm:max-w-sm">
@@ -712,6 +786,7 @@ export default function AdminPanel() {
                                 className="rounded border border-border bg-secondary px-2 py-1 text-xs text-foreground"
                               >
                                 <option value="free">Free</option>
+                                <option value="monthly">Monthly</option>
                                 <option value="lifetime">Lifetime</option>
                                 <option value="platform">Platform</option>
                               </select>
@@ -740,6 +815,11 @@ export default function AdminPanel() {
                                     <InfinityIcon className="h-3 w-3 mr-1" />Grant Lifetime
                                   </Button>
                                 )}
+                                {t.plan !== "monthly" && t.plan !== "platform" && (
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => updateTenantPlan(t.id, "monthly")}>
+                                    <Calendar className="h-3 w-3 mr-1" />Grant Monthly
+                                  </Button>
+                                )}
                                 {t.plan !== "free" && t.plan !== "platform" && (
                                   <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground" onClick={() => updateTenantPlan(t.id, "free")}>
                                     Reset to Free
@@ -766,6 +846,128 @@ export default function AdminPanel() {
                   </div>
                 </div>
                 <TablePagination currentPage={tenantsPage} totalItems={filteredTenants.length} pageSize={PAGE_SIZE} onPageChange={setTenantsPage} />
+              </>
+            )}
+          </TabsContent>
+          <TabsContent value="all-apps" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">All Users Apps</h2>
+                <p className="text-xs text-muted-foreground">Global application inventory with owner filters</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadAllApps}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+            </div>
+            <div className="relative sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Search app, owner, ID..." value={appsSearch} onChange={e => setAppsSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+            </div>
+            {appsLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Security</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedApps.map((app: any) => (
+                          <tr key={app.id} className="border-b border-border/50 hover:bg-secondary/30">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-foreground">{app.name}</p>
+                              {app.description && <p className="text-xs text-muted-foreground">{app.description}</p>}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{app.owner_profile?.email || app.user_id}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-primary">{String(app.id).slice(0, 12)}...</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {app.suspended && <Badge variant="destructive" className="text-[10px]">Suspended</Badge>}
+                                {app.kill_switch && <Badge variant="destructive" className="text-[10px]">Kill Switch</Badge>}
+                                {app.signature_required && <Badge variant="secondary" className="text-[10px] text-primary">Signed</Badge>}
+                                {!app.suspended && !app.kill_switch && !app.signature_required && <span className="text-xs text-muted-foreground">Standard</span>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(app.created_at)}</td>
+                          </tr>
+                        ))}
+                        {paginatedApps.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No apps found</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <TablePagination currentPage={appsPage} totalItems={filteredApps.length} pageSize={PAGE_SIZE} onPageChange={setAppsPage} />
+              </>
+            )}
+          </TabsContent>
+          <TabsContent value="all-licenses" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">All Users Licenses</h2>
+                <p className="text-xs text-muted-foreground">Search every license by key, owner, app, HWID, or status</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadAllLicenses}><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Refresh</Button>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="relative sm:max-w-sm sm:flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input placeholder="Search key, owner, app, HWID..." value={licensesSearch} onChange={e => setLicensesSearch(e.target.value)} className="bg-secondary border-border pl-10" />
+              </div>
+              <select value={licensesStatus} onChange={(e) => setLicensesStatus(e.target.value)} className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground">
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="expired">Expired</option>
+                <option value="banned">Banned</option>
+              </select>
+            </div>
+            {licensesLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+            ) : (
+              <>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[920px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">App</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID / IP</th>
+                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedLicenses.map((lic: any) => (
+                          <tr key={lic.id} className="border-b border-border/50 hover:bg-secondary/30">
+                            <td className="px-4 py-3 font-mono text-xs text-primary">{lic.license_key}</td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{lic.applications?.name || "Unknown app"}</td>
+                            <td className="px-4 py-3">
+                              <p className="text-xs text-foreground">{lic.owner_email || lic.owner_profile?.email || "No owner email"}</p>
+                              {lic.owner_name && <p className="text-[11px] text-muted-foreground">{lic.owner_name}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="outline" className={`text-[10px] ${getLicenseStatusColor(lic.status)}`}>{lic.banned ? "banned" : lic.status}</Badge>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">
+                              <p className="font-mono">{lic.hwid ? String(lic.hwid).slice(0, 14) + "..." : "No HWID"}</p>
+                              <p>{lic.ip || lic.last_seen_ip || "No IP"}</p>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-muted-foreground">{lic.expires_at ? formatDate(lic.expires_at) : "Lifetime"}</td>
+                          </tr>
+                        ))}
+                        {paginatedLicenses.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No licenses found</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <TablePagination currentPage={licensesPage} totalItems={filteredLicenses.length} pageSize={PAGE_SIZE} onPageChange={setLicensesPage} />
               </>
             )}
           </TabsContent>
@@ -830,7 +1032,14 @@ export default function AdminPanel() {
               </Card>
               <Card className="border-border/60">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm"><Wrench className="h-4 w-4 text-primary" />Maintenance Mode</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Wrench className="h-4 w-4 text-primary" />
+                    Maintenance Mode
+                    <span className={`ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${maintenanceEnabled ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${maintenanceEnabled ? "bg-yellow-300" : "bg-emerald-300"}`} />
+                      {maintenanceEnabled ? "ON" : "OFF"}
+                    </span>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <select

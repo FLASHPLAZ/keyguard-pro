@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Key, LogIn, Shield, Users, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
+import { LogIn, Shield, Users, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -74,9 +75,7 @@ export default function Login() {
         <div className="mb-10 flex flex-col items-center">
           <div className="relative mb-5">
             <div className="absolute -inset-3 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25">
-              <Key className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <BrandLogo size="lg" showText={false} />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">GX Auth</h1>
           <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">

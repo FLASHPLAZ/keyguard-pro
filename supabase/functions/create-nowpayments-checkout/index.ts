@@ -25,9 +25,12 @@ Deno.serve(async (req) => {
     if (authError || !authUser.user) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
+    const plan = String(body.plan || "lifetime").toLowerCase();
+    const amount = plan === "monthly" ? 3.99 : 24.99;
+    const planLabel = plan === "monthly" ? "Monthly Access" : "Lifetime Access";
     const payCurrency = String(body.payCurrency || "ltc").toLowerCase();
     const origin = req.headers.get("origin") || "https://www.gxauth.xyz";
-    const orderId = `gxauth_lifetime_${authUser.user.id}_${Date.now()}`;
+    const orderId = `gxauth_${plan === "monthly" ? "monthly" : "lifetime"}_${authUser.user.id}_${Date.now()}`;
 
     const response = await fetch("https://api.nowpayments.io/v1/invoice", {
       method: "POST",
@@ -36,11 +39,11 @@ Deno.serve(async (req) => {
         "x-api-key": apiKey,
       },
       body: JSON.stringify({
-        price_amount: 49,
+        price_amount: amount,
         price_currency: "usd",
         pay_currency: payCurrency,
         order_id: orderId,
-        order_description: "GX Auth Lifetime Access",
+        order_description: `GX Auth ${planLabel}`,
         ipn_callback_url: `${supabaseUrl}/functions/v1/nowpayments-webhook`,
         success_url: `${origin}/dashboard/billing?payment=success`,
         cancel_url: `${origin}/pricing?payment=cancelled`,

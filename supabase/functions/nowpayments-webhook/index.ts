@@ -21,16 +21,19 @@ Deno.serve(async (req) => {
     const orderId = String(payload.order_id || "");
     if (!orderId || !isPaid) return json({ ok: true, ignored: true, status });
 
-    const match = orderId.match(/^gxauth_lifetime_([^_]+)_/);
-    const userId = match?.[1];
+    const match = orderId.match(/^gxauth_(monthly|lifetime)_([^_]+)_/);
+    const plan = match?.[1] || "lifetime";
+    const userId = match?.[2];
     if (!userId) return json({ error: "Invalid order id" }, 400);
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 30);
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const patch = {
-      plan: "lifetime",
-      billing_cycle: "lifetime",
+      plan,
+      billing_cycle: plan === "monthly" ? "monthly" : "lifetime",
       plan_started_at: new Date().toISOString(),
-      plan_expires_at: null,
+      plan_expires_at: plan === "monthly" ? expiry.toISOString() : null,
       suspended: false,
     };
 
@@ -46,13 +49,13 @@ Deno.serve(async (req) => {
       await adminClient.from("tenants").insert({
         ...patch,
         owner_user_id: userId,
-        name: "Lifetime Workspace",
+        name: `${plan === "monthly" ? "Monthly" : "Lifetime"} Workspace`,
       } as any);
     }
 
     await adminClient.from("activity_logs").insert({
       user_id: userId,
-      action: "Lifetime activated by NOWPayments",
+      action: `${plan === "monthly" ? "Monthly" : "Lifetime"} activated by NOWPayments`,
       metadata: {
         order_id: orderId,
         invoice_id: payload.invoice_id,
