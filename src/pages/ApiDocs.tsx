@@ -35,8 +35,9 @@ const endpoints = [
       { name: "application_id", type: "string", required: false, desc: "Application UUID. If provided, verifies the license belongs to this app. Prevents cross-app key abuse." },
     ],
     headers: [
-      { name: "X-Signature", required: "If signing enabled", desc: "HMAC-SHA256 hex signature of timestamp.body using app signing secret" },
+      { name: "X-Signature", required: "If signing enabled", desc: "HMAC-SHA256 hex signature of timestamp.nonce.body using the app signing secret" },
       { name: "X-Timestamp", required: "If signing enabled", desc: "Unix timestamp (seconds). Must be within 60 seconds of server time." },
+      { name: "X-Nonce", required: "If signing enabled", desc: "Unique random value per request. Reusing it is rejected as replay." },
     ],
     errors: [
       { code: 400, message: "Invalid license_key", desc: "Missing or malformed license_key field" },
@@ -48,8 +49,10 @@ const endpoints = [
       { code: 403, message: "License expired", desc: "License expiration date has passed" },
       { code: 403, message: "HWID mismatch", desc: "Key is already bound to a different HWID" },
       { code: 403, message: "License banned for sharing", desc: "Too many unique IPs detected (anti-sharing)" },
-      { code: 403, message: "Signature required", desc: "App requires request signing but no X-Signature/X-Timestamp headers sent" },
+      { code: 403, message: "Signature, timestamp, and nonce required", desc: "App requires request signing but one or more signing headers are missing" },
+      { code: 403, message: "Invalid nonce", desc: "X-Nonce is missing, too short, too long, or contains unsupported characters" },
       { code: 403, message: "Request expired", desc: "X-Timestamp is older than 60 seconds (replay protection)" },
+      { code: 409, message: "Replay detected", desc: "The nonce has already been used for this application" },
       { code: 403, message: "Invalid signature", desc: "HMAC signature doesn't match — possible payload tampering" },
       { code: 429, message: "Too many requests", desc: "Rate limit exceeded. Retry after window expires." },
       { code: 500, message: "Internal server error", desc: "Unexpected server error" },
@@ -412,16 +415,16 @@ export default function ApiDocs() {
             <h3 className="font-semibold text-foreground mb-2">How it works</h3>
             <ol className="list-decimal list-inside space-y-1.5">
               <li>Enable <strong className="text-foreground">Request Signing</strong> in the Application details dialog and copy the <strong className="text-foreground">Signing Secret</strong>.</li>
-              <li>In your client, build the JSON body string, then compute: <code className="text-foreground bg-secondary/50 px-1 rounded">HMAC-SHA256(secret, timestamp + "." + body)</code></li>
-              <li>Send the hex-encoded signature as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Signature</code> header and the unix timestamp as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Timestamp</code> header.</li>
-              <li>The server verifies the signature and rejects requests older than <strong className="text-foreground">60 seconds</strong> (replay protection).</li>
+              <li>In your client, build the JSON body string, generate a unique nonce, then compute: <code className="text-foreground bg-secondary/50 px-1 rounded">HMAC-SHA256(secret, timestamp + "." + nonce + "." + body)</code></li>
+              <li>Send the hex-encoded signature as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Signature</code>, the unix timestamp as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Timestamp</code>, and the nonce as <code className="text-foreground bg-secondary/50 px-1 rounded">X-Nonce</code>.</li>
+              <li>The server verifies the signature and rejects requests older than <strong className="text-foreground">60 seconds</strong> or duplicate nonces.</li>
             </ol>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-4">
             <h3 className="font-semibold text-foreground mb-2">Security benefits</h3>
             <ul className="list-disc list-inside space-y-1">
               <li>Prevents modification of license_key, hwid, or device_name in transit</li>
-              <li>60-second timestamp window blocks replay attacks</li>
+              <li>60-second timestamp window plus one-time nonces blocks replay attacks</li>
               <li>Per-application secrets — compromise of one app doesn't affect others</li>
               <li>Backward compatible — apps without signing enabled continue to work normally</li>
             </ul>

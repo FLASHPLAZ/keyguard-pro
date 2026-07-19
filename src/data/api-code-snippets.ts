@@ -9,6 +9,7 @@ import sys
 import time
 import json
 import threading
+import secrets
 
 API_URL = "${API_BASE}/validate"
 HEARTBEAT_URL = "${API_BASE}/heartbeat"
@@ -38,11 +39,12 @@ def save_key(key):
 def sign_request(body_str: str, secret: str) -> tuple:
     """Generate HMAC-SHA256 signature and timestamp for request signing."""
     timestamp = str(int(time.time()))
-    signing_payload = f"{timestamp}.{body_str}"
+    nonce = secrets.token_hex(16)
+    signing_payload = f"{timestamp}.{nonce}.{body_str}"
     signature = hmac.new(
         secret.encode(), signing_payload.encode(), hashlib.sha256
     ).hexdigest()
-    return signature, timestamp
+    return signature, timestamp, nonce
 
 def validate_license(key: str) -> bool:
     try:
@@ -59,9 +61,10 @@ def validate_license(key: str) -> bool:
         
         # Add HMAC signature if signing secret is configured
         if SIGNING_SECRET:
-            signature, timestamp = sign_request(body_str, SIGNING_SECRET)
+            signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
             headers["X-Signature"] = signature
             headers["X-Timestamp"] = timestamp
+            headers["X-Nonce"] = nonce
         
         response = requests.post(API_URL, data=body_str, headers=headers, timeout=10)
         data = response.json()
@@ -159,14 +162,15 @@ class LicenseValidator
 
     static void SaveKey(string key) => File.WriteAllText(LICENSE_FILE, key);
 
-    static (string signature, string timestamp) SignRequest(string body, string secret)
+    static (string signature, string timestamp, string nonce) SignRequest(string body, string secret)
     {
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var signingPayload = $"{timestamp}.{body}";
+        var nonce = Guid.NewGuid().ToString("N");
+        var signingPayload = $"{timestamp}.{nonce}.{body}";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signingPayload));
         var signature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-        return (signature, timestamp);
+        return (signature, timestamp, nonce);
     }
 
     public static async Task<bool> ValidateLicense(string licenseKey)
@@ -188,9 +192,10 @@ class LicenseValidator
             // Add HMAC signature if signing secret is configured
             if (!string.IsNullOrEmpty(SIGNING_SECRET))
             {
-                var (signature, timestamp) = SignRequest(payload, SIGNING_SECRET);
+                var (signature, timestamp, nonce) = SignRequest(payload, SIGNING_SECRET);
                 request.Headers.Add("X-Signature", signature);
                 request.Headers.Add("X-Timestamp", timestamp);
+                request.Headers.Add("X-Nonce", nonce);
             }
 
             var response = await client.SendAsync(request);
@@ -296,10 +301,11 @@ function saveKey(key) {
 
 function signRequest(bodyStr, secret) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signingPayload = \`\${timestamp}.\${bodyStr}\`;
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  const signingPayload = \`\${timestamp}.\${nonce}.\${bodyStr}\`;
   const signature = crypto.createHmac('sha256', secret)
     .update(signingPayload).digest('hex');
-  return { signature, timestamp };
+  return { signature, timestamp, nonce };
 }
 
 async function validateLicense(licenseKey) {
@@ -316,9 +322,10 @@ async function validateLicense(licenseKey) {
     
     // Add HMAC signature if signing secret is configured
     if (SIGNING_SECRET) {
-      const { signature, timestamp } = signRequest(bodyStr, SIGNING_SECRET);
+      const { signature, timestamp, nonce } = signRequest(bodyStr, SIGNING_SECRET);
       headers['X-Signature'] = signature;
       headers['X-Timestamp'] = timestamp;
+      headers['X-Nonce'] = nonce;
     }
 
     const res = await fetch(API_URL, {
@@ -400,6 +407,7 @@ export const cppSnippet = `// Requires: libcurl, nlohmann/json, OpenSSL
 #include <string>
 #include <ctime>
 #include <cstdlib>
+#include <random>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <openssl/hmac.h>
@@ -464,6 +472,15 @@ std::string hmacSha256(const std::string& secret, const std::string& data) {
     return std::string(hex);
 }
 
+std::string randomNonce() {
+    static const char* hex = "0123456789abcdef";
+    std::random_device rd;
+    std::string nonce;
+    nonce.reserve(32);
+    for (int i = 0; i < 32; i++) nonce.push_back(hex[rd() % 16]);
+    return nonce;
+}
+
 bool validateLicense(const std::string& licenseKey) {
     CURL* curl = curl_easy_init();
     if (!curl) return false;
@@ -483,10 +500,12 @@ bool validateLicense(const std::string& licenseKey) {
     // Add HMAC signature if signing secret is configured
     if (!SIGNING_SECRET.empty()) {
         std::string timestamp = std::to_string(std::time(nullptr));
-        std::string signingPayload = timestamp + "." + postData;
+        std::string nonce = randomNonce();
+        std::string signingPayload = timestamp + "." + nonce + "." + postData;
         std::string signature = hmacSha256(SIGNING_SECRET, signingPayload);
         headers = curl_slist_append(headers, ("X-Signature: " + signature).c_str());
         headers = curl_slist_append(headers, ("X-Timestamp: " + timestamp).c_str());
+        headers = curl_slist_append(headers, ("X-Nonce: " + nonce).c_str());
     }
 
     curl_easy_setopt(curl, CURLOPT_URL, API_URL.c_str());
@@ -553,6 +572,7 @@ export const goSnippet = `package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -601,13 +621,22 @@ func saveKey(key string) {
 	os.WriteFile(licenseFile, []byte(key), 0644)
 }
 
-func signRequest(bodyStr string, secret string) (string, string) {
+func randomNonce() string {
+	buf := make([]byte, 16)
+	if _, err := rand.Read(buf); err != nil {
+		return strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
+	return hex.EncodeToString(buf)
+}
+
+func signRequest(bodyStr string, secret string) (string, string, string) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	signingPayload := timestamp + "." + bodyStr
+	nonce := randomNonce()
+	signingPayload := timestamp + "." + nonce + "." + bodyStr
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(signingPayload))
 	signature := hex.EncodeToString(mac.Sum(nil))
-	return signature, timestamp
+	return signature, timestamp, nonce
 }
 
 type ValidateRequest struct {
@@ -645,9 +674,10 @@ func validateLicense(key string) bool {
 
 	// Add HMAC signature if signing secret is configured
 	if signingSecret != "" {
-		signature, timestamp := signRequest(bodyStr, signingSecret)
+		signature, timestamp, nonce := signRequest(bodyStr, signingSecret)
 		req.Header.Set("X-Signature", signature)
 		req.Header.Set("X-Timestamp", timestamp)
+		req.Header.Set("X-Nonce", nonce)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -717,6 +747,7 @@ import java.net.http.*;
 import java.io.*;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import com.google.gson.*;
@@ -759,13 +790,14 @@ public class LicenseValidator {
 
     static String[] signRequest(String body, String secret) throws Exception {
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
-        String signingPayload = timestamp + "." + body;
+        String nonce = UUID.randomUUID().toString().replace("-", "");
+        String signingPayload = timestamp + "." + nonce + "." + body;
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes(), "HmacSHA256"));
         byte[] hash = mac.doFinal(signingPayload.getBytes());
         StringBuilder sb = new StringBuilder();
         for (byte b : hash) sb.append(String.format("%02x", b));
-        return new String[]{ sb.toString(), timestamp };
+        return new String[]{ sb.toString(), timestamp, nonce };
     }
 
     public static boolean validateLicense(String licenseKey) {
@@ -787,6 +819,7 @@ public class LicenseValidator {
                 String[] sig = signRequest(bodyStr, SIGNING_SECRET);
                 requestBuilder.header("X-Signature", sig[0]);
                 requestBuilder.header("X-Timestamp", sig[1]);
+                requestBuilder.header("X-Nonce", sig[2]);
             }
 
             HttpClient client = HttpClient.newBuilder()
@@ -857,6 +890,7 @@ export const rustSnippet = `// Cargo.toml dependencies:
 // hmac = "0.12"
 // sha2 = "0.10"
 // hex = "0.4"
+// uuid = { version = "1", features = ["v4"] }
 
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -896,17 +930,18 @@ fn save_key(key: &str) {
     let _ = fs::write(LICENSE_FILE, key);
 }
 
-fn sign_request(body: &str, secret: &str) -> (String, String) {
+fn sign_request(body: &str, secret: &str) -> (String, String, String) {
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs()
         .to_string();
-    let signing_payload = format!("{}.{}", timestamp, body);
+    let nonce = uuid::Uuid::new_v4().simple().to_string();
+    let signing_payload = format!("{}.{}.{}", timestamp, nonce, body);
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
     mac.update(signing_payload.as_bytes());
     let signature = hex::encode(mac.finalize().into_bytes());
-    (signature, timestamp)
+    (signature, timestamp, nonce)
 }
 
 #[derive(Serialize)]
@@ -946,10 +981,11 @@ fn validate_license(key: &str) -> bool {
 
     // Add HMAC signature if signing secret is configured
     if !SIGNING_SECRET.is_empty() {
-        let (signature, timestamp) = sign_request(&body_str, SIGNING_SECRET);
+        let (signature, timestamp, nonce) = sign_request(&body_str, SIGNING_SECRET);
         request = request
             .header("X-Signature", signature)
-            .header("X-Timestamp", timestamp);
+            .header("X-Timestamp", timestamp)
+            .header("X-Nonce", nonce);
     }
 
     match request.body(body_str).send() {
