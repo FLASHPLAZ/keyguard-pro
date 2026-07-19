@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown, ShieldCheck, Infinity as InfinityIcon, Zap, Lock, Coins } from "lucide-react";
+import { Key, CheckCircle2, ArrowRight, Sparkles, X, Crown, ShieldCheck, Infinity as InfinityIcon, Zap, Lock, Coins, Copy, ExternalLink, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,14 +75,15 @@ const FAQS = [
 ];
 
 export default function Pricing() {
-  const startOxaPayCheckout = async () => {
+  const manualAddress = "Contact admin on Discord for the current LTC address";
+  const startNowPaymentsCheckout = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Please sign in or create an account before checkout.");
       return;
     }
-    const { data, error } = await supabase.functions.invoke("create-oxapay-checkout", {
-      body: { plan: "lifetime" },
+    const { data, error } = await supabase.functions.invoke("create-nowpayments-checkout", {
+      body: { plan: "lifetime", payCurrency: "ltc" },
     });
     if (error || (data as any)?.error) {
       toast.error((data as any)?.error || error?.message || "Checkout is not configured yet");
@@ -90,10 +91,15 @@ export default function Pricing() {
     }
     const url = (data as any)?.payment_url;
     if (!url) {
-      toast.error("Payment link was not returned by OxaPay");
+      toast.error("Payment link was not returned by NOWPayments");
       return;
     }
     window.location.href = url;
+  };
+
+  const copyManualAddress = () => {
+    navigator.clipboard?.writeText(manualAddress);
+    toast.success("Manual payment note copied");
   };
 
   return (
@@ -194,12 +200,12 @@ export default function Pricing() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={startOxaPayCheckout}
+                  onClick={startNowPaymentsCheckout}
                   className="mt-3 w-full border-primary/40 bg-primary/10 hover:bg-primary/15"
                   size="lg"
                 >
                   <Coins className="mr-2 h-4 w-4" />
-                  Pay with Litecoin / Crypto
+                  Pay with Litecoin
                 </Button>
               )}
               <ul className="mt-7 space-y-3 text-sm">
@@ -226,13 +232,48 @@ export default function Pricing() {
             { icon: InfinityIcon, label: "No renewals" },
             { icon: ShieldCheck, label: "7-day money back" },
             { icon: Zap, label: "Instant activation" },
-            { icon: Lock, label: "Secure Paddle checkout" },
+            { icon: Lock, label: "Secure crypto invoice" },
           ].map((t) => (
             <div key={t.label} className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
               <t.icon className="h-4 w-4 text-primary" />
               <span>{t.label}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="px-4 pb-20 sm:px-6">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-primary/30 bg-card/55 p-6 backdrop-blur-sm">
+          <div className="grid gap-6 md:grid-cols-[1fr_0.9fr] md:items-center">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <Wallet className="h-3.5 w-3.5" /> Manual Litecoin fallback
+              </div>
+              <h2 className="text-2xl font-bold">Need manual payment?</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                If the automatic invoice is unavailable, send proof in Discord. Admin can manually grant Lifetime from the Admin Panel after checking the transaction.
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/60 bg-background/70 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manual process</p>
+              <ol className="mt-3 space-y-2 text-sm text-foreground">
+                <li>1. Create an account and keep your email ready.</li>
+                <li>2. Open Discord and request a Litecoin invoice.</li>
+                <li>3. Send transaction hash after payment.</li>
+                <li>4. Admin grants Lifetime after confirmation.</li>
+              </ol>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="gap-2" onClick={copyManualAddress}>
+                  <Copy className="h-4 w-4" /> Copy note
+                </Button>
+                <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer">
+                  <Button type="button" className="w-full gap-2 sm:w-auto">
+                    Discord <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
