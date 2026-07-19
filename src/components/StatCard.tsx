@@ -15,16 +15,16 @@ export function StatCard({ title, value, icon: Icon, change, changeType = "neutr
   const animatedValue = useAnimatedCounter(numericValue);
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 transition-all duration-300 hover:border-primary/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5">
+    <div className="group relative overflow-hidden rounded-lg border border-border/70 bg-card/90 p-5 shadow-[var(--shadow-card)] transition-all duration-300 hover:border-primary/35 hover:-translate-y-0.5">
       {/* Top accent */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/55 via-55% to-accent/40 opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
       
       {/* Glow effect */}
-      <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-accent/[0.025] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{title}</p>
           <p className="mt-2 text-3xl font-bold tracking-tight text-foreground">
             {typeof value === "number" ? animatedValue : value}
           </p>
@@ -41,7 +41,7 @@ export function StatCard({ title, value, icon: Icon, change, changeType = "neutr
             </p>
           )}
         </div>
-        <div className="rounded-xl bg-primary/10 p-2.5 transition-all duration-300 group-hover:bg-primary/15 group-hover:scale-110 group-hover:shadow-md group-hover:shadow-primary/10">
+        <div className="rounded-md border border-primary/15 bg-primary/10 p-2.5 transition-all duration-300 group-hover:bg-primary/15 group-hover:scale-105">
           <Icon className="h-5 w-5 text-primary" />
         </div>
       </div>

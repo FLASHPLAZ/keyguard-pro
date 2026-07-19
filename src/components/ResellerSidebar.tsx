@@ -67,12 +67,12 @@ export function ResellerSidebar() {
     <TooltipProvider>
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300",
+          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar/95 shadow-[18px_0_55px_-40px_hsl(0_0%_0%/0.85)] backdrop-blur-xl transition-all duration-300",
           collapsed ? "w-[68px]" : "w-60"
         )}
       >
-        <div className="relative flex h-16 items-center gap-3 border-b border-border px-4">
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md shadow-primary/20">
+        <div className="relative flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/10">
             <Users className="h-4 w-4 text-primary-foreground" />
           </div>
           {!collapsed && (
@@ -92,9 +92,9 @@ export function ResellerSidebar() {
           ))}
         </nav>
 
-        <div className="border-t border-border p-2 space-y-1">
+        <div className="border-t border-sidebar-border p-2 space-y-1">
           {!collapsed && user && (
-            <div className="flex items-center gap-2 rounded-lg bg-secondary/30 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-md border border-sidebar-border bg-secondary/35 px-3 py-2">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary uppercase">
                 {user.email?.charAt(0) || "U"}
               </div>
@@ -127,7 +127,7 @@ export function ResellerSidebar() {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex h-10 items-center justify-center border-t border-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all duration-200"
+          className="flex h-10 items-center justify-center border-t border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all duration-200"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
