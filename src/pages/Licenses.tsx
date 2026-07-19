@@ -44,7 +44,7 @@ export default function Licenses() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
-  const isAdminRoute = location.pathname.startsWith("/admin") || location.pathname === "/licenses";
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   const fetchData = async () => {
     if (!user) return;
