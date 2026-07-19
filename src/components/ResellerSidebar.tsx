@@ -5,7 +5,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Users,
   ScrollText,
   Sparkles,
 } from "lucide-react";
@@ -13,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/reseller" },
@@ -72,9 +72,7 @@ export function ResellerSidebar() {
         )}
       >
         <div className="relative flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-gradient-to-br from-primary to-accent shadow-md shadow-primary/10">
-            <Users className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <BrandLogo size="sm" showText={false} />
           {!collapsed && (
             <div className="min-w-0">
               <span className="block text-sm font-bold tracking-tight text-foreground truncate">GX Auth</span>

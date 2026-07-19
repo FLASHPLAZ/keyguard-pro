@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Wrench } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function MaintenanceGate({ children }: { children: React.ReactNode }) {
   const { role } = useAuth();
+  const location = useLocation();
   const [maintenance, setMaintenance] = useState<{ enabled: boolean; message: string } | null>(null);
+  const publicAllowed = ["/", "/login", "/signup"].includes(location.pathname);
 
   useEffect(() => {
     let mounted = true;
@@ -47,7 +50,7 @@ export function MaintenanceGate({ children }: { children: React.ReactNode }) {
     return () => { mounted = false; };
   }, []);
 
-  if (maintenance?.enabled && role !== "admin") {
+  if (maintenance?.enabled && role !== "admin" && !publicAllowed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
         <div className="max-w-md rounded-lg border border-border/70 bg-card/90 p-8 text-center shadow-[var(--shadow-card)]">

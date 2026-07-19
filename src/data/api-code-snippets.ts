@@ -1,7 +1,6 @@
 const API_BASE = "https://gxauth.xyz/api";
 
 export const pythonSnippet = `import requests
-import subprocess
 import hashlib
 import hmac
 import socket
@@ -19,11 +18,9 @@ SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
 APPLICATION_ID = ""  # Set your application UUID here (from dashboard)
 
 def get_hwid():
-    """Get a unique hardware ID (Windows)"""
-    result = subprocess.check_output(
-        'wmic csproduct get uuid', shell=True
-    ).decode().split('\\n')[1].strip()
-    return hashlib.md5(result.encode()).hexdigest()[:12]
+    """Create a stable device fingerprint without deprecated shell commands."""
+    raw = f"{socket.gethostname()}:{os.getenv('USERNAME') or os.getenv('USER') or ''}:{sys.platform}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 def get_device_name():
     return socket.gethostname()
@@ -133,7 +130,6 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Management;
 using System.Security.Cryptography;
 
 class LicenseValidator
@@ -146,15 +142,10 @@ class LicenseValidator
 
     static string GetHWID()
     {
-        var searcher = new ManagementObjectSearcher("SELECT UUID FROM Win32_ComputerSystemProduct");
-        foreach (var obj in searcher.Get())
-        {
-            var uuid = obj["UUID"]?.ToString() ?? "";
-            using var md5 = MD5.Create();
-            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(uuid));
-            return BitConverter.ToString(hash).Replace("-", "").Substring(0, 12).ToLower();
-        }
-        return "unknown";
+        var raw = $"{Environment.MachineName}:{Environment.UserName}:{Environment.OSVersion.Platform}";
+        using var sha = SHA256.Create();
+        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
+        return BitConverter.ToString(hash).Replace("-", "").Substring(0, 16).ToLower();
     }
 
     static string GetDeviceName() => Environment.MachineName;
@@ -263,7 +254,6 @@ class LicenseValidator
 }`;
 
 export const nodejsSnippet = `const crypto = require('crypto');
-const { execSync } = require('child_process');
 const readline = require('readline');
 const fs = require('fs');
 const os = require('os');
@@ -276,13 +266,16 @@ const SIGNING_SECRET = ""; // Set your app's signing secret here
 const APPLICATION_ID = ""; // Set your application UUID here
 
 function getHWID() {
-  try {
-    const uuid = execSync('wmic csproduct get uuid', { encoding: 'utf-8' })
-      .split('\\n')[1].trim();
-    return crypto.createHash('md5').update(uuid).digest('hex').slice(0, 12);
-  } catch {
-    return 'unknown';
-  }
+  const macs = Object.values(os.networkInterfaces())
+    .flat()
+    .filter(Boolean)
+    .map((item) => item.mac)
+    .filter((mac) => mac && mac !== '00:00:00:00:00:00')
+    .join('|');
+  return crypto.createHash('sha256')
+    .update(\`\${os.hostname()}:\${os.userInfo().username}:\${macs}\`)
+    .digest('hex')
+    .slice(0, 16);
 }
 
 function getDeviceName() {
@@ -406,6 +399,7 @@ export const cppSnippet = `// Requires: libcurl, nlohmann/json, OpenSSL
 #include <fstream>
 #include <string>
 #include <ctime>
+#include <cstdlib>
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <openssl/hmac.h>
@@ -423,21 +417,13 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::stri
 }
 
 std::string getHWID() {
-    #ifdef _WIN32
-    FILE* pipe = _popen("wmic csproduct get uuid", "r");
-    #else
-    FILE* pipe = popen("cat /etc/machine-id", "r");
-    #endif
-    if (!pipe) return "unknown";
-    char buffer[128];
-    std::string result;
-    while (fgets(buffer, sizeof(buffer), pipe)) result += buffer;
-    #ifdef _WIN32
-    _pclose(pipe);
-    #else
-    pclose(pipe);
-    #endif
-    return result.substr(0, 12);
+    const char* machine = std::getenv("COMPUTERNAME");
+    if (!machine) machine = std::getenv("HOSTNAME");
+    std::string raw = machine ? machine : "unknown-device";
+    const char* user = std::getenv("USERNAME");
+    if (!user) user = std::getenv("USER");
+    if (user) raw += std::string(":") + user;
+    return raw.substr(0, 16);
 }
 
 std::string getDeviceName() {
@@ -568,14 +554,13 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/hmac"
-	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -587,17 +572,13 @@ const signingSecret = "" // Set your app's signing secret here
 const applicationID = "" // Set your application UUID here
 
 func getHWID() string {
-	out, err := exec.Command("wmic", "csproduct", "get", "uuid").Output()
-	if err != nil {
-		return "unknown"
+	name, _ := os.Hostname()
+	user := os.Getenv("USERNAME")
+	if user == "" {
+		user = os.Getenv("USER")
 	}
-	lines := strings.Split(string(out), "\\n")
-	if len(lines) < 2 {
-		return "unknown"
-	}
-	uuid := strings.TrimSpace(lines[1])
-	hash := md5.Sum([]byte(uuid))
-	return fmt.Sprintf("%x", hash)[:12]
+	hash := sha256.Sum256([]byte(name + ":" + user + ":" + runtime.GOOS))
+	return fmt.Sprintf("%x", hash)[:16]
 }
 
 func getDeviceName() string {
@@ -748,15 +729,14 @@ public class LicenseValidator {
 
     static String getHWID() {
         try {
-            Process p = Runtime.getRuntime().exec("wmic csproduct get uuid");
-            BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            br.readLine(); // skip header
-            String uuid = br.readLine().trim();
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] hash = md.digest(uuid.getBytes());
+            String raw = java.net.InetAddress.getLocalHost().getHostName()
+                + ":" + System.getProperty("user.name")
+                + ":" + System.getProperty("os.name");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(raw.getBytes());
             StringBuilder sb = new StringBuilder();
             for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString().substring(0, 12);
+            return sb.toString().substring(0, 16);
         } catch (Exception e) {
             return "unknown";
         }
@@ -883,7 +863,6 @@ use sha2::Sha256;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{self, Write};
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
@@ -894,20 +873,13 @@ const SIGNING_SECRET: &str = ""; // Set your app's signing secret here
 const APPLICATION_ID: &str = ""; // Set your application UUID here
 
 fn get_hwid() -> String {
-    let output = Command::new("wmic")
-        .args(["csproduct", "get", "uuid"])
-        .output();
-
-    match output {
-        Ok(out) => {
-            let text = String::from_utf8_lossy(&out.stdout);
-            let uuid = text.lines().nth(1)
-                .unwrap_or("unknown").trim();
-            let hash = md5::compute(uuid.as_bytes());
-            format!("{:x}", hash)[..12].to_string()
-        }
-        Err(_) => "unknown".to_string(),
-    }
+    let host = get_device_name();
+    let user = std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .unwrap_or_default();
+    let raw = format!("{}:{}:{}", host, user, std::env::consts::OS);
+    let hash = md5::compute(raw.as_bytes());
+    format!("{:x}", hash)[..16].to_string()
 }
 
 fn get_device_name() -> String {
