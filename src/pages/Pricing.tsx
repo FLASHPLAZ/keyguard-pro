@@ -1,10 +1,13 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2, Coins, Copy, Crown, ExternalLink, Infinity as InfinityIcon, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, Coins, Crown, Infinity as InfinityIcon, Loader2, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 import discordIcon from "@/assets/discord-icon.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const premiumFeatures = [
   { text: "Unlimited Applications", ok: true },
@@ -39,7 +42,7 @@ const PLANS = [
     price: "$3.99",
     priceSuffix: "per month",
     subtitle: "Same premium features for 30 days. Good for testing the full platform.",
-    cta: "Request Monthly Invoice",
+    cta: "Pay Monthly",
     highlight: false,
     color: "border-primary/40",
     features: [...premiumFeatures, { text: "Expires after 30 days", ok: true }],
@@ -49,7 +52,7 @@ const PLANS = [
     price: "$24.99",
     priceSuffix: "one-time",
     subtitle: "Pay once. Every premium feature stays unlocked forever.",
-    cta: "Request Lifetime Invoice",
+    cta: "Pay Lifetime",
     highlight: true,
     color: "border-primary/70",
     features: [...premiumFeatures, { text: "No renewal or expiry", ok: true }],
@@ -69,7 +72,7 @@ const COMPARE_ROWS: { label: string; free: string | boolean; monthly: string | b
 ];
 
 const FAQS = [
-  { q: "How do Litecoin payments work?", a: "Join Discord, request a Monthly or Lifetime Litecoin invoice, pay it, then send your transaction hash and account email. Admin grants the plan after confirmation." },
+  { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a NOWPayments invoice, then you pay with Litecoin. Your plan activates automatically after the payment is confirmed." },
   { q: "Is Lifetime really one payment?", a: "Yes. Lifetime is $24.99 one-time and has no expiry." },
   { q: "What does Monthly include?", a: "Monthly is $3.99 for 30 days and includes the same premium feature limits as Lifetime." },
   { q: "Can I start free and upgrade later?", a: "Yes. Your apps, keys and logs stay on your account when admin upgrades your plan." },
@@ -82,11 +85,29 @@ function CompareValue({ value, primary = false }: { value: string | boolean; pri
 }
 
 export default function Pricing() {
-  const manualInstructions = "Open https://discord.gg/galaticboosts and request a GX Auth Litecoin invoice. Include your GX Auth account email and desired plan: Monthly $3.99 or Lifetime $24.99.";
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const copyManualInstructions = () => {
-    navigator.clipboard?.writeText(manualInstructions);
-    toast.success("Manual payment instructions copied");
+  const startCheckout = async (plan: "monthly" | "lifetime") => {
+    if (!user) {
+      toast.error("Please sign in before checkout");
+      navigate("/login");
+      return;
+    }
+
+    setLoadingPlan(plan);
+    const { data, error } = await supabase.functions.invoke("create-nowpayments-checkout", {
+      body: { plan, payCurrency: "ltc" },
+    });
+    setLoadingPlan(null);
+
+    if (error || data?.error || !data?.payment_url) {
+      toast.error(data?.error || error?.message || "Could not create NOWPayments invoice");
+      return;
+    }
+
+    window.location.href = data.payment_url;
   };
 
   return (
@@ -106,13 +127,13 @@ export default function Pricing() {
       <section className="relative px-4 pt-16 pb-10 sm:px-6 sm:pt-20">
         <div className="mx-auto max-w-4xl text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Litecoin payments with manual approval
+            <Sparkles className="h-3.5 w-3.5" /> Litecoin checkout with NOWPayments
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.05 }} className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
             Monthly or lifetime. <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">Your choice.</span>
           </motion.h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }} className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Start free, then request a Litecoin invoice for Monthly or Lifetime access. Admin activates your plan after payment proof.
+            Start free, then pay with Litecoin for Monthly or Lifetime access. Your plan unlocks automatically after confirmation.
           </motion.p>
         </div>
       </section>
@@ -150,14 +171,20 @@ export default function Pricing() {
                 </Link>
               ) : (
                 <>
-                  <Button type="button" onClick={copyManualInstructions} className="w-full bg-gradient-to-r from-primary to-primary-glow hover:opacity-90" size="lg">
-                    <Coins className="mr-2 h-4 w-4" />
+                  <Button
+                    type="button"
+                    onClick={() => startCheckout(plan.name.toLowerCase() as "monthly" | "lifetime")}
+                    disabled={loadingPlan === plan.name.toLowerCase()}
+                    className="w-full bg-gradient-to-r from-primary to-primary-glow hover:opacity-90"
+                    size="lg"
+                  >
+                    {loadingPlan === plan.name.toLowerCase() ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Coins className="mr-2 h-4 w-4" />}
                     {plan.cta}
                   </Button>
                   <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="mt-3 block">
                     <Button type="button" variant="outline" className="w-full border-[#5865F2]/40 bg-[#5865F2]/10 hover:bg-[#5865F2]/15" size="lg">
                       <img src={discordIcon} alt="" className="mr-2 h-5 w-5" />
-                      Send proof in Discord
+                      Need help? Join Discord
                     </Button>
                   </a>
                 </>
@@ -199,26 +226,24 @@ export default function Pricing() {
               </div>
               <h2 className="text-2xl font-bold">How manual activation works</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Because this Lovable Supabase project does not expose service-role access, manual approval is the clean payment path right now.
+                GX Auth uses NOWPayments hosted invoices so users never enter payment details on your website. Litecoin is selected by default.
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-background/70 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manual process</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Checkout process</p>
               <ol className="mt-3 space-y-2 text-sm text-foreground">
-                <li>1. Create an account and keep your email ready.</li>
-                <li>2. Request a Monthly or Lifetime Litecoin invoice in Discord.</li>
-                <li>3. Pay and send the transaction hash.</li>
-                <li>4. Admin grants the plan after confirmation.</li>
+                <li>1. Sign in to your GX Auth account.</li>
+                <li>2. Choose Monthly or Lifetime on this page.</li>
+                <li>3. Pay the hosted NOWPayments Litecoin invoice.</li>
+                <li>4. Your plan activates after payment confirmation.</li>
               </ol>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Button type="button" variant="outline" className="gap-2" onClick={copyManualInstructions}>
-                  <Copy className="h-4 w-4" /> Copy steps
+                <Button type="button" variant="outline" className="gap-2" onClick={() => startCheckout("monthly")} disabled={loadingPlan === "monthly"}>
+                  {loadingPlan === "monthly" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />} Monthly checkout
                 </Button>
-                <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer">
-                  <Button type="button" className="w-full gap-2 sm:w-auto">
-                    Discord <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </a>
+                <Button type="button" className="w-full gap-2 sm:w-auto" onClick={() => startCheckout("lifetime")} disabled={loadingPlan === "lifetime"}>
+                  {loadingPlan === "lifetime" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />} Lifetime checkout
+                </Button>
               </div>
             </div>
           </div>
@@ -272,9 +297,10 @@ export default function Pricing() {
           <div className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-8 text-center">
             <Crown className="mx-auto h-6 w-6 text-primary mb-3" />
             <h3 className="text-xl font-bold">Ready to unlock premium?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $3.99 or Lifetime for $24.99.</p>
-            <Button type="button" onClick={copyManualInstructions} size="lg" className="mt-5 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
-              Copy Litecoin invoice steps <ArrowRight className="ml-1 h-4 w-4" />
+            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $3.99 or Lifetime for $24.99. Litecoin checkout opens instantly.</p>
+            <Button type="button" onClick={() => startCheckout("lifetime")} disabled={loadingPlan === "lifetime"} size="lg" className="mt-5 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
+              {loadingPlan === "lifetime" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Unlock Lifetime <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
