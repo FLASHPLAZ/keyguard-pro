@@ -319,7 +319,12 @@ export default function Landing() {
       </div>
 
       {/* Navigation */}
-      <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }} className="sticky top-0 z-50 border-b border-border/40 md:backdrop-blur-xl bg-background/70">
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="sticky top-0 z-50 border-b border-white/10 bg-background/45 shadow-[0_18px_70px_-50px_hsl(var(--primary)/0.75)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/35"
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
             <BrandLogo size="sm" />
@@ -360,7 +365,16 @@ export default function Landing() {
         {/* dramatic radial backdrop */}
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[700px] overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-[520px] bg-[linear-gradient(180deg,hsl(var(--primary)/0.16),transparent_68%)]" />
-          <div className="absolute left-1/2 top-[120px] h-px w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/45 to-accent/25" />
+          <motion.div
+            className="absolute left-1/2 top-[120px] h-px w-[80%] -translate-x-1/2 bg-gradient-to-r from-transparent via-primary/55 to-accent/35"
+            animate={{ opacity: [0.35, 0.9, 0.35], scaleX: [0.78, 1, 0.78] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute left-0 right-0 top-[204px] h-px bg-gradient-to-r from-primary/0 via-primary/25 to-primary/0"
+            animate={{ x: ["-18%", "18%", "-18%"], opacity: [0.12, 0.42, 0.12] }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
 
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">

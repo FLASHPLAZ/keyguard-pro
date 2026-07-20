@@ -19,7 +19,7 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -80,6 +80,10 @@ export default function AdminPanel() {
   const [licensesStatus, setLicensesStatus] = useState("all");
   const [licensesPage, setLicensesPage] = useState(1);
   const [licensesLoading, setLicensesLoading] = useState(false);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentsSearch, setPaymentsSearch] = useState("");
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
 
   // ─── Recent logs ───
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
@@ -102,6 +106,7 @@ export default function AdminPanel() {
     if (activeTab === "tenants" && tenants.length === 0) loadTenants();
     if (activeTab === "all-apps" && allApps.length === 0) loadAllApps();
     if (activeTab === "all-licenses" && allLicenses.length === 0) loadAllLicenses();
+    if (activeTab === "payments" && payments.length === 0) loadPayments();
     if (activeTab === "ops") {
       loadSecurityLists();
       loadMaintenanceSettings();
@@ -241,6 +246,26 @@ export default function AdminPanel() {
     setLicensesLoading(false);
   }
 
+  async function loadPayments() {
+    setPaymentsLoading(true);
+    const [{ data: paymentsData, error }, { data: profiles }] = await Promise.all([
+      supabase
+        .from("payment_transactions" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase.from("profiles").select("user_id, email, username"),
+    ]);
+    if (error) {
+      toast.error("Failed to load payments: " + error.message);
+      setPaymentsLoading(false);
+      return;
+    }
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    setPayments((paymentsData || []).map((payment: any) => ({ ...payment, owner_profile: profileMap.get(payment.user_id) || null })));
+    setPaymentsLoading(false);
+  }
+
   async function suspendTenant(id: string, suspended: boolean) {
     const { error } = await supabase.from("tenants").update({ suspended: !suspended }).eq("id", id);
     if (error) { toast.error(error.message); return; }
@@ -309,6 +334,11 @@ export default function AdminPanel() {
   function viewUser(target: any) {
     setSelectedUser(target);
     toast.info("Opened admin user view. Full account login needs the impersonate-user Edge Function deployed.");
+  }
+
+  async function copyText(value: string, label: string) {
+    await navigator.clipboard?.writeText(value);
+    toast.success(`${label} copied`);
   }
 
   async function loadSecurityLists() {
@@ -432,6 +462,20 @@ export default function AdminPanel() {
     return matchesSearch && matchesStatus;
   });
   const paginatedLicenses = filteredLicenses.slice((licensesPage - 1) * PAGE_SIZE, licensesPage * PAGE_SIZE);
+  const filteredPayments = payments.filter((payment: any) => {
+    const s = paymentsSearch.toLowerCase();
+    return (payment.order_id || "").toLowerCase().includes(s) ||
+      (payment.payment_id || "").toLowerCase().includes(s) ||
+      (payment.status || "").toLowerCase().includes(s) ||
+      (payment.plan || "").toLowerCase().includes(s) ||
+      (payment.pay_address || "").toLowerCase().includes(s) ||
+      (payment.owner_profile?.email || "").toLowerCase().includes(s) ||
+      (payment.owner_profile?.username || "").toLowerCase().includes(s);
+  });
+  const paginatedPayments = filteredPayments.slice((paymentsPage - 1) * PAGE_SIZE, paymentsPage * PAGE_SIZE);
+  const confirmedPayments = payments.filter((payment: any) => ["confirmed", "finished"].includes(String(payment.status || "").toLowerCase()));
+  const waitingPayments = payments.filter((payment: any) => !["confirmed", "finished", "failed", "expired", "refunded"].includes(String(payment.status || "").toLowerCase()));
+  const paymentRevenue = confirmedPayments.reduce((sum: number, payment: any) => sum + Number(payment.price_amount || 0), 0);
   const filteredLogs = recentLogs.filter((log: any) => {
     const s = logsSearch.toLowerCase();
     return (log.action || "").toLowerCase().includes(s) ||
@@ -490,6 +534,7 @@ export default function AdminPanel() {
             <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
+            <TabsTrigger value="payments" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Payments</TabsTrigger>
             <TabsTrigger value="all-apps" className="gap-1.5 text-xs"><AppWindow className="h-3.5 w-3.5" />All Apps</TabsTrigger>
             <TabsTrigger value="all-licenses" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" />All Licenses</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Audit Logs</TabsTrigger>
@@ -970,6 +1015,119 @@ export default function AdminPanel() {
                 <TablePagination currentPage={licensesPage} totalItems={filteredLicenses.length} pageSize={PAGE_SIZE} onPageChange={setLicensesPage} />
               </>
             )}
+          </TabsContent>
+          <TabsContent value="payments" className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">NOWPayments Control</h2>
+                <p className="text-xs text-muted-foreground">Track Litecoin checkouts, confirmations, plan activation, and manual follow-up.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadPayments}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Refresh
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-4">
+              <StatMini label="Total Payments" value={payments.length} icon={CreditCard} />
+              <StatMini label="Confirmed" value={confirmedPayments.length} icon={CheckCircle} color="text-emerald-400" />
+              <StatMini label="Waiting" value={waitingPayments.length} icon={Clock} color="text-yellow-400" />
+              <StatMini label="Revenue" value={`$${paymentRevenue.toFixed(2)}`} icon={TrendingUp} color="text-primary" />
+            </div>
+
+            <Card className="border-border/60 bg-card/80">
+              <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-sm">Payment Ledger</CardTitle>
+                  <p className="mt-1 text-xs text-muted-foreground">Search by user, order, payment id, status, plan, or wallet address.</p>
+                </div>
+                <div className="relative w-full sm:w-96">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search payments..."
+                    value={paymentsSearch}
+                    onChange={(e) => setPaymentsSearch(e.target.value)}
+                    className="bg-secondary border-border pl-10"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {paymentsLoading ? (
+                  <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+                ) : (
+                  <>
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[1050px] text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-secondary/50">
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">USD / LTC</th>
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Payment</th>
+                              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedPayments.map((payment: any) => {
+                              const status = String(payment.status || "waiting").toLowerCase();
+                              const isConfirmed = ["confirmed", "finished"].includes(status);
+                              return (
+                                <tr key={payment.id} className="border-b border-border/50 hover:bg-secondary/30">
+                                  <td className="px-4 py-3">
+                                    <p className="text-xs font-medium text-foreground">{payment.owner_profile?.email || payment.user_id || "Unknown user"}</p>
+                                    {payment.owner_profile?.username && <p className="text-[11px] text-muted-foreground">{payment.owner_profile.username}</p>}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <Badge variant="outline" className="capitalize text-[10px]">{payment.plan || "unknown"}</Badge>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <p className="text-xs text-foreground">${Number(payment.price_amount || 0).toFixed(2)}</p>
+                                    <p className="font-mono text-[11px] text-primary">{payment.pay_amount || "-"} {String(payment.pay_currency || "ltc").toUpperCase()}</p>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-[10px] ${isConfirmed ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300" : status === "failed" || status === "expired" ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-yellow-400/30 bg-yellow-400/10 text-yellow-300"}`}
+                                    >
+                                      {status}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="space-y-1">
+                                      <button type="button" onClick={() => copyText(payment.order_id || "", "Order ID")} className="flex max-w-[280px] items-center gap-1 text-left font-mono text-[11px] text-muted-foreground hover:text-primary">
+                                        <span className="truncate">{payment.order_id || "No order"}</span>
+                                        <Copy className="h-3 w-3 shrink-0" />
+                                      </button>
+                                      {payment.payment_id && (
+                                        <button type="button" onClick={() => copyText(String(payment.payment_id), "Payment ID")} className="flex max-w-[280px] items-center gap-1 text-left font-mono text-[11px] text-muted-foreground hover:text-primary">
+                                          <span className="truncate">{payment.payment_id}</span>
+                                          <Copy className="h-3 w-3 shrink-0" />
+                                        </button>
+                                      )}
+                                      {payment.pay_address && (
+                                        <button type="button" onClick={() => copyText(payment.pay_address, "LTC address")} className="flex max-w-[280px] items-center gap-1 text-left font-mono text-[11px] text-primary hover:text-primary-glow">
+                                          <span className="truncate">{payment.pay_address}</span>
+                                          <Copy className="h-3 w-3 shrink-0" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-muted-foreground">{payment.created_at ? formatDate(payment.created_at) : "-"}</td>
+                                </tr>
+                              );
+                            })}
+                            {paginatedPayments.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No payments found</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <TablePagination currentPage={paymentsPage} totalItems={filteredPayments.length} pageSize={PAGE_SIZE} onPageChange={setPaymentsPage} />
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="logs" className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
