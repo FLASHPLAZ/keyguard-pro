@@ -1,11 +1,11 @@
 {
   "rewrites": [
-    { "source": "/api/validate", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/validate" },
-    { "source": "/api/heartbeat", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/heartbeat" },
-    { "source": "/api/reset-hwid", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/reset-hwid" },
-    { "source": "/api/create-reseller", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/create-reseller" },
-    { "source": "/api/notify-discord", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/notify-discord" },
-    { "source": "/api/check-license", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-license" },
+    { "source": "/api/validate", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/validate" },
+    { "source": "/api/heartbeat", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/heartbeat" },
+    { "source": "/api/reset-hwid", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/reset-hwid" },
+    { "source": "/api/create-reseller", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/create-reseller" },
+    { "source": "/api/notify-discord", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/notify-discord" },
+    { "source": "/api/check-license", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/check-license" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

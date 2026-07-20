@@ -240,6 +240,15 @@ export default function Applications() {
                 <p className="text-xs text-muted-foreground">
                   When enabled, all validation requests must include a valid HMAC-SHA256 signature. Unsigned requests will be rejected.
                 </p>
+                <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">Signing formula</p>
+                  <code className="mt-1 block break-all font-mono text-primary">
+                    HMAC_SHA256(secret, timestamp + "." + nonce + "." + exact_json_body)
+                  </code>
+                  <p className="mt-2">
+                    Important: sign the exact JSON string you send in the POST body. If your code signs pretty JSON but sends minified JSON, the signature will fail.
+                  </p>
+                </div>
 
                 {detailApp.signing_secret && (
                   <div>

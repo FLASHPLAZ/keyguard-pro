@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,8 @@ type ClientLicense = {
 
 export default function ClientEmails() {
   const { user } = useAuth();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
   const [rows, setRows] = useState<ClientLicense[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -34,13 +37,16 @@ export default function ClientEmails() {
   const fetchClients = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from("licenses")
       .select("id, owner_email, owner_name, license_key, status, created_at, last_used, application_id, applications(name)")
-      .eq("user_id", user.id)
       .not("owner_email", "is", null)
       .neq("owner_email", "")
       .order("created_at", { ascending: false });
+
+    if (!isAdminRoute) query = query.eq("user_id", user.id);
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error(error.message);
@@ -53,7 +59,7 @@ export default function ClientEmails() {
 
   useEffect(() => {
     fetchClients();
-  }, [user]);
+  }, [user, isAdminRoute]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -109,7 +115,7 @@ export default function ClientEmails() {
               Client Emails
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Buyer emails from your own apps and license keys only.
+              {isAdminRoute ? "Platform-wide buyer emails across all apps and license keys." : "Buyer emails from your own apps and license keys only."}
             </p>
           </div>
           <Button variant="outline" onClick={exportCsv} disabled={filtered.length === 0} className="gap-2">

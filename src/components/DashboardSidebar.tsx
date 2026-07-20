@@ -14,6 +14,7 @@ import {
   Bot,
   Sparkles,
   Crown,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -27,6 +28,7 @@ const navItems = [
   { icon: Shield, label: "Admin Panel", path: "/admin/panel" },
   { icon: AppWindow, label: "Applications", path: "/apps" },
   { icon: Key, label: "Licenses", path: "/licenses" },
+  { icon: Mail, label: "Client Emails", path: "/admin/clients" },
   { icon: Users, label: "Resellers", path: "/resellers" },
   { icon: ShieldCheck, label: "Managers", path: "/managers" },
   { icon: ScrollText, label: "Logs", path: "/logs" },
