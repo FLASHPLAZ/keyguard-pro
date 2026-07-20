@@ -1230,8 +1230,8 @@ fn main() {
 }`;
 
 export const languages = [
-  { id: "python", label: "Python", code: pythonSnippet },
-  { id: "python-cli", label: "Python CLI Gate", code: pythonCliGateSnippet },
+  { id: "python", label: "Python", code: pythonCliGateSnippet },
+  { id: "python-minimal", label: "Python Minimal", code: pythonSnippet },
   { id: "csharp", label: "C# (.NET)", code: csharpSnippet },
   { id: "nodejs", label: "Node.js", code: nodejsSnippet },
   { id: "cpp", label: "C++", code: cppSnippet },
