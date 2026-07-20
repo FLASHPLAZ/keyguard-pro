@@ -16,19 +16,34 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid NOWPayments signature" }, 401);
     }
 
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const status = String(payload.payment_status || payload.status || "").toLowerCase();
     const isPaid = ["finished", "confirmed"].includes(status);
     const orderId = String(payload.order_id || "");
-    if (!orderId || !isPaid) return json({ ok: true, ignored: true, status });
+    if (!orderId) return json({ ok: true, ignored: true, status });
 
     const match = orderId.match(/^gxauth_(monthly|lifetime)_([^_]+)_/);
     const plan = match?.[1] || "lifetime";
     const userId = match?.[2];
     if (!userId) return json({ error: "Invalid order id" }, 400);
+
+    await adminClient
+      .from("payment_transactions")
+      .update({
+        status: status || "unknown",
+        invoice_id: String(payload.invoice_id || payload.id || ""),
+        payment_id: String(payload.payment_id || ""),
+        pay_currency: String(payload.pay_currency || payload.pay_currency_from || "ltc").toLowerCase(),
+        actually_paid: Number(payload.actually_paid || payload.outcome_amount || 0) || null,
+        raw_payload: payload,
+      } as any)
+      .eq("order_id", orderId);
+
+    if (!isPaid) return json({ ok: true, tracked: true, status });
+
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 30);
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const patch = {
       plan,
       billing_cycle: plan === "monthly" ? "monthly" : "lifetime",
