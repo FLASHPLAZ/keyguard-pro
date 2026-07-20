@@ -466,6 +466,26 @@ export default function ApiDocs() {
         <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
           <Code2 className="h-5 w-5 text-primary" /> Client Integration Examples
         </h2>
+        <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-primary/25 bg-primary/10 p-4">
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Signed Body Rule</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Sign the exact JSON string you send. If your client signs formatted JSON but posts minified JSON, HMAC will fail.
+            </p>
+          </div>
+          <div className="rounded-lg border border-primary/25 bg-primary/10 p-4">
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Required Headers</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              HMAC apps must send <code className="text-primary">X-Signature</code>, <code className="text-primary">X-Timestamp</code>, and <code className="text-primary">X-Nonce</code>.
+            </p>
+          </div>
+          <div className="rounded-lg border border-primary/25 bg-primary/10 p-4">
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Replay Protection</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Timestamps expire after 60 seconds and each nonce can only be used once per application.
+            </p>
+          </div>
+        </div>
         <Tabs value={activeLang} onValueChange={setActiveLang}>
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <TabsList className="flex-wrap h-auto">

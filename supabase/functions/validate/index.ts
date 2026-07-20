@@ -166,6 +166,7 @@ async function checkRateLimit(supabase: any, ip: string, max: number, windowMinu
 async function trackIpAndCheckSharing(
   supabase: any, licenseId: string, ip: string, threshold: number, autoBan: boolean
 ): Promise<{ shouldBan: boolean; uniqueIpCount: number }> {
+  if (!ip || ip === "unknown") return { shouldBan: false, uniqueIpCount: 0 };
   // Upsert and count in parallel
   const [_, { count }] = await Promise.all([
     supabase.from("license_ips").upsert(
@@ -175,7 +176,7 @@ async function trackIpAndCheckSharing(
     supabase.from("license_ips").select("id", { count: "exact", head: true }).eq("license_id", licenseId),
   ]);
   const uniqueIpCount = count || 0;
-  if (autoBan && uniqueIpCount >= threshold) return { shouldBan: true, uniqueIpCount };
+  if (autoBan && threshold > 0 && uniqueIpCount >= threshold) return { shouldBan: true, uniqueIpCount };
   return { shouldBan: false, uniqueIpCount };
 }
 
@@ -497,7 +498,7 @@ Deno.serve(async (req) => {
         "🔨 Auto-Banned (IP Sharing)",
         { ...embedBase, "🖥️ HWID": hwid || license.hwid, "🌐 Unique IPs": uniqueIpCount, "⚙️ Threshold": settings.ipChangeThreshold }
       , startTime, true);
-      return jsonResponse({ valid: false, error: "License banned for sharing" }, 403);
+      return jsonResponse({ valid: false, error: "License banned for sharing", unique_ip_count: uniqueIpCount, ip_change_threshold: settings.ipChangeThreshold }, 403);
     }
 
     // ── SUCCESS — update license fire-and-forget ──

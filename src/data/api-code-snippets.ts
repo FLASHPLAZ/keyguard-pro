@@ -128,6 +128,182 @@ if __name__ == "__main__":
     # Your app code here
 `;
 
+export const pythonCliGateSnippet = `import hashlib
+import hmac
+import itertools
+import json
+import os
+import secrets
+import socket
+import sys
+import threading
+import time
+
+import requests
+
+API_URL = "${API_BASE}/validate"
+HEARTBEAT_URL = "${API_BASE}/heartbeat"
+HEARTBEAT_INTERVAL = 30
+LICENSE_FILE = "license.dat"
+
+SIGNING_SECRET = ""  # Paste your app signing secret when HMAC is enabled
+APPLICATION_ID = ""  # Paste your application UUID
+
+APP_NAME = "MY APP"
+APP_TAGLINE = "Protected by GX Auth"
+
+
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
+
+
+def print_banner():
+    print()
+    print("  " + APP_NAME.upper())
+    print("  " + APP_TAGLINE)
+    print("  " + "-" * max(len(APP_NAME), len(APP_TAGLINE)))
+    print()
+
+
+class Spinner:
+    def __init__(self, message="Validating license"):
+        self.message = message
+        self._stop_event = threading.Event()
+        self._thread = None
+        self._frames = itertools.cycle("|/-\\\\")
+
+    def _spin(self):
+        while not self._stop_event.is_set():
+            sys.stdout.write(f"\\r  {next(self._frames)} {self.message}...")
+            sys.stdout.flush()
+            time.sleep(0.08)
+
+    def start(self):
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join()
+        sys.stdout.write("\\r" + " " * (len(self.message) + 20) + "\\r")
+        sys.stdout.flush()
+
+
+def get_hwid():
+    raw = f"{socket.gethostname()}:{os.getenv('USERNAME') or os.getenv('USER') or ''}:{sys.platform}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def load_saved_key():
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r", encoding="utf-8") as file:
+            return file.read().strip()
+    return None
+
+
+def save_key(key):
+    with open(LICENSE_FILE, "w", encoding="utf-8") as file:
+        file.write(key)
+
+
+def sign_request(body_str, secret):
+    timestamp = str(int(time.time()))
+    nonce = secrets.token_hex(16)
+    signature = hmac.new(
+        secret.encode(),
+        f"{timestamp}.{nonce}.{body_str}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return signature, timestamp, nonce
+
+
+def build_headers(body_str):
+    headers = {"Content-Type": "application/json"}
+    if SIGNING_SECRET:
+        signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
+        headers["X-Signature"] = signature
+        headers["X-Timestamp"] = timestamp
+        headers["X-Nonce"] = nonce
+    return headers
+
+
+def validate_license(key):
+    spinner = Spinner()
+    spinner.start()
+    try:
+        payload = {
+            "license_key": key.strip(),
+            "hwid": get_hwid(),
+            "device_name": socket.gethostname(),
+        }
+        if APPLICATION_ID:
+            payload["application_id"] = APPLICATION_ID
+
+        body_str = json.dumps(payload, separators=(",", ":"))
+        response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=10)
+        data = response.json()
+        spinner.stop()
+
+        if data.get("valid"):
+            print("  [OK] License verified")
+            print(f"       App     : {data.get('app', 'Unknown')}")
+            print(f"       Expires : {data.get('expires_readable', data.get('expires', 'Unknown'))}")
+            print(f"       HWID    : {data.get('hwid', get_hwid())}")
+            return True
+
+        print(f"  [X]  {data.get('error', 'Invalid license')}")
+        return False
+    except Exception as error:
+        spinner.stop()
+        print(f"  [!] Connection error: {error}")
+        return False
+
+
+def heartbeat_loop(key):
+    while True:
+        time.sleep(HEARTBEAT_INTERVAL)
+        try:
+            payload = {"license_key": key.strip()}
+            if APPLICATION_ID:
+                payload["application_id"] = APPLICATION_ID
+            response = requests.post(HEARTBEAT_URL, json=payload, timeout=5)
+            data = response.json()
+            if not data.get("active"):
+                clear_screen()
+                print_banner()
+                print(f"  [X] License disabled: {data.get('reason', 'License no longer active')}")
+                os._exit(1)
+        except Exception:
+            pass
+
+
+def license_gate():
+    clear_screen()
+    print_banner()
+    saved = load_saved_key()
+    key = saved or input("  License key > ").strip()
+
+    if not validate_license(key):
+        print("\\n  [X] Startup aborted - license is invalid or unreachable.")
+        sys.exit(1)
+
+    if not saved and input("\\n  Save license on this device? [y/N] > ").strip().lower() == "y":
+        save_key(key)
+        print("  [OK] License saved")
+
+    threading.Thread(target=heartbeat_loop, args=(key,), daemon=True).start()
+    print(f"  [*] Protection active - checking every {HEARTBEAT_INTERVAL} seconds")
+    print("  [OK] Authorization complete")
+    time.sleep(1.2)
+    clear_screen()
+
+
+if __name__ == "__main__":
+    license_gate()
+    # Start your app below this line.
+`;
+
 export const csharpSnippet = `using System;
 using System.IO;
 using System.Net.Http;
@@ -1055,6 +1231,7 @@ fn main() {
 
 export const languages = [
   { id: "python", label: "Python", code: pythonSnippet },
+  { id: "python-cli", label: "Python CLI Gate", code: pythonCliGateSnippet },
   { id: "csharp", label: "C# (.NET)", code: csharpSnippet },
   { id: "nodejs", label: "Node.js", code: nodejsSnippet },
   { id: "cpp", label: "C++", code: cppSnippet },

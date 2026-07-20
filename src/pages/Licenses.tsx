@@ -270,9 +270,10 @@ export default function Licenses() {
     const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
     await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
+    await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
-    toast.success("License unbanned");
-    notifyDiscord("License unbanned", { Key: licenseKey, App: appName, HWID: hwid || "N/A" });
+    toast.success("License unbanned and IP history cleared");
+    notifyDiscord("License unbanned", { Key: licenseKey, App: appName, HWID: hwid || "N/A", "IP History": "Cleared" });
     fetchData();
   };
 
@@ -280,9 +281,10 @@ export default function Licenses() {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
     await supabase.from("licenses").update({ hwid: null }).eq("id", id);
+    await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
-    toast.success("HWID reset");
-    notifyDiscord("HWID reset", { Key: licenseKey, App: appName, "Old HWID": lic?.hwid || "N/A" });
+    toast.success("HWID and IP history reset");
+    notifyDiscord("HWID reset", { Key: licenseKey, App: appName, "Old HWID": lic?.hwid || "N/A", "IP History": "Cleared" });
     fetchData();
   };
 
