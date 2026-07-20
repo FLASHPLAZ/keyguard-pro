@@ -38,6 +38,8 @@ const DEFAULT_SETTINGS: SettingsState = {
   bot_api_key: "",
 };
 
+const USER_SETTING_KEYS: (keyof SettingsState)[] = ["discord_webhook_url", "bot_api_key"];
+
 interface BlacklistEntry {
   id: string;
   type: string;
@@ -50,6 +52,7 @@ interface BlacklistEntry {
 export default function SettingsPage() {
   const { user, role } = useAuth();
   const isAdmin = role === "admin";
+  const showPlatformControls = false;
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,13 +74,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings();
-    loadBlacklist();
-    loadResellerKeys();
-  }, [user]);
+    if (isAdmin) {
+      loadBlacklist();
+      loadResellerKeys();
+    }
+  }, [user, isAdmin]);
 
   async function loadSettings() {
+    if (!user) return;
     try {
-      const { data, error } = await supabase.from("settings").select("key, value");
+      const { data, error } = await supabase
+        .from("settings")
+        .select("key, value")
+        .eq("user_id", user.id)
+        .in("key", USER_SETTING_KEYS);
       if (error) throw error;
       if (data) {
         const loaded = { ...DEFAULT_SETTINGS };
@@ -122,9 +132,9 @@ export default function SettingsPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      await Promise.all(Object.entries(settings).map(([key, value]) => saveSetting(key, value)));
+      await Promise.all(USER_SETTING_KEYS.map((key) => saveSetting(key, settings[key])));
       toast.success("Settings saved successfully");
-      notifyDiscord("Settings updated", { "Rate Limit": settings.rate_limit_max, "Window": settings.rate_limit_window + "m", "IP Threshold": settings.ip_change_threshold, "Auto-Ban": settings.auto_ban_enabled });
+      notifyDiscord("Notification settings updated", {});
     } catch { toast.error("Failed to save settings"); }
     finally { setSaving(false); }
   }
@@ -236,7 +246,7 @@ export default function SettingsPage() {
       <div className="mb-8 flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-sm text-muted-foreground">System configuration & security</p>
+          <p className="text-sm text-muted-foreground">Account integrations and notification settings</p>
         </div>
         <button
           onClick={handleSave}
@@ -250,7 +260,7 @@ export default function SettingsPage() {
 
       <div className="space-y-6">
         {/* Row: General + Rate Limiting — admin only */}
-        {isAdmin && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {showPlatformControls && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* General */}
           <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up">
             <div className="mb-4 flex items-center gap-2">
@@ -385,7 +395,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Anti-Sharing — admin only */}
-          {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
+          {showPlatformControls && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "300ms" }}>
             <div className="mb-4 flex items-center gap-2">
               <Lock className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Anti-Sharing Protection</h3>
@@ -416,7 +426,7 @@ export default function SettingsPage() {
         </div>
 
         {/* IP/HWID Blacklist */}
-        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
+        {showPlatformControls && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "400ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldBan className="h-4 w-4 text-destructive" />
@@ -491,7 +501,7 @@ export default function SettingsPage() {
         </div>}
 
         {/* Reseller Generated Keys */}
-        {isAdmin && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
+        {showPlatformControls && <div className="rounded-lg border border-border bg-card p-4 sm:p-6 glow-hover animate-fade-in-up" style={{ animationDelay: "500ms" }}>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />

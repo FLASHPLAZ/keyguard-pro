@@ -52,14 +52,15 @@ export default function Dashboard() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const [appsRes, licensesRes, resellersRes, logsRes, latestLicRes, resellerDetailRes, validationLogsRes] = await Promise.all([
-      supabase.from("applications").select("id", { count: "exact", head: true }),
-      supabase.from("licenses").select("id, status", { count: "exact" }),
-      supabase.from("resellers").select("id", { count: "exact", head: true }),
-      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(5),
-      supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }).limit(5),
-      supabase.from("resellers").select("*").order("created_at", { ascending: false }),
+      supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("licenses").select("id, status", { count: "exact" }).eq("user_id", user.id),
+      supabase.from("resellers").select("id", { count: "exact", head: true }).eq("admin_id", user.id),
+      supabase.from("activity_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
+      supabase.from("licenses").select("*, applications(name)").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
+      supabase.from("resellers").select("*").eq("admin_id", user.id).order("created_at", { ascending: false }),
       supabase.from("activity_logs")
         .select("created_at")
+        .eq("user_id", user.id)
         .in("action", ["License Login", "First Login — HWID Bound"])
         .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: true }),

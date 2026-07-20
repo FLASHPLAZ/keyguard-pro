@@ -45,7 +45,7 @@ export default function Logs() {
     if (!user) return;
     (async () => {
       const { data: logsData } = await supabase
-        .from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000);
+        .from("activity_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1000);
       const list = logsData || [];
       setLogs(list);
       const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));

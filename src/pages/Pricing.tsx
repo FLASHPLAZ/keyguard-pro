@@ -40,9 +40,9 @@ const PLANS = [
   },
   {
     name: "Monthly",
-    price: "$3.99",
+    price: "$5.00",
     priceSuffix: "per month",
-    subtitle: "Same premium features for 30 days. Good for testing the full platform.",
+    subtitle: "Same premium features for 30 days with NOWPayments minimum-safe checkout.",
     cta: "Pay Monthly",
     highlight: false,
     color: "border-primary/40",
@@ -75,7 +75,7 @@ const COMPARE_ROWS: { label: string; free: string | boolean; monthly: string | b
 const FAQS = [
   { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a NOWPayments LTC payment, then you send the exact amount to the shown address. Your plan activates automatically after the payment is confirmed." },
   { q: "Is Lifetime really one payment?", a: "Yes. Lifetime is $24.99 one-time and has no expiry." },
-  { q: "What does Monthly include?", a: "Monthly is $3.99 for 30 days and includes the same premium feature limits as Lifetime." },
+  { q: "What does Monthly include?", a: "Monthly is $5.00 for 30 days and includes the same premium feature limits as Lifetime." },
   { q: "Can I start free and upgrade later?", a: "Yes. Your apps, keys and logs stay on your account when admin upgrades your plan." },
 ];
 
@@ -339,7 +339,7 @@ export default function Pricing() {
           <div className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-8 text-center">
             <Crown className="mx-auto h-6 w-6 text-primary mb-3" />
             <h3 className="text-xl font-bold">Ready to unlock premium?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $3.99 or Lifetime for $24.99. Litecoin checkout opens instantly.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $5.00 or Lifetime for $24.99. Litecoin checkout opens instantly.</p>
             <Button type="button" onClick={() => startCheckout("lifetime")} disabled={loadingPlan === "lifetime"} size="lg" className="mt-5 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
               {loadingPlan === "lifetime" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Unlock Lifetime <ArrowRight className="ml-1 h-4 w-4" />
@@ -367,7 +367,7 @@ export default function Pricing() {
                   <span className="font-mono text-3xl font-bold text-foreground">{checkout.pay_amount}</span>
                   <span className="pb-1 text-sm font-semibold uppercase text-primary">{checkout.pay_currency}</span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Plan: {checkout.plan === "monthly" ? "Monthly $3.99" : "Lifetime $24.99"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Plan: {checkout.plan === "monthly" ? "Monthly $5.00" : "Lifetime $24.99"}</p>
               </div>
 
               <div className="space-y-2">

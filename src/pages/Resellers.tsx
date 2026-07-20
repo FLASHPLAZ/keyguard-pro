@@ -37,9 +37,9 @@ export default function Resellers() {
   const fetchData = async () => {
     if (!user) return;
     const [resRes, appRes, creditsRes] = await Promise.all([
-      supabase.from("resellers").select("*").order("created_at", { ascending: false }),
-      supabase.from("applications").select("id, name"),
-      supabase.from("reseller_app_credits").select("*"),
+      supabase.from("resellers").select("*").eq("admin_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("applications").select("id, name").eq("user_id", user.id),
+      supabase.from("reseller_app_credits").select("*, resellers!inner(admin_id)").eq("resellers.admin_id", user.id),
     ]);
     setResellers(resRes.data || []);
     setApps(appRes.data || []);

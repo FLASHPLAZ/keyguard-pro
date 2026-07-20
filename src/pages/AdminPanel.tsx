@@ -81,6 +81,7 @@ export default function AdminPanel() {
   const [licensesPage, setLicensesPage] = useState(1);
   const [licensesLoading, setLicensesLoading] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
+  const [paymentLogs, setPaymentLogs] = useState<any[]>([]);
   const [paymentsSearch, setPaymentsSearch] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -92,6 +93,16 @@ export default function AdminPanel() {
   const [blacklistLicense, setBlacklistLicense] = useState("");
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
+  const [securitySettings, setSecuritySettings] = useState({
+    rate_limit_max: "10",
+    rate_limit_window: "5",
+    heartbeat_rate_limit_max: "60",
+    heartbeat_rate_limit_window: "5",
+    resethwid_rate_limit_max: "10",
+    resethwid_rate_limit_window: "5",
+    ip_change_threshold: "5",
+    auto_ban_enabled: "true",
+  });
   const [blacklistRows, setBlacklistRows] = useState<any[]>([]);
   const [adminBannedLicenses, setAdminBannedLicenses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -248,13 +259,19 @@ export default function AdminPanel() {
 
   async function loadPayments() {
     setPaymentsLoading(true);
-    const [{ data: paymentsData, error }, { data: profiles }] = await Promise.all([
+    const [{ data: paymentsData, error }, { data: profiles }, { data: logsData }] = await Promise.all([
       supabase
         .from("payment_transactions" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase.from("profiles").select("user_id, email, username"),
+      supabase
+        .from("activity_logs")
+        .select("id, user_id, action, metadata, created_at")
+        .ilike("action", "%payment%")
+        .order("created_at", { ascending: false })
+        .limit(80),
     ]);
     if (error) {
       toast.error("Failed to load payments: " + error.message);
@@ -263,6 +280,7 @@ export default function AdminPanel() {
     }
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     setPayments((paymentsData || []).map((payment: any) => ({ ...payment, owner_profile: profileMap.get(payment.user_id) || null })));
+    setPaymentLogs((logsData || []).map((log: any) => ({ ...log, owner_profile: profileMap.get(log.user_id) || null })));
     setPaymentsLoading(false);
   }
 
@@ -359,10 +377,32 @@ export default function AdminPanel() {
     const { data } = await supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["maintenance_mode", "maintenance_message"]);
+      .in("key", [
+        "maintenance_mode",
+        "maintenance_message",
+        "rate_limit_max",
+        "rate_limit_window",
+        "heartbeat_rate_limit_max",
+        "heartbeat_rate_limit_window",
+        "resethwid_rate_limit_max",
+        "resethwid_rate_limit_window",
+        "ip_change_threshold",
+        "auto_ban_enabled",
+      ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
     if (map.has("maintenance_message")) setMaintenanceMessage(map.get("maintenance_message") || maintenanceMessage);
+    setSecuritySettings((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key);
+      });
+      return next;
+    });
+  }
+
+  function updateSecuritySetting(key: keyof typeof securitySettings, value: string) {
+    setSecuritySettings((prev) => ({ ...prev, [key]: value }));
   }
 
   async function addAdminIpBlacklist() {
@@ -426,6 +466,22 @@ export default function AdminPanel() {
     notifyDiscord("Maintenance mode updated", { Enabled: maintenanceEnabled ? "Yes" : "No" });
     localStorage.setItem("gxauth_maintenance_mode", maintenanceEnabled ? "true" : "false");
     localStorage.setItem("gxauth_maintenance_message", maintenanceMessage);
+  }
+
+  async function saveSecuritySettings() {
+    if (!user) return;
+    const { error } = await supabase.from("settings").upsert(
+      Object.entries(securitySettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success("Platform security settings saved");
+    notifyDiscord("Admin updated platform security settings", {
+      "Validate Limit": securitySettings.rate_limit_max,
+      "Heartbeat Limit": securitySettings.heartbeat_rate_limit_max,
+      "IP Threshold": securitySettings.ip_change_threshold,
+      "Auto Ban": securitySettings.auto_ban_enabled,
+    });
   }
 
   // Filtered data
@@ -1128,6 +1184,40 @@ export default function AdminPanel() {
                 )}
               </CardContent>
             </Card>
+
+            <Card className="border-border/60 bg-card/80">
+              <CardHeader>
+                <CardTitle className="text-sm">Invoice Creation Logs</CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">Every checkout/invoice event recorded from the payment flow.</p>
+              </CardHeader>
+              <CardContent>
+                {paymentLogs.length === 0 ? (
+                  <p className="rounded-lg border border-border/60 bg-secondary/30 px-4 py-8 text-center text-sm text-muted-foreground">No payment activity logs yet</p>
+                ) : (
+                  <div className="divide-y divide-border/60 rounded-lg border border-border/60">
+                    {paymentLogs.slice(0, 12).map((log: any) => {
+                      const metadata = log.metadata || {};
+                      return (
+                        <div key={log.id} className="grid gap-2 px-4 py-3 text-xs hover:bg-secondary/30 md:grid-cols-[1fr_auto]">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">{log.action || "Payment event"}</Badge>
+                              <span className="text-muted-foreground">{log.owner_profile?.email || log.user_id || "Unknown user"}</span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted-foreground">
+                              {metadata.order_id && <span>order: {metadata.order_id}</span>}
+                              {metadata.payment_id && <span>payment: {metadata.payment_id}</span>}
+                              {metadata.pay_currency && <span>currency: {String(metadata.pay_currency).toUpperCase()}</span>}
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground">{log.created_at ? formatDate(log.created_at) : "-"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="logs" className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1214,6 +1304,76 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
             </div>
+            <Card className="border-border/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm"><Shield className="h-4 w-4 text-primary" />Platform Rate Limits & Anti-Sharing</CardTitle>
+                <p className="text-xs text-muted-foreground">Admin-only controls used by validate, heartbeat, reset-HWID, and IP sharing detection.</p>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-4 md:grid-cols-3">
+                  {[
+                    ["Validate", "rate_limit_max", "rate_limit_window", 100],
+                    ["Heartbeat", "heartbeat_rate_limit_max", "heartbeat_rate_limit_window", 200],
+                    ["Reset HWID", "resethwid_rate_limit_max", "resethwid_rate_limit_window", 100],
+                  ].map(([label, maxKey, windowKey, max]) => (
+                    <div key={String(label)} className="rounded-lg border border-border/60 bg-secondary/30 p-3">
+                      <p className="mb-3 text-xs font-semibold text-primary">{label} Endpoint</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="space-y-1">
+                          <span className="text-[11px] text-muted-foreground">Max attempts</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={Number(max)}
+                            value={(securitySettings as any)[maxKey as string]}
+                            onChange={(e) => updateSecuritySetting(maxKey as keyof typeof securitySettings, e.target.value)}
+                            className="bg-background border-border"
+                          />
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-[11px] text-muted-foreground">Window min</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={60}
+                            value={(securitySettings as any)[windowKey as string]}
+                            onChange={(e) => updateSecuritySetting(windowKey as keyof typeof securitySettings, e.target.value)}
+                            className="bg-background border-border"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-xs text-muted-foreground">IP change threshold</span>
+                      <Input
+                        type="number"
+                        min={2}
+                        max={50}
+                        value={securitySettings.ip_change_threshold}
+                        onChange={(e) => updateSecuritySetting("ip_change_threshold", e.target.value)}
+                        className="bg-secondary border-border"
+                      />
+                    </label>
+                    <label className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Auto-ban on threshold</span>
+                      <select
+                        value={securitySettings.auto_ban_enabled}
+                        onChange={(e) => updateSecuritySetting("auto_ban_enabled", e.target.value)}
+                        className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground"
+                      >
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                      </select>
+                    </label>
+                  </div>
+                  <Button onClick={saveSecuritySettings} className="w-full md:w-auto">Save Security</Button>
+                </div>
+              </CardContent>
+            </Card>
             <div className="grid gap-4 xl:grid-cols-2">
               <Card className="border-border/60">
                 <CardHeader className="pb-2">

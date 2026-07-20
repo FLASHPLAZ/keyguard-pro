@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const PLANS: Record<string, { amount: number; label: string }> = {
-  monthly: { amount: 3.99, label: "Monthly Access" },
+  monthly: { amount: 5.00, label: "Monthly Access" },
   lifetime: { amount: 24.99, label: "Lifetime Access" },
 };
 
@@ -64,7 +64,13 @@ Deno.serve(async (req) => {
 
     const payment = await response.json();
     if (!response.ok || payment.error) {
-      return json({ error: payment.error || payment.message || "Could not create NOWPayments payment" }, 400);
+      const errorMessage = payment.error || payment.message || "Could not create NOWPayments payment";
+      await adminClient.from("activity_logs").insert({
+        user_id: authUser.user.id,
+        action: "NOWPayments payment failed",
+        metadata: { order_id: orderId, plan, amount, pay_currency: payCurrency, error: errorMessage },
+      } as any);
+      return json({ error: errorMessage }, 400);
     }
     if (!payment.pay_address || !payment.pay_amount) {
       return json({ error: "NOWPayments did not return a Litecoin address. Check your NOWPayments currencies/settings." }, 400);
