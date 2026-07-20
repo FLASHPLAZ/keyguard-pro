@@ -115,13 +115,37 @@ export default function Pricing() {
     }
 
     setLoadingPlan(plan);
-    const { data, error } = await supabase.functions.invoke("create-nowpayments-checkout", {
-      body: { plan, payCurrency: "ltc" },
-    });
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const checkoutUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-nowpayments-checkout`;
+    let data: any = null;
+    let errorMessage = "";
+
+    try {
+      const response = await fetch(checkoutUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ plan, payCurrency: "ltc" }),
+      });
+      const text = await response.text();
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = null;
+      }
+      if (!response.ok) {
+        errorMessage = data?.error || text || `Checkout failed (${response.status})`;
+      }
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : "Could not reach checkout service";
+    }
     setLoadingPlan(null);
 
-    if (error || data?.error || !data?.pay_address || !data?.pay_amount) {
-      toast.error(data?.error || error?.message || "Could not create NOWPayments payment");
+    if (errorMessage || data?.error || !data?.pay_address || !data?.pay_amount) {
+      toast.error(data?.error || errorMessage || "Could not create NOWPayments payment");
       return;
     }
 

@@ -1,4 +1,4 @@
-project_id = "mcpbzkekllhsmtelfvbe"
+project_id = "qygthejhzgbjaawqhuny"
 
 [functions.validate]
 verify_jwt = false
@@ -25,4 +25,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.get-download]
+verify_jwt = false
+
+[functions.create-nowpayments-checkout]
+verify_jwt = false
+
+[functions.nowpayments-webhook]
 verify_jwt = false

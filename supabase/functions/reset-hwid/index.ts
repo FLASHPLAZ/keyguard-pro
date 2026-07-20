@@ -162,6 +162,7 @@ Deno.serve(async (req) => {
 
     const previousHwid = license.hwid;
     await supabase.from("licenses").update({ hwid: null }).eq("id", license.id);
+    await supabase.from("license_ips").delete().eq("license_id", license.id);
 
     // Log the action
     await supabase.from("activity_logs").insert({
@@ -195,6 +196,7 @@ Deno.serve(async (req) => {
               fields: [
                 { name: "🔑 License Key", value: license_key, inline: true },
                 { name: "🖥️ Previous HWID", value: previousHwid, inline: true },
+                { name: "🌐 IP History", value: "Cleared", inline: true },
                 { name: "📱 App", value: (license as any).applications?.name || "Unknown", inline: true },
                 { name: "🌐 IP", value: clientIp, inline: true },
                 { name: "🌍 Country", value: country, inline: true },
@@ -212,6 +214,7 @@ Deno.serve(async (req) => {
       message: "HWID reset successfully",
       license_key,
       previous_hwid: previousHwid,
+      ip_history_cleared: true,
     }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
