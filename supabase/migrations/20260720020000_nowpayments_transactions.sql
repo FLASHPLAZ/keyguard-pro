@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS public.payment_transactions (
   invoice_id text,
   payment_id text,
   payment_url text,
+  pay_address text,
+  pay_amount numeric,
   price_amount numeric(10, 2) NOT NULL,
   price_currency text NOT NULL DEFAULT 'usd',
   pay_currency text NOT NULL DEFAULT 'ltc',
@@ -23,6 +25,10 @@ CREATE TABLE IF NOT EXISTS public.payment_transactions (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE public.payment_transactions
+  ADD COLUMN IF NOT EXISTS pay_address text,
+  ADD COLUMN IF NOT EXISTS pay_amount numeric;
 
 CREATE INDEX IF NOT EXISTS idx_payment_transactions_user_created
   ON public.payment_transactions(user_id, created_at DESC);

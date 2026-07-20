@@ -15,6 +15,7 @@ import {
   Sparkles,
   Code2,
   Crown,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -34,6 +35,7 @@ function useSellerNavItems() {
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", always: true },
     { icon: AppWindow, label: "Applications", path: "/dashboard/apps", always: true },
     { icon: Key, label: "Licenses", path: "/dashboard/licenses", always: true },
+    { icon: Mail, label: "Client Emails", path: "/dashboard/clients", always: true },
     { icon: Users, label: "Resellers", path: "/dashboard/resellers", always: false, minPlan: "seller" },
     { icon: ShieldCheck, label: "Managers", path: "/dashboard/managers", always: false, minPlan: "seller" },
     { icon: ScrollText, label: "Logs", path: "/dashboard/logs", always: true },

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle2, Coins, Crown, Infinity as InfinityIcon, Loader2, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowRight, CheckCircle2, Coins, Copy, Crown, Infinity as InfinityIcon, Loader2, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -72,7 +73,7 @@ const COMPARE_ROWS: { label: string; free: string | boolean; monthly: string | b
 ];
 
 const FAQS = [
-  { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a NOWPayments invoice, then you pay with Litecoin. Your plan activates automatically after the payment is confirmed." },
+  { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a NOWPayments LTC payment, then you send the exact amount to the shown address. Your plan activates automatically after the payment is confirmed." },
   { q: "Is Lifetime really one payment?", a: "Yes. Lifetime is $24.99 one-time and has no expiry." },
   { q: "What does Monthly include?", a: "Monthly is $3.99 for 30 days and includes the same premium feature limits as Lifetime." },
   { q: "Can I start free and upgrade later?", a: "Yes. Your apps, keys and logs stay on your account when admin upgrades your plan." },
@@ -84,10 +85,27 @@ function CompareValue({ value, primary = false }: { value: string | boolean; pri
   return <span className={primary ? "font-medium text-primary" : "font-medium text-foreground/80"}>{value}</span>;
 }
 
+type CheckoutPayment = {
+  payment_id: string;
+  order_id: string;
+  plan: "monthly" | "lifetime";
+  amount: number;
+  pay_currency: string;
+  pay_address: string;
+  pay_amount: string | number;
+  payment_status: string;
+};
+
 export default function Pricing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [checkout, setCheckout] = useState<CheckoutPayment | null>(null);
+
+  const copyText = async (text: string, label: string) => {
+    await navigator.clipboard?.writeText(text);
+    toast.success(`${label} copied`);
+  };
 
   const startCheckout = async (plan: "monthly" | "lifetime") => {
     if (!user) {
@@ -102,12 +120,12 @@ export default function Pricing() {
     });
     setLoadingPlan(null);
 
-    if (error || data?.error || !data?.payment_url) {
-      toast.error(data?.error || error?.message || "Could not create NOWPayments invoice");
+    if (error || data?.error || !data?.pay_address || !data?.pay_amount) {
+      toast.error(data?.error || error?.message || "Could not create NOWPayments payment");
       return;
     }
 
-    window.location.href = data.payment_url;
+    setCheckout(data as CheckoutPayment);
   };
 
   return (
@@ -205,9 +223,9 @@ export default function Pricing() {
         <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
           {[
             { icon: InfinityIcon, label: "Lifetime available" },
-            { icon: ShieldCheck, label: "Manual verification" },
+            { icon: ShieldCheck, label: "Automatic confirmation" },
             { icon: Zap, label: "Fast admin approval" },
-            { icon: Lock, label: "Litecoin invoice proof" },
+            { icon: Lock, label: "Direct LTC payment" },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
               <item.icon className="h-4 w-4 text-primary" />
@@ -222,11 +240,11 @@ export default function Pricing() {
           <div className="grid gap-6 md:grid-cols-[1fr_0.9fr] md:items-center">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <Wallet className="h-3.5 w-3.5" /> Manual Litecoin flow
+                <Wallet className="h-3.5 w-3.5" /> Automatic Litecoin flow
               </div>
-              <h2 className="text-2xl font-bold">How manual activation works</h2>
+              <h2 className="text-2xl font-bold">How payment activation works</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                GX Auth uses NOWPayments hosted invoices so users never enter payment details on your website. Litecoin is selected by default.
+                GX Auth creates a direct NOWPayments Litecoin payment and shows the address inside your dashboard flow, so users avoid the external email prompt.
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-background/70 p-4">
@@ -234,7 +252,7 @@ export default function Pricing() {
               <ol className="mt-3 space-y-2 text-sm text-foreground">
                 <li>1. Sign in to your GX Auth account.</li>
                 <li>2. Choose Monthly or Lifetime on this page.</li>
-                <li>3. Pay the hosted NOWPayments Litecoin invoice.</li>
+                <li>3. Send the exact LTC amount to the shown address.</li>
                 <li>4. Your plan activates after payment confirmation.</li>
               </ol>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -305,6 +323,71 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      <Dialog open={!!checkout} onOpenChange={(open) => !open && setCheckout(null)}>
+        <DialogContent className="border-primary/30 bg-card text-card-foreground sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-primary" />
+              Litecoin payment created
+            </DialogTitle>
+            <DialogDescription>
+              Send the exact amount below. GX Auth activates your plan automatically when NOWPayments confirms the transaction.
+            </DialogDescription>
+          </DialogHeader>
+          {checkout && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-primary/25 bg-primary/10 p-4">
+                <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Amount to send</div>
+                <div className="mt-1 flex flex-wrap items-end gap-2">
+                  <span className="font-mono text-3xl font-bold text-foreground">{checkout.pay_amount}</span>
+                  <span className="pb-1 text-sm font-semibold uppercase text-primary">{checkout.pay_currency}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Plan: {checkout.plan === "monthly" ? "Monthly $3.99" : "Lifetime $24.99"}</p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Litecoin address</div>
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs break-all">
+                    {checkout.pay_address}
+                  </div>
+                  <Button type="button" variant="outline" size="icon" onClick={() => copyText(checkout.pay_address, "Address")}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 rounded-xl border border-border/60 bg-background/60 p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <div className="text-xs text-muted-foreground">Payment ID</div>
+                  <div className="mt-1 truncate font-mono text-xs">{checkout.payment_id}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Status</div>
+                  <div className="mt-1 capitalize text-primary">{checkout.payment_status || "waiting"}</div>
+                </div>
+                <div className="sm:col-span-2">
+                  <div className="text-xs text-muted-foreground">Order ID</div>
+                  <div className="mt-1 flex gap-2">
+                    <div className="min-w-0 flex-1 truncate font-mono text-xs">{checkout.order_id}</div>
+                    <button type="button" className="text-xs text-primary hover:underline" onClick={() => copyText(checkout.order_id, "Order ID")}>Copy</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Link to="/dashboard/billing" className="flex-1">
+                  <Button className="w-full bg-gradient-to-r from-primary to-primary-glow">View payment status</Button>
+                </Link>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setCheckout(null)}>
+                  I will pay now
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
