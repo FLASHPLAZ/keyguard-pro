@@ -38,7 +38,6 @@ Deno.serve(async (req) => {
     const planLabel = PLANS[plan].label;
     const payCurrency = String(body.payCurrency || "ltc").toLowerCase();
     if (!PAY_CURRENCIES.has(payCurrency)) return json({ error: "Unsupported payment currency" }, 400);
-    const origin = req.headers.get("origin") || "https://www.gxauth.xyz";
     const orderId = `gxauth_${plan === "monthly" ? "monthly" : "lifetime"}_${authUser.user.id}_${Date.now()}`;
     const { data: tenant } = await adminClient
       .from("tenants")
@@ -46,7 +45,7 @@ Deno.serve(async (req) => {
       .eq("owner_user_id", authUser.user.id)
       .maybeSingle();
 
-    const response = await fetch("https://api.nowpayments.io/v1/invoice", {
+    const response = await fetch("https://api.nowpayments.io/v1/payment", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -59,29 +58,32 @@ Deno.serve(async (req) => {
         order_id: orderId,
         order_description: `GX Auth ${planLabel}`,
         ipn_callback_url: `${supabaseUrl}/functions/v1/nowpayments-webhook`,
-        success_url: `${origin}/dashboard/billing?payment=success`,
-        cancel_url: `${origin}/pricing?payment=cancelled`,
         is_fixed_rate: true,
       }),
     });
 
-    const invoice = await response.json();
-    if (!response.ok || invoice.error) {
-      return json({ error: invoice.error || invoice.message || "Could not create NOWPayments invoice" }, 400);
+    const payment = await response.json();
+    if (!response.ok || payment.error) {
+      return json({ error: payment.error || payment.message || "Could not create NOWPayments payment" }, 400);
+    }
+    if (!payment.pay_address || !payment.pay_amount) {
+      return json({ error: "NOWPayments did not return a Litecoin address. Check your NOWPayments currencies/settings." }, 400);
     }
 
     const { error: transactionError } = await adminClient.from("payment_transactions").insert({
       user_id: authUser.user.id,
       tenant_id: tenant?.id || null,
       plan,
-      status: "created",
+      status: String(payment.payment_status || "waiting").toLowerCase(),
       order_id: orderId,
-      invoice_id: String(invoice.id || ""),
-      payment_url: invoice.invoice_url,
+      payment_id: String(payment.payment_id || ""),
+      payment_url: null,
+      pay_address: String(payment.pay_address || ""),
+      pay_amount: Number(payment.pay_amount || 0),
       price_amount: amount,
       price_currency: "usd",
       pay_currency: payCurrency,
-      raw_payload: invoice,
+      raw_payload: payment,
     } as any);
     if (transactionError) {
       return json({ error: `Payment tracking is not ready: ${transactionError.message}` }, 500);
@@ -89,17 +91,19 @@ Deno.serve(async (req) => {
 
     await adminClient.from("activity_logs").insert({
       user_id: authUser.user.id,
-      action: "NOWPayments invoice created",
-      metadata: { order_id: orderId, invoice_id: invoice.id, pay_currency: payCurrency },
+      action: "NOWPayments payment created",
+      metadata: { order_id: orderId, payment_id: payment.payment_id, pay_currency: payCurrency },
     } as any);
 
     return json({
-      payment_url: invoice.invoice_url,
-      invoice_id: invoice.id,
+      payment_id: payment.payment_id,
       order_id: orderId,
       plan,
       amount,
       pay_currency: payCurrency,
+      pay_address: payment.pay_address,
+      pay_amount: payment.pay_amount,
+      payment_status: payment.payment_status || "waiting",
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);

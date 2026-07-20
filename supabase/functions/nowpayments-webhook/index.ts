@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
         invoice_id: String(payload.invoice_id || payload.id || ""),
         payment_id: String(payload.payment_id || ""),
         pay_currency: String(payload.pay_currency || payload.pay_currency_from || "ltc").toLowerCase(),
+        pay_address: payload.pay_address ? String(payload.pay_address) : undefined,
+        pay_amount: Number(payload.pay_amount || 0) || null,
         actually_paid: Number(payload.actually_paid || payload.outcome_amount || 0) || null,
         raw_payload: payload,
       } as any)

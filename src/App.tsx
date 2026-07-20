@@ -20,6 +20,7 @@ import ApiDocs from "./pages/ApiDocs";
 import BotGuide from "./pages/BotGuide";
 import SettingsPage from "./pages/Settings";
 import Billing from "./pages/Billing";
+import ClientEmails from "./pages/ClientEmails";
 import ResellerDashboard from "./pages/ResellerDashboard";
 import ResellerKeys from "./pages/ResellerKeys";
 import ResellerLogs from "./pages/ResellerLogs";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute requiredRole="seller"><Dashboard /></ProtectedRoute>} />
             <Route path="/dashboard/apps" element={<ProtectedRoute requiredRole="seller"><Applications /></ProtectedRoute>} />
             <Route path="/dashboard/licenses" element={<ProtectedRoute requiredRole="seller"><Licenses /></ProtectedRoute>} />
+            <Route path="/dashboard/clients" element={<ProtectedRoute requiredRole="seller"><ClientEmails /></ProtectedRoute>} />
             <Route path="/dashboard/logs" element={<ProtectedRoute requiredRole="seller"><Logs /></ProtectedRoute>} />
             <Route path="/dashboard/api-docs" element={<ProtectedRoute requiredRole="seller"><ApiDocs /></ProtectedRoute>} />
             <Route path="/dashboard/bot-guide" element={<ProtectedRoute requiredRole="seller"><BotGuide /></ProtectedRoute>} />

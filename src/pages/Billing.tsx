@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppWindow, Key, Users, ShieldCheck, Sparkles, Receipt } from "lucide-react";
+import { toast } from "sonner";
+import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppWindow, Key, Users, ShieldCheck, Sparkles, Receipt, Copy } from "lucide-react";
 
 type PaymentTransaction = {
   id: string;
@@ -18,6 +19,8 @@ type PaymentTransaction = {
   status: string;
   order_id: string;
   payment_url: string | null;
+  pay_address: string | null;
+  pay_amount: number | null;
   price_amount: number;
   price_currency: string;
   pay_currency: string;
@@ -115,7 +118,7 @@ export default function Billing() {
     setPaymentsLoading(true);
     supabase
       .from("payment_transactions" as any)
-      .select("id, plan, status, order_id, payment_url, price_amount, price_currency, pay_currency, created_at")
+      .select("id, plan, status, order_id, payment_url, pay_address, pay_amount, price_amount, price_currency, pay_currency, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(8)
@@ -130,6 +133,10 @@ export default function Billing() {
   const expired = !!data?.expired;
   const expiresAt = data?.plan_expires_at ? new Date(data.plan_expires_at) : null;
   const lifetime = !expiresAt;
+  const copyText = async (text: string, label: string) => {
+    await navigator.clipboard?.writeText(text);
+    toast.success(`${label} copied`);
+  };
 
   return (
     <RoleLayout>
@@ -245,7 +252,7 @@ export default function Billing() {
             <Card className="lg:col-span-3 border-border/60">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Receipt className="h-4 w-4 text-primary" /> Recent Payment Invoices
+                  <Receipt className="h-4 w-4 text-primary" /> Recent Payments
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -266,8 +273,9 @@ export default function Billing() {
                           <th className="py-3 pr-4 font-medium">Plan</th>
                           <th className="py-3 pr-4 font-medium">Amount</th>
                           <th className="py-3 pr-4 font-medium">Status</th>
+                          <th className="py-3 pr-4 font-medium">LTC Payment</th>
                           <th className="py-3 pr-4 font-medium">Created</th>
-                          <th className="py-3 text-right font-medium">Invoice</th>
+                          <th className="py-3 text-right font-medium">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -282,6 +290,26 @@ export default function Billing() {
                                 {payment.status || "created"}
                               </Badge>
                             </td>
+                            <td className="py-3 pr-4">
+                              {payment.pay_address ? (
+                                <div className="max-w-[260px] space-y-1">
+                                  <div className="font-mono text-xs text-foreground">
+                                    {payment.pay_amount ? `${payment.pay_amount} ${payment.pay_currency?.toUpperCase()}` : payment.pay_currency?.toUpperCase()}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyText(payment.pay_address!, "Litecoin address")}
+                                    className="flex max-w-full items-center gap-1 text-left font-mono text-[11px] text-muted-foreground hover:text-primary"
+                                    title={payment.pay_address}
+                                  >
+                                    <span className="truncate">{payment.pay_address}</span>
+                                    <Copy className="h-3 w-3 shrink-0" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Waiting</span>
+                              )}
+                            </td>
                             <td className="py-3 pr-4 text-muted-foreground">
                               {new Date(payment.created_at).toLocaleString()}
                             </td>
@@ -293,7 +321,9 @@ export default function Billing() {
                                   </Button>
                                 </a>
                               ) : (
-                                <span className="text-xs text-muted-foreground">Unavailable</span>
+                                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => copyText(payment.order_id, "Order ID")}>
+                                  Copy order <Copy className="h-3.5 w-3.5" />
+                                </Button>
                               )}
                             </td>
                           </tr>
