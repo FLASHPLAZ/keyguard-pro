@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!lic) return json({ error: "Invalid license key" }, 404);
-    if (!lic.owner_email || lic.owner_email.toLowerCase() !== email) {
-      return json({ error: "Email does not match this license" }, 403);
+    if (lic.owner_email && lic.owner_email.toLowerCase() !== email) {
+      return json({ error: "Email does not match this license. Use the buyer email saved on this license, or ask the seller to update it." }, 403);
     }
     if (lic.banned || lic.banned_by_admin) return json({ error: "License is banned" }, 403);
     if (lic.expires_at && new Date(lic.expires_at) < new Date()) return json({ error: "License expired" }, 403);
@@ -65,12 +65,19 @@ Deno.serve(async (req) => {
 
     if (!app.download_url) return json({ error: "No download available for this product yet. Please contact the seller." }, 404);
 
+    await supabase.from("licenses").update({
+      owner_email: lic.owner_email || email,
+      download_verified_at: new Date().toISOString(),
+      download_verified_email: email,
+    } as any).eq("id", lic.id);
+
     // Log access (best-effort)
     await supabase.from("activity_logs").insert({
       action: "Download link accessed",
       license_key: lic.license_key,
       application_id: app.id,
       application_name: app.name,
+      metadata: { verified_email: email },
     } as any).then(() => {}, () => {});
 
     return json({

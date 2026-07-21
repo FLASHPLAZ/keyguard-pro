@@ -215,6 +215,10 @@ export default function Licenses() {
   const generateKeys = async () => {
     if (!selectedApp || !user) return;
     if (generating) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
+      toast.error("Buyer email is required so the customer can verify on the download panel first.");
+      return;
+    }
     if (!canCreate("keys")) {
       toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan.`);
       return;
@@ -228,7 +232,7 @@ export default function Licenses() {
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
       owner_name: ownerName.trim() || null,
-      owner_email: ownerEmail.trim() || null,
+      owner_email: ownerEmail.trim().toLowerCase(),
     }));
     const { error } = await supabase.from("licenses").insert(inserts as any);
     if (error) { toast.error(error.message); setGenerating(false); return; }
@@ -448,7 +452,7 @@ export default function Licenses() {
                 <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(optional — required if buyer will use download portal)</span></label>
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(required before customer activation)</span></label>
                 <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="buyer@example.com" className="bg-secondary border-border" />
               </div>
               <Button onClick={generateKeys} disabled={generating} className="w-full btn-glow">{generating ? "Generating..." : "Generate"}</Button>
