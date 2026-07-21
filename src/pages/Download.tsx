@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Download as DownloadIcon, KeyRound, Mail, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -30,10 +29,16 @@ export default function Download() {
     if (!licenseKey.trim()) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("get-download", {
-        body: { email, license_key: licenseKey.trim() },
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-download`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ email, license_key: licenseKey.trim() }),
       });
-      if (error) throw new Error(error.message);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error((data as any)?.error || `Download check failed (${response.status})`);
       if ((data as any)?.error) throw new Error((data as any).error);
       const payload = data as { application: string; download_url: string };
       setResult(payload);
