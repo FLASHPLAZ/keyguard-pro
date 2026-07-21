@@ -6,21 +6,22 @@ const corsHeaders = {
 };
 
 const PLANS: Record<string, { amount: number; label: string }> = {
-  monthly: { amount: 5.00, label: "Monthly Access" },
+  monthly: { amount: 3.99, label: "Monthly Access" },
   lifetime: { amount: 24.99, label: "Lifetime Access" },
 };
 
-const PAY_CURRENCIES = new Set(["ltc", "btc", "eth", "usdttrc20", "usdterc20", "trx", "doge", "sol"]);
+const LITOSHI_PER_LTC = 100_000_000;
+const INVOICE_EXPIRY_MS = 60 * 60 * 1000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("NOWPAYMENTS_API_KEY");
+    const manualLtcAddress = Deno.env.get("MANUAL_LTC_ADDRESS") || Deno.env.get("LTC_PAYMENT_ADDRESS");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!apiKey || !supabaseUrl || !serviceRoleKey) {
-      return json({ error: "NOWPayments is not configured yet" }, 500);
+    if (!manualLtcAddress || !supabaseUrl || !serviceRoleKey) {
+      return json({ error: "Litecoin payments are not configured yet" }, 500);
     }
 
     const authHeader = req.headers.get("Authorization") || "";
@@ -35,61 +36,42 @@ Deno.serve(async (req) => {
     const plan = String(body.plan || "lifetime").toLowerCase();
     if (!PLANS[plan]) return json({ error: "Invalid plan selected" }, 400);
     const amount = PLANS[plan].amount;
-    const planLabel = PLANS[plan].label;
-    const payCurrency = String(body.payCurrency || "ltc").toLowerCase();
-    if (!PAY_CURRENCIES.has(payCurrency)) return json({ error: "Unsupported payment currency" }, 400);
+    const payCurrency = "ltc";
     const orderId = `gxauth_${plan === "monthly" ? "monthly" : "lifetime"}_${authUser.user.id}_${Date.now()}`;
+    const paymentId = `manual_ltc_${crypto.randomUUID()}`;
+    const ltcUsdRate = await getLtcUsdRate();
+    const uniqueOffset = crypto.getRandomValues(new Uint32Array(1))[0] % 5000 + 1;
+    const expectedLitoshi = Math.ceil((amount / ltcUsdRate) * LITOSHI_PER_LTC) + uniqueOffset;
+    const payAmount = Number((expectedLitoshi / LITOSHI_PER_LTC).toFixed(8));
+    const expiresAt = new Date(Date.now() + INVOICE_EXPIRY_MS).toISOString();
     const { data: tenant } = await adminClient
       .from("tenants")
       .select("id")
       .eq("owner_user_id", authUser.user.id)
       .maybeSingle();
 
-    const response = await fetch("https://api.nowpayments.io/v1/payment", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        price_amount: amount,
-        price_currency: "usd",
-        pay_currency: payCurrency,
-        order_id: orderId,
-        order_description: `GX Auth ${planLabel}`,
-        ipn_callback_url: `${supabaseUrl}/functions/v1/nowpayments-webhook`,
-        is_fixed_rate: true,
-      }),
-    });
-
-    const payment = await response.json();
-    if (!response.ok || payment.error) {
-      const errorMessage = payment.error || payment.message || "Could not create NOWPayments payment";
-      await adminClient.from("activity_logs").insert({
-        user_id: authUser.user.id,
-        action: "NOWPayments payment failed",
-        metadata: { order_id: orderId, plan, amount, pay_currency: payCurrency, error: errorMessage },
-      } as any);
-      return json({ error: errorMessage }, 400);
-    }
-    if (!payment.pay_address || !payment.pay_amount) {
-      return json({ error: "NOWPayments did not return a Litecoin address. Check your NOWPayments currencies/settings." }, 400);
-    }
-
     const { error: transactionError } = await adminClient.from("payment_transactions").insert({
       user_id: authUser.user.id,
       tenant_id: tenant?.id || null,
       plan,
-      status: String(payment.payment_status || "waiting").toLowerCase(),
+      provider: "manual_ltc",
+      status: "waiting_payment",
       order_id: orderId,
-      payment_id: String(payment.payment_id || ""),
+      payment_id: paymentId,
       payment_url: null,
-      pay_address: String(payment.pay_address || ""),
-      pay_amount: Number(payment.pay_amount || 0),
+      pay_address: manualLtcAddress,
+      pay_amount: payAmount,
       price_amount: amount,
       price_currency: "usd",
       pay_currency: payCurrency,
-      raw_payload: payment,
+      ltc_usd_rate: ltcUsdRate,
+      amount_offset_litoshi: uniqueOffset,
+      expires_at: expiresAt,
+      raw_payload: {
+        gateway: "auto_ltc",
+        expected_litoshi: expectedLitoshi,
+        note: "Send the exact LTC amount. GX Auth scans the Litecoin blockchain and activates after confirmations.",
+      },
     } as any);
     if (transactionError) {
       return json({ error: `Payment tracking is not ready: ${transactionError.message}` }, 500);
@@ -97,24 +79,45 @@ Deno.serve(async (req) => {
 
     await adminClient.from("activity_logs").insert({
       user_id: authUser.user.id,
-      action: "NOWPayments payment created",
-      metadata: { order_id: orderId, payment_id: payment.payment_id, pay_currency: payCurrency },
+      action: "Manual Litecoin payment invoice created",
+      metadata: { order_id: orderId, payment_id: paymentId, pay_currency: payCurrency, amount_usd: amount, pay_amount: payAmount },
     } as any);
 
     return json({
-      payment_id: payment.payment_id,
+      payment_id: paymentId,
       order_id: orderId,
       plan,
       amount,
       pay_currency: payCurrency,
-      pay_address: payment.pay_address,
-      pay_amount: payment.pay_amount,
-      payment_status: payment.payment_status || "waiting",
+      pay_address: manualLtcAddress,
+      pay_amount: payAmount,
+      payment_status: "waiting_payment",
+      expires_at: expiresAt,
     });
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
   }
 });
+
+async function getLtcUsdRate() {
+  const override = Number(Deno.env.get("LTC_USD_RATE_OVERRIDE") || "");
+  if (Number.isFinite(override) && override > 0) return override;
+
+  const headers: Record<string, string> = {};
+  const demoKey = Deno.env.get("COINGECKO_DEMO_API_KEY");
+  const proKey = Deno.env.get("COINGECKO_PRO_API_KEY");
+  if (demoKey) headers["x-cg-demo-api-key"] = demoKey;
+  if (proKey) headers["x-cg-pro-api-key"] = proKey;
+
+  const baseUrl = proKey ? "https://pro-api.coingecko.com/api/v3" : "https://api.coingecko.com/api/v3";
+  const response = await fetch(`${baseUrl}/simple/price?ids=litecoin&vs_currencies=usd`, { headers });
+  const data = await response.json().catch(() => ({}));
+  const rate = Number(data?.litecoin?.usd);
+  if (!response.ok || !Number.isFinite(rate) || rate <= 0) {
+    throw new Error("Could not fetch live Litecoin price. Try again in a minute.");
+  }
+  return rate;
+}
 
 function json(body: Record<string, unknown>, status = 200) {
   const responseStatus = body.error ? 200 : status;

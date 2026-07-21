@@ -11,7 +11,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppWindow, Key, Users, ShieldCheck, Sparkles, Receipt, Copy } from "lucide-react";
+import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppWindow, Key, Users, ShieldCheck, Sparkles, Receipt, Copy, RefreshCw } from "lucide-react";
 
 type PaymentTransaction = {
   id: string;
@@ -106,9 +106,11 @@ export default function Billing() {
   const { user } = useAuth();
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [syncingPayments, setSyncingPayments] = useState(false);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 60_000); return () => clearInterval(t); }, []);
-  useEffect(() => {
+
+  const loadPayments = () => {
     if (!user) {
       setPayments([]);
       setPaymentsLoading(false);
@@ -126,6 +128,10 @@ export default function Billing() {
         setPayments((data || []) as PaymentTransaction[]);
         setPaymentsLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadPayments();
   }, [user]);
 
   const planKey = (data?.plan ?? "free") as keyof typeof PLAN_FEATURES;
@@ -136,6 +142,19 @@ export default function Billing() {
   const copyText = async (text: string, label: string) => {
     await navigator.clipboard?.writeText(text);
     toast.success(`${label} copied`);
+  };
+
+  const syncLitecoinPayments = async () => {
+    setSyncingPayments(true);
+    const { data: result, error } = await supabase.functions.invoke("sync-litecoin-payments");
+    setSyncingPayments(false);
+    if (error || (result as any)?.error) {
+      toast.error((result as any)?.error || error?.message || "Could not scan Litecoin payments");
+      return;
+    }
+    toast.success(`Blockchain scan complete. Confirmed ${(result as any)?.confirmed || 0} payment(s).`);
+    loadPayments();
+    refresh();
   };
 
   return (
@@ -250,10 +269,14 @@ export default function Billing() {
             </Card>
 
             <Card className="lg:col-span-3 border-border/60">
-              <CardHeader className="pb-3">
+              <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-primary" /> Recent Payments
                 </CardTitle>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={syncLitecoinPayments} disabled={syncingPayments}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncingPayments ? "animate-spin" : ""}`} />
+                  Check blockchain
+                </Button>
               </CardHeader>
               <CardContent>
                 {paymentsLoading ? (
@@ -263,7 +286,7 @@ export default function Billing() {
                   </div>
                 ) : payments.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border/70 bg-secondary/20 px-4 py-8 text-center text-sm text-muted-foreground">
-                    No payment invoices yet. Choose a plan on the pricing page to create a NOWPayments checkout.
+                    No payment invoices yet. Choose a plan on the pricing page to create a Litecoin invoice.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -273,7 +296,7 @@ export default function Billing() {
                           <th className="py-3 pr-4 font-medium">Plan</th>
                           <th className="py-3 pr-4 font-medium">Amount</th>
                           <th className="py-3 pr-4 font-medium">Status</th>
-                          <th className="py-3 pr-4 font-medium">LTC Payment</th>
+                          <th className="py-3 pr-4 font-medium">Litecoin Invoice</th>
                           <th className="py-3 pr-4 font-medium">Created</th>
                           <th className="py-3 text-right font-medium">Action</th>
                         </tr>
@@ -294,7 +317,9 @@ export default function Billing() {
                               {payment.pay_address ? (
                                 <div className="max-w-[260px] space-y-1">
                                   <div className="font-mono text-xs text-foreground">
-                                    {payment.pay_amount ? `${payment.pay_amount} ${payment.pay_currency?.toUpperCase()}` : payment.pay_currency?.toUpperCase()}
+                                    {Number(payment.pay_amount || 0) > 0
+                                      ? `${payment.pay_amount} ${payment.pay_currency?.toUpperCase()}`
+                                      : `Send USD equivalent in ${payment.pay_currency?.toUpperCase() || "LTC"}`}
                                   </div>
                                   <button
                                     type="button"

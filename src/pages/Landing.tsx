@@ -88,7 +88,7 @@ const FEATURE_GROUPS = [
 
 const PRICING_TEASER = [
   { name: "Free", price: "$0", suffix: "forever", desc: "1 app · 25 keys · HWID binding · full validation API.", cta: "Start free", highlight: false },
-  { name: "Monthly", price: "$5.00", suffix: "per month", desc: "Unlimited premium access for 30 days with Litecoin checkout.", cta: "Get Monthly", highlight: false },
+  { name: "Monthly", price: "$3.99", suffix: "per month", desc: "Unlimited premium access for 30 days with Litecoin auto-tracking.", cta: "Get Monthly", highlight: false },
   { name: "Lifetime", price: "$24.99", suffix: "one-time", desc: "Unlimited apps and keys, resellers, managers, webhooks and priority support forever.", cta: "Get Lifetime", highlight: true },
 ];
 
@@ -121,7 +121,7 @@ const FAQS = [
   { q: "What programming languages are supported?", a: "We provide HMAC-ready code examples for Python, C#, Node.js, C++, Go, Rust, and Java. Our REST API works with any language that can make HTTP requests." },
   { q: "Can I migrate from KeyAuth?", a: "Absolutely. Our API is designed to be a drop-in replacement. Most migrations take under an hour. We also offer migration guides and direct support." },
   { q: "Is my data secure?", a: "All requests use HMAC-SHA256 signing with replay protection. Data is encrypted at rest and in transit. Our infrastructure runs on enterprise-grade serverless edge nodes." },
-  { q: "Is Lifetime really one payment?", a: "Yes. Pay $24.99 once and premium access stays on your account. Monthly is also available for $5.00 per month." },
+  { q: "Is Lifetime really one payment?", a: "Yes. Pay $24.99 once and premium access stays on your account. Monthly is also available for $3.99 per month." },
 ];
 
 const THREATS = [
