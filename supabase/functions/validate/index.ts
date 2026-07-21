@@ -465,6 +465,19 @@ Deno.serve(async (req) => {
       return jsonResponse({ valid: false, error: "Application is disabled" }, 403);
     }
 
+    if (!license.download_verified_at) {
+      logAndNotify(supabase, settings.discordWebhookUrl,
+        { ...logBase, action: "Download Verification Required", hwid: hwid || license.hwid },
+        "Download Verification Required",
+        { ...embedBase, HWID: hwid || license.hwid || "N/A", "Next Step": "Verify this key at gxauth.xyz/download first" }
+      , startTime, true);
+      return jsonResponse({
+        valid: false,
+        error: "Verify this license on gxauth.xyz/download first",
+        verify_url: "https://gxauth.xyz/download",
+      }, 403);
+    }
+
     // ── Expired check ──
     if (new Date(license.expires_at) < new Date()) {
       // Update status fire-and-forget
