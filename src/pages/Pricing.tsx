@@ -40,9 +40,9 @@ const PLANS = [
   },
   {
     name: "Monthly",
-    price: "$5.00",
+    price: "$3.99",
     priceSuffix: "per month",
-    subtitle: "Same premium features for 30 days with NOWPayments minimum-safe checkout.",
+    subtitle: "Same premium features for 30 days with automatic Litecoin tracking.",
     cta: "Pay Monthly",
     highlight: false,
     color: "border-primary/40",
@@ -73,9 +73,9 @@ const COMPARE_ROWS: { label: string; free: string | boolean; monthly: string | b
 ];
 
 const FAQS = [
-  { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a NOWPayments LTC payment, then you send the exact amount to the shown address. Your plan activates automatically after the payment is confirmed." },
+  { q: "How do Litecoin payments work?", a: "Choose a plan, GX Auth creates a unique Litecoin amount, then scans the blockchain and activates your plan after the payment has enough confirmations." },
   { q: "Is Lifetime really one payment?", a: "Yes. Lifetime is $24.99 one-time and has no expiry." },
-  { q: "What does Monthly include?", a: "Monthly is $5.00 for 30 days and includes the same premium feature limits as Lifetime." },
+  { q: "What does Monthly include?", a: "Monthly is $3.99 for 30 days and includes the same premium feature limits as Lifetime." },
   { q: "Can I start free and upgrade later?", a: "Yes. Your apps, keys and logs stay on your account when admin upgrades your plan." },
 ];
 
@@ -101,19 +101,24 @@ export default function Pricing() {
   const navigate = useNavigate();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [checkout, setCheckout] = useState<CheckoutPayment | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<"monthly" | "lifetime" | null>(null);
 
   const copyText = async (text: string, label: string) => {
     await navigator.clipboard?.writeText(text);
     toast.success(`${label} copied`);
   };
 
-  const startCheckout = async (plan: "monthly" | "lifetime") => {
+  const requestCheckout = (plan: "monthly" | "lifetime") => {
     if (!user) {
       toast.error("Please sign in before checkout");
       navigate("/login");
       return;
     }
+    setPendingPlan(plan);
+  };
 
+  const startCheckout = async (plan: "monthly" | "lifetime") => {
+    setPendingPlan(null);
     setLoadingPlan(plan);
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -145,7 +150,7 @@ export default function Pricing() {
     setLoadingPlan(null);
 
     if (errorMessage || data?.error || !data?.pay_address || !data?.pay_amount) {
-      toast.error(data?.error || errorMessage || "Could not create NOWPayments payment");
+      toast.error(data?.error || errorMessage || "Could not create Litecoin invoice");
       return;
     }
 
@@ -154,8 +159,8 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <nav className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+      <nav className="sticky top-0 z-50 border-b border-white/10 bg-background/45 shadow-[0_18px_70px_-50px_hsl(var(--primary)/0.75)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/35">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link to="/">
             <BrandLogo size="sm" />
           </Link>
@@ -169,13 +174,13 @@ export default function Pricing() {
       <section className="relative px-4 pt-16 pb-10 sm:px-6 sm:pt-20">
         <div className="mx-auto max-w-4xl text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Litecoin checkout with NOWPayments
+            <Sparkles className="h-3.5 w-3.5" /> Litecoin checkout with auto-tracking
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.05 }} className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
             Monthly or lifetime. <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">Your choice.</span>
           </motion.h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.1 }} className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Start free, then pay with Litecoin for Monthly or Lifetime access. Your plan unlocks automatically after confirmation.
+            Start free, then pay with Litecoin for Monthly or Lifetime access. Your plan unlocks automatically after blockchain confirmation.
           </motion.p>
         </div>
       </section>
@@ -215,7 +220,7 @@ export default function Pricing() {
                 <>
                   <Button
                     type="button"
-                    onClick={() => startCheckout(plan.name.toLowerCase() as "monthly" | "lifetime")}
+                    onClick={() => requestCheckout(plan.name.toLowerCase() as "monthly" | "lifetime")}
                     disabled={loadingPlan === plan.name.toLowerCase()}
                     className="w-full bg-gradient-to-r from-primary to-primary-glow hover:opacity-90"
                     size="lg"
@@ -247,9 +252,9 @@ export default function Pricing() {
         <div className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
           {[
             { icon: InfinityIcon, label: "Lifetime available" },
-            { icon: ShieldCheck, label: "Automatic confirmation" },
-            { icon: Zap, label: "Fast admin approval" },
-            { icon: Lock, label: "Direct LTC payment" },
+            { icon: ShieldCheck, label: "Auto activation" },
+            { icon: Zap, label: "Auto blockchain scan" },
+            { icon: Lock, label: "Exact LTC invoice" },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-card/40 px-3 py-3 text-xs text-muted-foreground">
               <item.icon className="h-4 w-4 text-primary" />
@@ -268,7 +273,7 @@ export default function Pricing() {
               </div>
               <h2 className="text-2xl font-bold">How payment activation works</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                GX Auth creates a direct NOWPayments Litecoin payment and shows the address inside your dashboard flow, so users avoid the external email prompt.
+                GX Auth creates a unique Litecoin amount, watches your payment address, and activates the plan after the matching transaction reaches the required confirmations.
               </p>
             </div>
             <div className="rounded-xl border border-border/60 bg-background/70 p-4">
@@ -277,13 +282,13 @@ export default function Pricing() {
                 <li>1. Sign in to your GX Auth account.</li>
                 <li>2. Choose Monthly or Lifetime on this page.</li>
                 <li>3. Send the exact LTC amount to the shown address.</li>
-                <li>4. Your plan activates after payment confirmation.</li>
+                <li>4. The tracker confirms the transaction and unlocks your plan.</li>
               </ol>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Button type="button" variant="outline" className="gap-2" onClick={() => startCheckout("monthly")} disabled={loadingPlan === "monthly"}>
+                <Button type="button" variant="outline" className="gap-2" onClick={() => requestCheckout("monthly")} disabled={loadingPlan === "monthly"}>
                   {loadingPlan === "monthly" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />} Monthly checkout
                 </Button>
-                <Button type="button" className="w-full gap-2 sm:w-auto" onClick={() => startCheckout("lifetime")} disabled={loadingPlan === "lifetime"}>
+                <Button type="button" className="w-full gap-2 sm:w-auto" onClick={() => requestCheckout("lifetime")} disabled={loadingPlan === "lifetime"}>
                   {loadingPlan === "lifetime" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wallet className="h-4 w-4" />} Lifetime checkout
                 </Button>
               </div>
@@ -339,8 +344,8 @@ export default function Pricing() {
           <div className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-transparent p-8 text-center">
             <Crown className="mx-auto h-6 w-6 text-primary mb-3" />
             <h3 className="text-xl font-bold">Ready to unlock premium?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $5.00 or Lifetime for $24.99. Litecoin checkout opens instantly.</p>
-            <Button type="button" onClick={() => startCheckout("lifetime")} disabled={loadingPlan === "lifetime"} size="lg" className="mt-5 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
+            <p className="mt-2 text-sm text-muted-foreground">Choose Monthly for $3.99 or Lifetime for $24.99. A Litecoin invoice opens instantly.</p>
+            <Button type="button" onClick={() => requestCheckout("lifetime")} disabled={loadingPlan === "lifetime"} size="lg" className="mt-5 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90">
               {loadingPlan === "lifetime" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Unlock Lifetime <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
@@ -348,26 +353,73 @@ export default function Pricing() {
         </div>
       </section>
 
+      <Dialog open={!!pendingPlan} onOpenChange={(open) => !open && setPendingPlan(null)}>
+        <DialogContent className="border-primary/30 bg-card text-card-foreground sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              Confirm checkout
+            </DialogTitle>
+            <DialogDescription>
+              GX Auth will create one Litecoin invoice and start monitoring that invoice for the exact incoming amount.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingPlan && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-primary/25 bg-primary/10 p-4">
+                <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Selected plan</div>
+                <div className="mt-1 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xl font-bold capitalize text-foreground">{pendingPlan}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {pendingPlan === "monthly" ? "30 days of premium access" : "Premium access with no expiry"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-2xl font-bold text-primary">{pendingPlan === "monthly" ? "$3.99" : "$24.99"}</p>
+                    <p className="text-xs text-muted-foreground">{pendingPlan === "monthly" ? "per month" : "one-time"}</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                After confirmation, copy the exact LTC amount shown on the invoice. Sending a different amount can stop automatic matching.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setPendingPlan(null)}>
+                  Cancel
+                </Button>
+                <Button type="button" className="flex-1 bg-gradient-to-r from-primary to-primary-glow" onClick={() => startCheckout(pendingPlan)}>
+                  Create invoice
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!checkout} onOpenChange={(open) => !open && setCheckout(null)}>
         <DialogContent className="border-primary/30 bg-card text-card-foreground sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-primary" />
-              Litecoin payment created
+              Litecoin invoice created
             </DialogTitle>
             <DialogDescription>
-              Send the exact amount below. GX Auth activates your plan automatically when NOWPayments confirms the transaction.
+              Send the exact Litecoin amount to this address. GX Auth will detect the transaction and activate your plan after confirmations.
             </DialogDescription>
           </DialogHeader>
           {checkout && (
             <div className="space-y-4">
               <div className="rounded-xl border border-primary/25 bg-primary/10 p-4">
-                <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Amount to send</div>
+                <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Invoice amount</div>
                 <div className="mt-1 flex flex-wrap items-end gap-2">
-                  <span className="font-mono text-3xl font-bold text-foreground">{checkout.pay_amount}</span>
-                  <span className="pb-1 text-sm font-semibold uppercase text-primary">{checkout.pay_currency}</span>
+                  <span className="font-mono text-3xl font-bold text-foreground">{Number(checkout.pay_amount).toFixed(8)}</span>
+                  <span className="pb-1 text-sm font-semibold uppercase text-primary">LTC</span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">Plan: {checkout.plan === "monthly" ? "Monthly $5.00" : "Lifetime $24.99"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Plan: {checkout.plan === "monthly" ? "Monthly $3.99" : "Lifetime $24.99"}.
+                  Send exactly this amount so the tracker can match your invoice.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -384,12 +436,12 @@ export default function Pricing() {
 
               <div className="grid gap-3 rounded-xl border border-border/60 bg-background/60 p-4 text-sm sm:grid-cols-2">
                 <div>
-                  <div className="text-xs text-muted-foreground">Payment ID</div>
+                  <div className="text-xs text-muted-foreground">Invoice ID</div>
                   <div className="mt-1 truncate font-mono text-xs">{checkout.payment_id}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Status</div>
-                  <div className="mt-1 capitalize text-primary">{checkout.payment_status || "waiting"}</div>
+                  <div className="mt-1 capitalize text-primary">{checkout.payment_status.replaceAll("_", " ")}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-xs text-muted-foreground">Order ID</div>

@@ -81,7 +81,6 @@ export default function AdminPanel() {
   const [licensesPage, setLicensesPage] = useState(1);
   const [licensesLoading, setLicensesLoading] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
-  const [paymentLogs, setPaymentLogs] = useState<any[]>([]);
   const [paymentsSearch, setPaymentsSearch] = useState("");
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -259,19 +258,13 @@ export default function AdminPanel() {
 
   async function loadPayments() {
     setPaymentsLoading(true);
-    const [{ data: paymentsData, error }, { data: profiles }, { data: logsData }] = await Promise.all([
+    const [{ data: paymentsData, error }, { data: profiles }] = await Promise.all([
       supabase
         .from("payment_transactions" as any)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase.from("profiles").select("user_id, email, username"),
-      supabase
-        .from("activity_logs")
-        .select("id, user_id, action, metadata, created_at")
-        .ilike("action", "%payment%")
-        .order("created_at", { ascending: false })
-        .limit(80),
     ]);
     if (error) {
       toast.error("Failed to load payments: " + error.message);
@@ -280,8 +273,95 @@ export default function AdminPanel() {
     }
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     setPayments((paymentsData || []).map((payment: any) => ({ ...payment, owner_profile: profileMap.get(payment.user_id) || null })));
-    setPaymentLogs((logsData || []).map((log: any) => ({ ...log, owner_profile: profileMap.get(log.user_id) || null })));
     setPaymentsLoading(false);
+  }
+
+  async function syncLitecoinPayments() {
+    setPaymentsLoading(true);
+    const { data: result, error } = await supabase.functions.invoke("sync-litecoin-payments");
+    if (error || (result as any)?.error) {
+      toast.error((result as any)?.error || error?.message || "Could not scan Litecoin payments");
+      setPaymentsLoading(false);
+      return;
+    }
+    toast.success(`Blockchain scan complete. Confirmed ${(result as any)?.confirmed || 0} payment(s).`);
+    await loadPayments();
+    loadTenants();
+    loadOverview();
+  }
+
+  async function confirmManualPayment(payment: any) {
+    if (!user) return;
+    const ok = window.confirm(
+      `Confirm this Litecoin payment and activate ${payment.plan} for ${payment.owner_profile?.email || payment.user_id}?\n\nOnly confirm after checking your Litecoin wallet/transaction.`
+    );
+    if (!ok) return;
+
+    const plan = String(payment.plan || "").toLowerCase();
+    if (!["monthly", "lifetime"].includes(plan)) {
+      toast.error("Only monthly or lifetime payments can be confirmed");
+      return;
+    }
+
+    const monthlyExpiry = new Date();
+    monthlyExpiry.setDate(monthlyExpiry.getDate() + 30);
+    const tenantPatch: any = {
+      plan,
+      billing_cycle: plan,
+      plan_started_at: new Date().toISOString(),
+      plan_expires_at: plan === "monthly" ? monthlyExpiry.toISOString() : null,
+      suspended: false,
+    };
+
+    let tenantId = payment.tenant_id;
+    if (!tenantId && payment.user_id) {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("owner_user_id", payment.user_id)
+        .maybeSingle();
+      tenantId = tenant?.id;
+    }
+    if (!tenantId) {
+      toast.error("No tenant found for this payment owner");
+      return;
+    }
+    const rawPayload = payment.raw_payload && typeof payment.raw_payload === "object" && !Array.isArray(payment.raw_payload)
+      ? payment.raw_payload
+      : {};
+
+    const [{ error: tenantError }, { error: paymentError }] = await Promise.all([
+      supabase.from("tenants").update(tenantPatch).eq("id", tenantId),
+      supabase.from("payment_transactions" as any).update({
+        status: "confirmed",
+        raw_payload: {
+          ...rawPayload,
+          confirmed_by: user.id,
+          confirmed_at: new Date().toISOString(),
+          activation: tenantPatch,
+        },
+      }).eq("id", payment.id),
+    ]);
+    if (tenantError || paymentError) {
+      toast.error(tenantError?.message || paymentError?.message || "Failed to confirm payment");
+      return;
+    }
+
+    await supabase.from("activity_logs").insert({
+      user_id: user.id,
+      action: "Manual Litecoin payment confirmed",
+      metadata: { payment_id: payment.payment_id, order_id: payment.order_id, plan, tenant_id: tenantId },
+    } as any);
+    toast.success("Payment confirmed and subscription activated");
+    notifyDiscord("Manual Litecoin payment confirmed", {
+      User: payment.owner_profile?.email || payment.user_id,
+      Plan: plan,
+      Amount: `$${Number(payment.price_amount || 0).toFixed(2)}`,
+      Order: payment.order_id,
+    });
+    loadPayments();
+    loadTenants();
+    loadOverview();
   }
 
   async function suspendTenant(id: string, suspended: boolean) {
@@ -1075,13 +1155,19 @@ export default function AdminPanel() {
           <TabsContent value="payments" className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">NOWPayments Control</h2>
-                <p className="text-xs text-muted-foreground">Track Litecoin checkouts, confirmations, plan activation, and manual follow-up.</p>
+                <h2 className="text-lg font-semibold text-foreground">Litecoin Payment Control</h2>
+                <p className="text-xs text-muted-foreground">Track Litecoin invoices, confirmations, automatic plan activation, and manual follow-up.</p>
               </div>
-              <Button variant="outline" size="sm" onClick={loadPayments}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                Refresh
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={syncLitecoinPayments} disabled={paymentsLoading}>
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${paymentsLoading ? "animate-spin" : ""}`} />
+                  Scan blockchain
+                </Button>
+                <Button variant="outline" size="sm" onClick={loadPayments}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-4">
@@ -1123,6 +1209,7 @@ export default function AdminPanel() {
                               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Payment</th>
                               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1140,7 +1227,7 @@ export default function AdminPanel() {
                                   </td>
                                   <td className="px-4 py-3">
                                     <p className="text-xs text-foreground">${Number(payment.price_amount || 0).toFixed(2)}</p>
-                                    <p className="font-mono text-[11px] text-primary">{payment.pay_amount || "-"} {String(payment.pay_currency || "ltc").toUpperCase()}</p>
+                                    <p className="font-mono text-[11px] text-primary">{payment.pay_amount ? payment.pay_amount : "Exact amount pending"} {String(payment.pay_currency || "ltc").toUpperCase()}</p>
                                   </td>
                                   <td className="px-4 py-3">
                                     <Badge
@@ -1171,10 +1258,18 @@ export default function AdminPanel() {
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 text-xs text-muted-foreground">{payment.created_at ? formatDate(payment.created_at) : "-"}</td>
+                                  <td className="px-4 py-3 text-right">
+                                    {!isConfirmed && (
+                                      <Button size="sm" variant="outline" className="h-8 gap-1.5 border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/15" onClick={() => confirmManualPayment(payment)}>
+                                        <CheckCircle className="h-3.5 w-3.5" />
+                                        Confirm
+                                      </Button>
+                                    )}
+                                  </td>
                                 </tr>
                               );
                             })}
-                            {paginatedPayments.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No payments found</td></tr>}
+                            {paginatedPayments.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">No payments found</td></tr>}
                           </tbody>
                         </table>
                       </div>
@@ -1191,26 +1286,28 @@ export default function AdminPanel() {
                 <p className="mt-1 text-xs text-muted-foreground">Every checkout/invoice event recorded from the payment flow.</p>
               </CardHeader>
               <CardContent>
-                {paymentLogs.length === 0 ? (
-                  <p className="rounded-lg border border-border/60 bg-secondary/30 px-4 py-8 text-center text-sm text-muted-foreground">No payment activity logs yet</p>
+                {payments.length === 0 ? (
+                  <p className="rounded-lg border border-border/60 bg-secondary/30 px-4 py-8 text-center text-sm text-muted-foreground">No payment invoices yet</p>
                 ) : (
                   <div className="divide-y divide-border/60 rounded-lg border border-border/60">
-                    {paymentLogs.slice(0, 12).map((log: any) => {
-                      const metadata = log.metadata || {};
+                    {payments.slice(0, 12).map((payment: any) => {
+                      const metadata = payment.raw_payload || {};
                       return (
-                        <div key={log.id} className="grid gap-2 px-4 py-3 text-xs hover:bg-secondary/30 md:grid-cols-[1fr_auto]">
+                        <div key={payment.id} className="grid gap-2 px-4 py-3 text-xs hover:bg-secondary/30 md:grid-cols-[1fr_auto]">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">{log.action || "Payment event"}</Badge>
-                              <span className="text-muted-foreground">{log.owner_profile?.email || log.user_id || "Unknown user"}</span>
+                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">Invoice created</Badge>
+                              <Badge variant="outline" className="capitalize text-[10px]">{payment.status || "waiting"}</Badge>
+                              <span className="text-muted-foreground">{payment.owner_profile?.email || payment.user_id || "Unknown user"}</span>
                             </div>
                             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted-foreground">
-                              {metadata.order_id && <span>order: {metadata.order_id}</span>}
-                              {metadata.payment_id && <span>payment: {metadata.payment_id}</span>}
-                              {metadata.pay_currency && <span>currency: {String(metadata.pay_currency).toUpperCase()}</span>}
+                              <span>order: {payment.order_id || "-"}</span>
+                              {payment.payment_id && <span>invoice: {payment.payment_id}</span>}
+                              <span>amount: {payment.pay_amount || "-"} {String(payment.pay_currency || "ltc").toUpperCase()}</span>
+                              {metadata.detected_tx_hash && <span>tx: {String(metadata.detected_tx_hash).slice(0, 18)}...</span>}
                             </div>
                           </div>
-                          <div className="text-muted-foreground">{log.created_at ? formatDate(log.created_at) : "-"}</div>
+                          <div className="text-muted-foreground">{payment.created_at ? formatDate(payment.created_at) : "-"}</div>
                         </div>
                       );
                     })}
