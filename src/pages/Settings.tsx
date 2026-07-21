@@ -191,7 +191,8 @@ export default function SettingsPage() {
     const lic = resellerKeys.find((l: any) => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
     const resellerName = lic?.resellers?.username || "Unknown";
-    await supabase.from("licenses").update({ banned: false, status: "active", banned_by_admin: false }).eq("id", id);
+    await supabase.from("licenses").update({ banned: false, status: "active", banned_by_admin: false, ip: null }).eq("id", id);
+    await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) {
       await supabase.from("activity_logs").insert({
         user_id: user.id, action: "Admin unbanned license", license_key: licenseKey, application_name: appName,

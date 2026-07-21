@@ -131,7 +131,8 @@ export default function ManagerLicenses() {
 
   const unbanLicense = async (lic: any) => {
     const newStatus = lic.hwid ? "active" : "unused";
-    await supabase.from("licenses").update({ banned: false, status: newStatus }).eq("id", lic.id);
+    await supabase.from("licenses").update({ banned: false, status: newStatus, ip: null }).eq("id", lic.id);
+    await supabase.from("license_ips").delete().eq("license_id", lic.id);
     const appName = lic.applications?.name || "Unknown";
     await supabase.from("activity_logs").insert({
       user_id: user!.id,
@@ -148,6 +149,7 @@ export default function ManagerLicenses() {
   const resetHwid = async (lic: any) => {
     const previousHwid = lic.hwid;
     await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    await supabase.from("license_ips").delete().eq("license_id", lic.id);
     const appName = lic.applications?.name || "Unknown";
     await supabase.from("activity_logs").insert({
       user_id: user!.id,

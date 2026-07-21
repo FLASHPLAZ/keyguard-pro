@@ -163,7 +163,8 @@ export default function Licenses() {
     if (toUnban.length === 0) { toast.error("No banned licenses selected"); return; }
     for (const lic of toUnban) {
       const restoredStatus = lic.hwid ? "active" : "unused";
-      await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", lic.id);
+      await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", lic.id);
+      await supabase.from("license_ips").delete().eq("license_id", lic.id);
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` } as any);
     toast.success(`Unbanned ${toUnban.length} license(s)`);
@@ -178,6 +179,7 @@ export default function Licenses() {
     if (toReset.length === 0) { toast.error("No licenses with HWID selected"); return; }
     for (const lic of toReset) {
       await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+      await supabase.from("license_ips").delete().eq("license_id", lic.id);
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` } as any);
     toast.success(`Reset HWID for ${toReset.length} license(s)`);
@@ -273,7 +275,7 @@ export default function Licenses() {
     }
     const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
-    await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false }).eq("id", id);
+    await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", id);
     await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License unbanned and IP history cleared");
@@ -284,7 +286,7 @@ export default function Licenses() {
   const resetHwid = async (id: string, licenseKey: string) => {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
-    await supabase.from("licenses").update({ hwid: null }).eq("id", id);
+    await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", id);
     await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("HWID and IP history reset");
