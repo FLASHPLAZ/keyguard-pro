@@ -108,8 +108,9 @@ export default function Pricing() {
     toast.success(`${label} copied`);
   };
 
-  const requestCheckout = (plan: "monthly" | "lifetime") => {
-    if (!user) {
+  const requestCheckout = async (plan: "monthly" | "lifetime") => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!user || !sessionData.session?.access_token) {
       toast.error("Please sign in before checkout");
       navigate("/login");
       return;
@@ -122,6 +123,12 @@ export default function Pricing() {
     setLoadingPlan(plan);
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
+    if (!token) {
+      setLoadingPlan(null);
+      toast.error("Please sign in before checkout");
+      navigate("/login");
+      return;
+    }
     const checkoutUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-nowpayments-checkout`;
     let data: any = null;
     let errorMessage = "";
@@ -131,6 +138,7 @@ export default function Pricing() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ plan, payCurrency: "ltc" }),

@@ -7,10 +7,8 @@ const corsHeaders = {
 };
 
 function json(body: unknown, status = 200) {
-  // Always return 200 so supabase-js exposes the JSON payload to the client;
-  // the client checks `data.error` to display the real message.
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
@@ -52,7 +50,7 @@ Deno.serve(async (req) => {
     if (!app) return json({ error: "Application not found" }, 404);
     if (app.suspended || app.kill_switch) return json({ error: "Application is unavailable" }, 403);
 
-    // Enforce Lifetime plan on the tenant
+    // Paid sellers can use the download portal.
     if (lic.tenant_id) {
       const { data: tenant } = await supabase
         .from("tenants")
@@ -60,8 +58,8 @@ Deno.serve(async (req) => {
         .eq("id", lic.tenant_id)
         .maybeSingle();
       if (!tenant || tenant.suspended) return json({ error: "Seller account unavailable" }, 403);
-      if (tenant.plan !== "lifetime" && tenant.plan !== "platform") {
-        return json({ error: "Download portal is not enabled by the seller (Lifetime plan required)" }, 403);
+      if (!["monthly", "lifetime", "platform"].includes(tenant.plan)) {
+        return json({ error: "Download portal is not enabled by the seller (premium plan required)" }, 403);
       }
     }
 

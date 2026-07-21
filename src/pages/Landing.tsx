@@ -111,7 +111,7 @@ const TESTIMONIALS = [
   { name: "DevKing", role: "Bot Developer", stars: 4, text: "Using 1 year — stable 99% uptime. The Discord bot integration is seamless and my users love the HWID system." },
   { name: "JCrick", role: "Tool Developer", stars: 5, text: "Docs complete, API clean, support responsive. Would recommend to anyone building licensed software." },
   { name: "NeoBytes", role: "Security Researcher", stars: 5, text: "The request signing and anti-tamper detection are top-notch. Finally a licensing system that takes security seriously." },
-  { name: "Luna", role: "Indie Developer", stars: 5, text: "The $24.99 lifetime plan is simple, and the $5 monthly option is great for testing premium features." },
+  { name: "Luna", role: "Indie Developer", stars: 5, text: "The $24.99 lifetime plan is simple, and the $3.99 monthly option is great for testing premium features." },
 ];
 
 const FAQS = [
