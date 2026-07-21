@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail, Search, Download, Copy, Users, Key, AppWindow, ShieldCheck } from "lucide-react";
+import { Mail, Search, Download, Copy, Users, Key, AppWindow, ShieldCheck, Pencil, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,6 +79,72 @@ export default function ClientEmails() {
   const copyEmail = async (email: string) => {
     await navigator.clipboard?.writeText(email);
     toast.success("Client email copied");
+  };
+
+  const changeEmail = async (row: ClientLicense) => {
+    const nextEmail = window.prompt("Enter the new buyer email for this license:", row.owner_email || "");
+    if (nextEmail === null) return;
+    const email = nextEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Enter a valid email address");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("licenses")
+      .update({
+        owner_email: email,
+        download_verified_at: null,
+        download_verified_email: null,
+      } as any)
+      .eq("id", row.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    await supabase.from("activity_logs").insert({
+      user_id: user?.id,
+      action: "Client email changed",
+      license_key: row.license_key,
+      application_id: row.application_id,
+      application_name: row.applications?.name || null,
+      metadata: { previous_email: row.owner_email, new_email: email },
+    } as any);
+
+    toast.success("Buyer email updated. Customer must verify on the download panel again.");
+    fetchClients();
+  };
+
+  const resetEmail = async (row: ClientLicense) => {
+    if (!window.confirm(`Clear buyer email for ${row.license_key}? The next valid download verification can claim this license.`)) return;
+
+    const { error } = await supabase
+      .from("licenses")
+      .update({
+        owner_email: null,
+        download_verified_at: null,
+        download_verified_email: null,
+      } as any)
+      .eq("id", row.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    await supabase.from("activity_logs").insert({
+      user_id: user?.id,
+      action: "Client email reset",
+      license_key: row.license_key,
+      application_id: row.application_id,
+      application_name: row.applications?.name || null,
+      metadata: { previous_email: row.owner_email },
+    } as any);
+
+    toast.success("Buyer email cleared");
+    fetchClients();
   };
 
   const exportCsv = () => {
@@ -203,6 +269,7 @@ export default function ClientEmails() {
                     <TableHead>License</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Used</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -228,6 +295,16 @@ export default function ClientEmails() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {row.last_used ? formatDate(row.last_used) : `Created ${formatDate(row.created_at)}`}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" title="Change buyer email" onClick={() => changeEmail(row)}>
+                            <Pencil className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-warning/10" title="Reset buyer email" onClick={() => resetEmail(row)}>
+                            <RotateCcw className="h-3.5 w-3.5 text-warning" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

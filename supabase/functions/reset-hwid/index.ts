@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     }
 
     const previousHwid = license.hwid;
-    await supabase.from("licenses").update({ hwid: null }).eq("id", license.id);
+    await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", license.id);
     await supabase.from("license_ips").delete().eq("license_id", license.id);
 
     // Log the action

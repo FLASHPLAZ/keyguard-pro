@@ -186,8 +186,9 @@ export default function ResellerKeys() {
 
   const unbanKey = async (id: string, licenseKey: string, hwid: string | null) => {
     const restoredStatus = hwid ? "active" : "unused";
-    const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus, ip: null }).eq("id", id);
     if (error) { toast.error(error.message); return; }
+    await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller unbanned license", license_key: licenseKey } as any);
     notifyDiscord("Reseller unbanned license", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("License unbanned");
@@ -195,8 +196,9 @@ export default function ResellerKeys() {
   };
 
   const resetHwid = async (id: string, licenseKey: string) => {
-    const { error } = await supabase.from("licenses").update({ hwid: null }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", id);
     if (error) { toast.error(error.message); return; }
+    await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Reseller reset HWID", license_key: licenseKey } as any);
     notifyDiscord("Reseller HWID reset", { Reseller: reseller?.username, "License Key": licenseKey });
     toast.success("HWID reset");
