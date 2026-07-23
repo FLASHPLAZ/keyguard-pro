@@ -1,9 +1,39 @@
 import { useTheme } from "next-themes";
-import { Toaster as Sonner, toast } from "sonner";
+import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 import { createElement } from "react";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
+
+function toastText(value: unknown, fallback: string) {
+  if (!value) return fallback;
+  if (typeof value === "string") return value.trim() || fallback;
+  if (value instanceof Error && value.message) return value.message;
+  if (typeof value === "object") {
+    const error = value as { message?: unknown; error?: unknown; error_description?: unknown; details?: unknown };
+    for (const item of [error.message, error.error_description, error.error, error.details]) {
+      if (typeof item === "string" && item.trim()) return item;
+    }
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized && serialized !== "{}") return serialized;
+    } catch {
+      // Leave it to the fallback below.
+    }
+  }
+  return fallback;
+}
+
+const toast = Object.assign(sonnerToast, {
+  error: (message: unknown, data?: Parameters<typeof sonnerToast.error>[1]) =>
+    sonnerToast.error(toastText(message, "Something went wrong. Please try again."), data),
+  success: (message: unknown, data?: Parameters<typeof sonnerToast.success>[1]) =>
+    sonnerToast.success(toastText(message, "Done."), data),
+  warning: (message: unknown, data?: Parameters<typeof sonnerToast.warning>[1]) =>
+    sonnerToast.warning(toastText(message, "Please check this and try again."), data),
+  info: (message: unknown, data?: Parameters<typeof sonnerToast.info>[1]) =>
+    sonnerToast.info(toastText(message, "Heads up."), data),
+});
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();

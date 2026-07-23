@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LogIn, Shield, Users, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 
 function getAuthErrorMessage(error: unknown, fallback: string) {
