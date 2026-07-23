@@ -27,8 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<UserRole>(null);
 
+  const ensureProfile = async () => {
+    const { error } = await (supabase as any).rpc("ensure_user_bootstrap");
+    if (error) {
+      console.error("Failed to bootstrap user profile", error);
+    }
+  };
+
   const fetchRole = async (userId: string) => {
-    // Check ban status first — banned users get signed out immediately
+    // Check ban status first so banned users get signed out immediately.
     const { data: profile } = await supabase
       .from("profiles")
       .select("banned, banned_reason")
@@ -40,11 +47,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRole(null);
       return;
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
+    if (error) {
+      console.error("Failed to load user role", error);
+      setRole(null);
+      return;
+    }
     setRole((data?.role as UserRole) || null);
   };
 
@@ -55,7 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           // Defer to avoid Supabase client deadlock
-          setTimeout(() => fetchRole(session.user.id), 0);
+          setTimeout(async () => {
+            try {
+              await ensureProfile();
+              await fetchRole(session.user.id);
+            } finally {
+              setLoading(false);
+            }
+          }, 0);
         } else {
           setRole(null);
           setLoading(false);
@@ -67,7 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchRole(session.user.id).then(() => setLoading(false));
+        ensureProfile()
+          .then(() => fetchRole(session.user.id))
+          .finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
