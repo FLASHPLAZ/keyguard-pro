@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const MAX_BODY_BYTES = 16_384;
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
+const ALLOWED_FIELDS = new Set(["email", "license_key"]);
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -13,16 +17,41 @@ function json(body: unknown, status = 200) {
   });
 }
 
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw || "{}");
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+  for (const key of Object.keys(parsed)) {
+    if (!ALLOWED_FIELDS.has(key)) throw new Error("INVALID_FIELD");
+  }
+  return parsed;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const body = await req.json().catch(() => ({} as any));
+    let body: any;
+    try {
+      body = await readJsonBody(req);
+    } catch (error) {
+      if ((error as Error).message === "PAYLOAD_TOO_LARGE") return json({ error: "Request body too large" }, 413);
+      return json({ error: "Invalid request body" }, 400);
+    }
     const email = String(body.email || "").trim().toLowerCase();
     const license_key = String(body.license_key || "").trim().toUpperCase();
     if (!email || !license_key) return json({ error: "Email and license key are required" }, 400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Invalid email" }, 400);
+    if (!LICENSE_KEY_PATTERN.test(license_key)) return json({ error: "Invalid license key format" }, 400);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -86,6 +115,7 @@ Deno.serve(async (req) => {
       download_url: app.download_url,
     });
   } catch (e) {
-    return json({ error: (e as Error).message || "Internal error" }, 500);
+    console.error("Get-download error:", e);
+    return json({ error: "Internal server error" }, 500);
   }
 });

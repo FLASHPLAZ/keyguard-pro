@@ -246,7 +246,7 @@ export default function ApiDocs() {
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-4">
             <h3 className="font-semibold text-foreground mb-2">Step 5 — Monitor &amp; Manage</h3>
-            <p>Use the <strong className="text-foreground">Dashboard</strong> to monitor validations in real-time. View logs, ban/unban keys, reset HWIDs, and toggle the kill switch from the dashboard. Enable Discord webhooks in <strong className="text-foreground">Settings</strong> for instant notifications.</p>
+            <p>Use the <strong className="text-foreground">Dashboard</strong> to monitor validations in real-time. View logs, ban/unban keys, reset HWIDs, and toggle the kill switch from the dashboard. Sellers can configure their own Discord webhook in <strong className="text-foreground">Settings</strong>; platform-wide security controls live in the <strong className="text-foreground">Admin Panel</strong>.</p>
           </div>
         </div>
       </div>
@@ -440,11 +440,11 @@ export default function ApiDocs() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Rate Limiting</h3>
-            <p className="text-xs text-muted-foreground">Configurable max attempts per IP within a time window. Returns 429 when exceeded. Adjust in Settings.</p>
+            <p className="text-xs text-muted-foreground">Configurable max attempts per IP within a time window. Returns 429 when exceeded. Platform admins adjust this in Admin Panel.</p>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Anti-Sharing (IP Tracking)</h3>
-            <p className="text-xs text-muted-foreground">Tracks unique IPs per license. Auto-bans keys exceeding the threshold. Configure threshold in Settings.</p>
+            <p className="text-xs text-muted-foreground">Tracks unique IPs per license. Auto-bans keys exceeding the threshold. Platform admins configure thresholds in Admin Panel.</p>
           </div>
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <h3 className="font-semibold text-foreground text-sm mb-1">Kill Switch</h3>
@@ -525,7 +525,7 @@ export default function ApiDocs() {
           <li>If <code className="text-foreground bg-secondary/50 px-1 rounded">valid: true</code> → run your app. Otherwise → show the error and exit.</li>
           <li>The code snippets include a <strong className="text-foreground">"Save license key"</strong> prompt — users can type <code className="text-foreground bg-secondary/50 px-1 rounded">y</code> to save their key locally so they don't need to re-enter it.</li>
           <li>Build your project as an executable and distribute with license keys.</li>
-          <li>(Optional) Set up <strong className="text-foreground">Discord webhooks</strong> and <strong className="text-foreground">anti-sharing</strong> in Settings.</li>
+          <li>(Optional) Set up <strong className="text-foreground">Discord webhooks</strong> in Settings. Platform admins manage anti-sharing and rate limits in Admin Panel.</li>
           <li>(Optional) Create <strong className="text-foreground">Resellers</strong> to let others distribute keys on your behalf.</li>
         </ol>
       </div>

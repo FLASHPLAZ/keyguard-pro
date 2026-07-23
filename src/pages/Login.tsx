@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogIn, Shield, Users, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, LogIn, Shield, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 
@@ -27,6 +27,23 @@ function getAuthErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -35,6 +52,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [inlineError, setInlineError] = useState("");
+  const [inlineStatus, setInlineStatus] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -53,14 +72,39 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    setInlineError("");
+    setInlineStatus("");
+
+    if (!isEmail(cleanEmail)) {
+      const message = "Enter a valid email address";
+      setInlineError(message);
+      toast.error(message);
+      return;
+    }
+    if (!password) {
+      const message = "Enter your password";
+      setInlineError(message);
+      toast.error(message);
+      return;
+    }
+
     setLoading(true);
+    setInlineStatus("Signing you in...");
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email: cleanEmail, password }),
+        15000,
+        "Sign in request timed out. Please check your connection and try again.",
+      );
       if (error) throw error;
       toast.success("Welcome back!");
     } catch (err) {
-      toast.error(getAuthErrorMessage(err, "Authentication failed. Please check your email and password."));
+      const message = getAuthErrorMessage(err, "Authentication failed. Please check your email and password.");
+      setInlineError(message);
+      toast.error(message);
     } finally {
+      setInlineStatus("");
       setLoading(false);
     }
   };
@@ -129,7 +173,7 @@ export default function Login() {
               ))}
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Email address</label>
                 <Input
@@ -168,13 +212,27 @@ export default function Login() {
                 className="w-full h-11 gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-primary/30 hover:shadow-xl"
               >
                 {loading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    Signing in...
+                  </>
                 ) : (
                   <>
                     <LogIn className="h-4 w-4" /> Sign In
                   </>
                 )}
               </Button>
+              {inlineStatus && !inlineError && (
+                <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-primary">
+                  {inlineStatus}
+                </div>
+              )}
+              {inlineError && (
+                <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>{inlineError}</span>
+                </div>
+              )}
             </form>
           </div>
         </div>

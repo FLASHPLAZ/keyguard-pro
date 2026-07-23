@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const DEFAULT_RATE_LIMIT_MAX = 60;
 const DEFAULT_RATE_LIMIT_WINDOW_MIN = 5;
+const MAX_BODY_BYTES = 16_384;
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_FIELDS = new Set(["license_key", "application_id", "hwid", "device_name"]);
 
 // ── Cache settings for 1 minute ──
 let settingsCache: { data: any; expiry: number } | null = null;
@@ -76,23 +80,57 @@ function jsonResponse(body: Record<string, any>, status: number) {
   });
 }
 
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw || "{}");
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+  for (const key of Object.keys(parsed)) {
+    if (!ALLOWED_FIELDS.has(key)) throw new Error("INVALID_FIELD");
+  }
+  return parsed;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ active: false, reason: "Method not allowed" }, 405);
   }
 
   try {
     let parsed: any;
     try {
-      parsed = await req.json();
-    } catch {
+      parsed = await readJsonBody(req);
+    } catch (err) {
+      if ((err as Error).message === "PAYLOAD_TOO_LARGE") {
+        return jsonResponse({ active: false, reason: "Request body too large" }, 413);
+      }
       return jsonResponse({ active: false, reason: "Invalid JSON body" }, 400);
     }
 
-    const { license_key, application_id, hwid, device_name } = parsed;
+    const license_key = typeof parsed.license_key === "string" ? parsed.license_key.trim().toUpperCase() : parsed.license_key;
+    const application_id = typeof parsed.application_id === "string" ? parsed.application_id.trim() : parsed.application_id;
+    const hwid = typeof parsed.hwid === "string" ? parsed.hwid.trim().slice(0, 128) : parsed.hwid;
+    const device_name = typeof parsed.device_name === "string" ? parsed.device_name.trim().slice(0, 120) : parsed.device_name;
 
-    if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
+    if (!license_key || typeof license_key !== "string" || !LICENSE_KEY_PATTERN.test(license_key)) {
       return jsonResponse({ active: false, reason: "Invalid license_key" }, 400);
+    }
+    if (application_id && (typeof application_id !== "string" || !UUID_PATTERN.test(application_id))) {
+      return jsonResponse({ active: false, reason: "Invalid application_id" }, 400);
+    }
+    if (hwid && (typeof hwid !== "string" || hwid.length < 3 || hwid.length > 128)) {
+      return jsonResponse({ active: false, reason: "Invalid hwid" }, 400);
     }
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -199,7 +237,8 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ active: true, app: app?.name, country, last_seen: now.toISOString() }, 200);
 
-  } catch {
+  } catch (err) {
+    console.error("Heartbeat error:", err);
     return jsonResponse({ active: false, reason: "Internal server error" }, 500);
   }
 });

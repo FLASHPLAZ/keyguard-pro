@@ -27,7 +27,9 @@ function formatExpiry(expiresAt: string): string {
 
 const RATE_LIMIT_MAX = 15;
 const RATE_LIMIT_WINDOW_MINUTES = 5;
+const MAX_BODY_BYTES = 16_384;
 const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
+const ALLOWED_FIELDS = new Set(["license_key"]);
 
 async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
@@ -49,16 +51,40 @@ async function checkRateLimit(supabase: any, ip: string): Promise<boolean> {
   return false;
 }
 
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw || "{}");
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+  for (const key of Object.keys(parsed)) {
+    if (!ALLOWED_FIELDS.has(key)) throw new Error("INVALID_FIELD");
+  }
+  return parsed;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ valid: false, error: "Method not allowed" }, 405);
   }
 
   try {
     let parsed: any;
     try {
-      parsed = await req.json();
-    } catch {
+      parsed = await readJsonBody(req);
+    } catch (err) {
+      if ((err as Error).message === "PAYLOAD_TOO_LARGE") {
+        return jsonResponse({ valid: false, error: "Request body too large" }, 413);
+      }
       return jsonResponse({ valid: false, error: "Invalid JSON body" }, 400);
     }
 

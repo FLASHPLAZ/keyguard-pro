@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const MAX_BODY_BYTES = 32_768;
+
 Deno.serve(async (req) => {
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -9,7 +13,7 @@ Deno.serve(async (req) => {
       return json({ error: "Server not configured" }, 500);
     }
 
-    const payload = await req.json();
+    const payload = await readJsonBody(req);
     const providedSignature = req.headers.get("x-nowpayments-sig") || "";
     const expectedSignature = await createSignature(payload, ipnSecret);
     if (!providedSignature || !timingSafeEqual(providedSignature.toLowerCase(), expectedSignature)) {
@@ -85,9 +89,30 @@ Deno.serve(async (req) => {
 
     return json({ ok: true });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    console.error("NOWPayments webhook error:", error);
+    const status = error instanceof Error && error.message === "PAYLOAD_TOO_LARGE"
+      ? 413
+      : error instanceof Error && error.message === "INVALID_JSON"
+        ? 400
+        : 500;
+    const message = status === 413 ? "Request body too large" : status === 400 ? "Invalid JSON body" : "Unexpected webhook error";
+    return json({ error: message }, status);
   }
 });
+
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+    return parsed;
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+}
 
 function sortObject(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortObject);
