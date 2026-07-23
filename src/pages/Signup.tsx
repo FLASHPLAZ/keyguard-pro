@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserPlus, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { notifyDiscord } from "@/lib/discord-notify";
 import { getClientMeta } from "@/lib/client-meta";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -65,7 +65,7 @@ export default function Signup() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -74,6 +74,10 @@ export default function Signup() {
         },
       });
       if (error) throw error;
+      if (data.session) {
+        const { error: bootstrapError } = await (supabase as any).rpc("ensure_user_bootstrap");
+        if (bootstrapError) console.error("Signup bootstrap failed", bootstrapError);
+      }
       setDone(true);
       toast.success("Account created! Check your email to verify.");
       try {
