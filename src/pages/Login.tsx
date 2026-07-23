@@ -8,6 +8,25 @@ import { LogIn, Shield, Users, ShieldCheck, Eye, EyeOff, Sparkles } from "lucide
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 
+function getAuthErrorMessage(error: unknown, fallback: string) {
+  if (!error) return fallback;
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object") {
+    const value = error as { message?: unknown; error_description?: unknown; error?: unknown; details?: unknown };
+    for (const item of [value.message, value.error_description, value.error, value.details]) {
+      if (typeof item === "string" && item.trim()) return item;
+    }
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== "{}") return serialized;
+    } catch {
+      // ignore serialization errors
+    }
+  }
+  return fallback;
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -39,8 +58,8 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       toast.success("Welcome back!");
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err, "Authentication failed. Please check your email and password."));
     } finally {
       setLoading(false);
     }
@@ -167,7 +186,7 @@ export default function Login() {
           </Link>
         </p>
         <p className="mt-3 text-center text-xs text-muted-foreground/60">
-          <Link to="/" className="hover:text-foreground transition-colors">← Back to home</Link>
+          <Link to="/" className="hover:text-foreground transition-colors">Back to home</Link>
         </p>
       </div>
     </div>

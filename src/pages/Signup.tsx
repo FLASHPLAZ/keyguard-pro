@@ -10,6 +10,25 @@ import { notifyDiscord } from "@/lib/discord-notify";
 import { getClientMeta } from "@/lib/client-meta";
 import { BrandLogo } from "@/components/BrandLogo";
 
+function getAuthErrorMessage(error: unknown, fallback: string) {
+  if (!error) return fallback;
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string") return error;
+  if (typeof error === "object") {
+    const value = error as { message?: unknown; error_description?: unknown; error?: unknown; details?: unknown };
+    for (const item of [value.message, value.error_description, value.error, value.details]) {
+      if (typeof item === "string" && item.trim()) return item;
+    }
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== "{}") return serialized;
+    } catch {
+      // ignore serialization errors
+    }
+  }
+  return fallback;
+}
+
 export default function Signup() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -66,8 +85,8 @@ export default function Signup() {
           Country: meta.country,
         });
       } catch { /* best-effort */ }
-    } catch (err: any) {
-      toast.error(err.message || "Sign up failed");
+    } catch (err) {
+      toast.error(getAuthErrorMessage(err, "Sign up failed. Please try again or contact support."));
     } finally {
       setLoading(false);
     }
@@ -101,7 +120,7 @@ export default function Signup() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Create your workspace</h1>
           <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 text-primary/60" />
-            <span>Free during beta — no credit card</span>
+            <span>Free during beta - no credit card</span>
           </div>
         </div>
 
@@ -198,7 +217,7 @@ export default function Signup() {
           </Link>
         </p>
         <p className="mt-3 text-center text-xs text-muted-foreground/60">
-          <Link to="/" className="hover:text-foreground transition-colors">← Back to home</Link>
+          <Link to="/" className="hover:text-foreground transition-colors">Back to home</Link>
         </p>
       </div>
     </div>
