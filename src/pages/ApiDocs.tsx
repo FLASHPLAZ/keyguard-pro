@@ -42,6 +42,10 @@ async def gxauth_post(endpoint: str, payload: dict, use_key: bool = False):
             data = await response.json(content_type=None)
             return response.status, data
 
+async def gxauth_manage(action: str, **payload):
+    payload["action"] = action
+    return await gxauth_post("bot-manage", payload, use_key=True)
+
 def clean_key(key: str) -> str:
     return key.strip().upper()
 
@@ -71,7 +75,7 @@ async def reset_hwid(interaction: discord.Interaction, license_key: str):
         return await interaction.response.send_message("Invalid license key format.", ephemeral=True)
 
     await interaction.response.defer(ephemeral=True)
-    status, data = await gxauth_post("reset-hwid", {"license_key": key}, use_key=True)
+    status, data = await gxauth_manage("reset_hwid", license_key=key)
     if status == 200 and data.get("success"):
         embed = discord.Embed(title="HWID reset complete", color=0x35D399)
         embed.add_field(name="License", value=f"\`{key}\`", inline=False)
@@ -79,6 +83,86 @@ async def reset_hwid(interaction: discord.Interaction, license_key: str):
     else:
         embed = discord.Embed(title="HWID reset failed", description=data.get("error", "Unknown error"), color=0xFF4D4D)
     await interaction.followup.send(embed=embed, ephemeral=True)
+
+@tree.command(name="gx_profile", description="Show your GX Auth workspace summary")
+async def gx_profile(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("profile")
+    if status != 200 or not data.get("success"):
+        return await interaction.followup.send(data.get("error", "Could not load profile"), ephemeral=True)
+    usage = data.get("usage", {})
+    tenant = data.get("tenant", {})
+    embed = discord.Embed(title="GX Auth Workspace", color=0x5C72FF)
+    embed.add_field(name="Plan", value=tenant.get("plan", "unknown"), inline=True)
+    embed.add_field(name="Apps", value=str(usage.get("apps", 0)), inline=True)
+    embed.add_field(name="Licenses", value=str(usage.get("licenses", 0)), inline=True)
+    embed.add_field(name="Resellers", value=str(usage.get("resellers", 0)), inline=True)
+    embed.add_field(name="Managers", value=str(usage.get("managers", 0)), inline=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+@tree.command(name="gx_apps", description="List your GX Auth applications")
+async def gx_apps(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("list_apps")
+    apps = data.get("apps", []) if status == 200 else []
+    if not apps:
+        return await interaction.followup.send("No apps found.", ephemeral=True)
+    lines = [f"**{app['name']}** — \`{app['id']}\`" for app in apps[:20]]
+    await interaction.followup.send("\\n".join(lines), ephemeral=True)
+
+@tree.command(name="gx_create_app", description="Create a GX Auth application")
+async def gx_create_app(interaction: discord.Interaction, name: str, description: str = ""):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("create_app", name=name, description=description)
+    if status == 200 and data.get("success"):
+        app = data["app"]
+        return await interaction.followup.send(f"Created app **{app['name']}**\\nID: \`{app['id']}\`", ephemeral=True)
+    await interaction.followup.send(data.get("error", "Could not create app"), ephemeral=True)
+
+@tree.command(name="gx_delete_app", description="Delete one of your GX Auth applications")
+async def gx_delete_app(interaction: discord.Interaction, application_id: str):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("delete_app", application_id=application_id)
+    await interaction.followup.send("Application deleted." if status == 200 and data.get("success") else data.get("error", "Delete failed"), ephemeral=True)
+
+@tree.command(name="gx_create_license", description="Create a license for one of your apps")
+async def gx_create_license(interaction: discord.Interaction, application_id: str, days: int = 30, owner_email: str = ""):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("create_license", application_id=application_id, days=days, owner_email=owner_email)
+    if status == 200 and data.get("success"):
+        lic = data["license"]
+        return await interaction.followup.send(f"License created: \`{lic['license_key']}\`\\nExpires: {lic['expires_at']}", ephemeral=True)
+    await interaction.followup.send(data.get("error", "Could not create license"), ephemeral=True)
+
+@tree.command(name="gx_delete_license", description="Delete a license from your workspace")
+async def gx_delete_license(interaction: discord.Interaction, license_key: str):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("delete_license", license_key=clean_key(license_key))
+    await interaction.followup.send("License deleted." if status == 200 and data.get("success") else data.get("error", "Delete failed"), ephemeral=True)
+
+@tree.command(name="gx_ban_license", description="Ban a license in your workspace")
+async def gx_ban_license(interaction: discord.Interaction, license_key: str):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("ban_license", license_key=clean_key(license_key))
+    await interaction.followup.send("License banned." if status == 200 and data.get("success") else data.get("error", "Ban failed"), ephemeral=True)
+
+@tree.command(name="gx_unban_license", description="Unban a license in your workspace")
+async def gx_unban_license(interaction: discord.Interaction, license_key: str):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("unban_license", license_key=clean_key(license_key))
+    await interaction.followup.send("License unbanned." if status == 200 and data.get("success") else data.get("error", "Unban failed"), ephemeral=True)
+
+@tree.command(name="gx_create_reseller", description="Create a reseller account")
+async def gx_create_reseller(interaction: discord.Interaction, username: str, email: str, password: str, credits: int = 10):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("create_reseller", username=username, email=email, password=password, credits=credits)
+    await interaction.followup.send("Reseller created." if status == 200 and data.get("success") else data.get("error", "Could not create reseller"), ephemeral=True)
+
+@tree.command(name="gx_create_manager", description="Create a manager account")
+async def gx_create_manager(interaction: discord.Interaction, username: str, email: str, password: str):
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_manage("create_manager", username=username, email=email, password=password)
+    await interaction.followup.send("Manager created." if status == 200 and data.get("success") else data.get("error", "Could not create manager"), ephemeral=True)
 
 @bot.event
 async def on_ready():
@@ -254,6 +338,42 @@ const endpoints = [
       { code: 400, message: "No HWID bound", desc: "License has no HWID to reset" },
       { code: 401, message: "Unauthorized", desc: "Missing or invalid API key / token" },
       { code: 404, message: "License not found", desc: "No license matches the key" },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/bot-manage",
+    auth: "X-API-Key (Bot API Key)",
+    description: "Owner-scoped GX Auth AIO endpoint for Discord bots and automation. The key owner can manage only their own workspace apps, licenses, resellers, and managers.",
+    request: `{
+  "action": "create_license",
+  "application_id": "your-app-uuid",
+  "days": 30,
+  "owner_email": "customer@example.com"
+}`,
+    response: `{
+  "success": true,
+  "license": {
+    "id": "uuid",
+    "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+    "expires_at": "2026-08-22T00:00:00Z"
+  }
+}`,
+    fields: [
+      { name: "action", type: "string", required: true, desc: "One of: profile, list_apps, create_app, delete_app, list_licenses, create_license, delete_license, ban_license, unban_license, reset_hwid, list_resellers, create_reseller, delete_reseller, list_managers, create_manager, delete_manager" },
+      { name: "application_id", type: "uuid", required: "For app/license actions", desc: "Application UUID from the owner workspace" },
+      { name: "license_key", type: "string", required: "For license actions", desc: "License key to delete, ban, unban, or reset" },
+      { name: "email", type: "string", required: "For team creation", desc: "Reseller or manager login email" },
+      { name: "password", type: "string", required: "For team creation", desc: "Temporary password for reseller/manager account" },
+    ],
+    headers: [
+      { name: "X-API-Key", required: "Yes", desc: "Bot API Key generated from the owner's Settings page" },
+    ],
+    errors: [
+      { code: 400, message: "Unsupported action", desc: "Action is missing or not supported" },
+      { code: 401, message: "Invalid Bot API Key", desc: "Missing, revoked, or invalid key" },
+      { code: 403, message: "Action not allowed for this workspace", desc: "The target app/license/user does not belong to the key owner" },
+      { code: 404, message: "(varies)", desc: "Target app, license, reseller, or manager was not found" },
     ],
   },
 ];

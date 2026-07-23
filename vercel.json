@@ -16,6 +16,7 @@
     { "source": "/api/validate", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/validate" },
     { "source": "/api/heartbeat", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/heartbeat" },
     { "source": "/api/reset-hwid", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/reset-hwid" },
+    { "source": "/api/bot-manage", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/bot-manage" },
     { "source": "/api/create-reseller", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/create-reseller" },
     { "source": "/api/notify-discord", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/notify-discord" },
     { "source": "/api/check-license", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/check-license" },
