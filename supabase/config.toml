@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.reset-hwid]
 verify_jwt = false
 
+[functions.bot-manage]
+verify_jwt = false
+
 [functions.heartbeat]
 verify_jwt = false
 

@@ -103,6 +103,15 @@ export default function AdminPanel() {
     ip_change_threshold: "5",
     auto_ban_enabled: "true",
   });
+  const [webhookSettings, setWebhookSettings] = useState({
+    admin_webhook_activity: "",
+    admin_webhook_auth: "",
+    admin_webhook_apps: "",
+    admin_webhook_licenses: "",
+    admin_webhook_billing: "",
+    admin_webhook_security: "",
+    admin_webhook_team: "",
+  });
   const [blacklistRows, setBlacklistRows] = useState<any[]>([]);
   const [adminBannedLicenses, setAdminBannedLicenses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
@@ -469,6 +478,13 @@ export default function AdminPanel() {
         "resethwid_rate_limit_window",
         "ip_change_threshold",
         "auto_ban_enabled",
+        "admin_webhook_activity",
+        "admin_webhook_auth",
+        "admin_webhook_apps",
+        "admin_webhook_licenses",
+        "admin_webhook_billing",
+        "admin_webhook_security",
+        "admin_webhook_team",
       ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
@@ -480,10 +496,21 @@ export default function AdminPanel() {
       });
       return next;
     });
+    setWebhookSettings((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key);
+      });
+      return next;
+    });
   }
 
   function updateSecuritySetting(key: keyof typeof securitySettings, value: string) {
     setSecuritySettings((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateWebhookSetting(key: keyof typeof webhookSettings, value: string) {
+    setWebhookSettings((prev) => ({ ...prev, [key]: value }));
   }
 
   async function addAdminIpBlacklist() {
@@ -563,6 +590,17 @@ export default function AdminPanel() {
       "IP Threshold": securitySettings.ip_change_threshold,
       "Auto Ban": securitySettings.auto_ban_enabled,
     });
+  }
+
+  async function saveAdminWebhooks() {
+    if (!user) return;
+    const { error } = await supabase.from("settings").upsert(
+      Object.entries(webhookSettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success("Admin webhook routing saved");
+    notifyDiscord("Admin updated webhook routing", { Categories: Object.values(webhookSettings).filter(Boolean).length });
   }
 
   // Filtered data
@@ -841,8 +879,8 @@ export default function AdminPanel() {
                   <div className="rounded-lg border border-border/70 bg-secondary/30 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Bot APIs</p>
                     <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-                      <p><code className="text-foreground">POST /api/reset-hwid</code> accepts a seller Bot API Key.</p>
-                      <p>Seller keys are workspace-scoped. Platform admin credentials can manage globally.</p>
+                      <p><code className="text-foreground">POST /api/bot-manage</code> powers the GX Auth AIO Discord bot.</p>
+                      <p>Owner Bot API Keys can create apps, issue licenses, reset HWID, ban keys, and manage resellers/managers inside that owner workspace.</p>
                     </div>
                   </div>
                   <div className="rounded-lg border border-border/70 bg-secondary/30 p-4">
@@ -861,7 +899,7 @@ export default function AdminPanel() {
                       <p className="text-sm font-semibold text-foreground">GX Auth AIO Discord Bot</p>
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      Owners generate a Bot API Key in Settings, paste it into the Python bot config, then use Discord slash commands to check licenses and reset HWIDs.
+                      Owners generate a Bot API Key in Settings, paste it into the Python bot config, then manage apps, licenses, resellers, managers, HWID resets, and bans from Discord slash commands.
                     </p>
                     <Button asChild size="sm" className="mt-4">
                       <Link to="/api-docs#discord-bot">Open Bot Guide</Link>
@@ -1463,6 +1501,38 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
             </div>
+            <Card className="border-border/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary" />Discord Webhook Routing</CardTitle>
+                <p className="text-xs text-muted-foreground">Platform-wide admin webhooks. These receive activity across all users, resellers, managers, apps, licenses, payments, and security actions.</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {[
+                    ["admin_webhook_activity", "General Activity", "Fallback for all admin events"],
+                    ["admin_webhook_auth", "Users / Auth", "Signups, logins, workspace/user actions"],
+                    ["admin_webhook_apps", "Applications", "App create/delete/suspend/signing events"],
+                    ["admin_webhook_licenses", "Licenses", "License create/delete/ban/HWID/key events"],
+                    ["admin_webhook_billing", "Billing / Invoices", "Checkout, invoice, payment, plan events"],
+                    ["admin_webhook_security", "Security", "Blacklist, bans, maintenance, security settings"],
+                    ["admin_webhook_team", "Team", "Reseller and manager changes"],
+                  ].map(([key, label, helper]) => (
+                    <label key={key} className="space-y-1">
+                      <span className="text-xs font-medium text-foreground">{label}</span>
+                      <Input
+                        type="url"
+                        value={(webhookSettings as any)[key]}
+                        onChange={(e) => updateWebhookSetting(key as keyof typeof webhookSettings, e.target.value)}
+                        placeholder="https://discord.com/api/webhooks/..."
+                        className="bg-secondary border-border font-mono text-xs"
+                      />
+                      <span className="block text-[11px] text-muted-foreground">{helper}</span>
+                    </label>
+                  ))}
+                </div>
+                <Button onClick={saveAdminWebhooks} className="w-full md:w-auto">Save Webhook Routing</Button>
+              </CardContent>
+            </Card>
             <Card className="border-border/60">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Shield className="h-4 w-4 text-primary" />Platform Rate Limits & Anti-Sharing</CardTitle>

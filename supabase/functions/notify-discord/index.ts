@@ -51,7 +51,18 @@ async function getUserWebhook(supabase: any, userId: string | null): Promise<str
   return (data?.value as string | undefined) || "";
 }
 
-async function getAdminWebhook(supabase: any): Promise<string> {
+function categoryForAction(action: string): string {
+  const lower = action.toLowerCase();
+  if (lower.includes("login") || lower.includes("signup") || lower.includes("user") || lower.includes("workspace")) return "auth";
+  if (lower.includes("application") || lower.includes("app") || lower.includes("kill switch") || lower.includes("signing")) return "apps";
+  if (lower.includes("license") || lower.includes("hwid") || lower.includes("key")) return "licenses";
+  if (lower.includes("payment") || lower.includes("invoice") || lower.includes("checkout") || lower.includes("plan") || lower.includes("billing")) return "billing";
+  if (lower.includes("blacklist") || lower.includes("ban") || lower.includes("security") || lower.includes("maintenance")) return "security";
+  if (lower.includes("reseller") || lower.includes("manager")) return "team";
+  return "activity";
+}
+
+async function getAdminWebhooks(supabase: any, category: string): Promise<string[]> {
   // Prefer env fallback (admin/global) and any settings row owned by an admin.
   const envUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
   const { data: admins } = await supabase
@@ -63,13 +74,14 @@ async function getAdminWebhook(supabase: any): Promise<string> {
     const { data } = await supabase
       .from("settings")
       .select("value")
-      .eq("key", "discord_webhook_url")
+      .in("key", ["discord_webhook_url", `admin_webhook_${category}`, "admin_webhook_activity"])
       .in("user_id", ids)
-      .limit(1)
-      .maybeSingle();
-    if (data?.value) return data.value as string;
+      .limit(10);
+    const urls = (data || []).map((row: any) => row.value).filter(Boolean);
+    if (envUrl) urls.push(envUrl);
+    return Array.from(new Set(urls));
   }
-  return envUrl;
+  return envUrl ? [envUrl] : [];
 }
 
 Deno.serve(async (req) => {
@@ -178,6 +190,7 @@ Deno.serve(async (req) => {
     else if (lower.includes("blacklist") || lower.includes("banned")) icon = "🚫";
     else if (lower.includes("settings")) icon = "⚙️";
 
+    const category = categoryForAction(action);
     const color = colorMap[action] || 0x8b5cf6; // violet fallback
 
     const fields = Object.entries(details || {})
@@ -201,13 +214,13 @@ Deno.serve(async (req) => {
 
     // Fan out to: acting user's own webhook, their tenant owner's webhook (if
     // they are a manager/reseller), and the global admin webhook. Dedupe.
-    const [userHook, adminHook, ownerId] = await Promise.all([
+    const [userHook, adminHooks, ownerId] = await Promise.all([
       getUserWebhook(supabase, user.id),
-      getAdminWebhook(supabase),
+      getAdminWebhooks(supabase, category),
       findTenantOwner(supabase, user.id),
     ]);
     const ownerHook = ownerId && ownerId !== user.id ? await getUserWebhook(supabase, ownerId) : "";
-    const targets = Array.from(new Set([userHook, ownerHook, adminHook].filter(Boolean)));
+    const targets = Array.from(new Set([userHook, ownerHook, ...adminHooks].filter(Boolean)));
 
     if (targets.length === 0) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), {
@@ -221,7 +234,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+    console.error("Notify Discord failed", e);
+    return new Response(JSON.stringify({ error: "Discord notification failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
