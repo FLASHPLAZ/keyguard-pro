@@ -7,6 +7,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -31,8 +32,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleRow) return json({ error: "Admin access required" }, 403);
 
-    const { userId } = await req.json();
+    const { userId } = await req.json().catch(() => ({}));
     if (!userId || userId === authUser.user.id) return json({ error: "Invalid target user" }, 400);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(userId))) {
+      return json({ error: "Invalid target user" }, 400);
+    }
 
     const { data: target, error: targetError } = await adminClient.auth.admin.getUserById(userId);
     if (targetError || !target?.user?.email) return json({ error: "Target user not found" }, 404);
@@ -44,7 +48,10 @@ Deno.serve(async (req) => {
         redirectTo: `${req.headers.get("origin") || "https://www.gxauth.xyz"}/dashboard`,
       },
     });
-    if (linkError) return json({ error: linkError.message }, 400);
+    if (linkError) {
+      console.error("Impersonation link error:", linkError);
+      return json({ error: "Could not create impersonation link" }, 400);
+    }
 
     await adminClient.from("activity_logs").insert({
       user_id: authUser.user.id,
@@ -54,7 +61,8 @@ Deno.serve(async (req) => {
 
     return json({ action_link: linkData.properties?.action_link });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    console.error("Impersonate-user error:", error);
+    return json({ error: "Internal server error" }, 500);
   }
 });
 

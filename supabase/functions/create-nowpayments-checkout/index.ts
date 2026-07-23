@@ -12,9 +12,12 @@ const PLANS: Record<string, { amount: number; label: string }> = {
 
 const LITOSHI_PER_LTC = 100_000_000;
 const INVOICE_EXPIRY_MS = 60 * 60 * 1000;
+const MAX_BODY_BYTES = 16_384;
+const ALLOWED_FIELDS = new Set(["plan", "payCurrency"]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const manualLtcAddress = Deno.env.get("MANUAL_LTC_ADDRESS") || Deno.env.get("LTC_PAYMENT_ADDRESS");
@@ -32,7 +35,7 @@ Deno.serve(async (req) => {
     const { data: authUser, error: authError } = await adminClient.auth.getUser(token);
     if (authError || !authUser.user) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
+    const body = await readJsonBody(req);
     const plan = String(body.plan || "lifetime").toLowerCase();
     if (!PLANS[plan]) return json({ error: "Invalid plan selected" }, 400);
     const amount = PLANS[plan].amount;
@@ -74,7 +77,8 @@ Deno.serve(async (req) => {
       },
     } as any);
     if (transactionError) {
-      return json({ error: `Payment tracking is not ready: ${transactionError.message}` }, 500);
+      console.error("Payment transaction insert failed:", transactionError);
+      return json({ error: "Payment tracking is not ready. Please contact support." }, 500);
     }
 
     await adminClient.from("activity_logs").insert({
@@ -95,9 +99,33 @@ Deno.serve(async (req) => {
       expires_at: expiresAt,
     });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
+    console.error("Create payment checkout error:", error);
+    const message = error instanceof Error && error.message === "PAYLOAD_TOO_LARGE"
+      ? "Request body too large"
+      : error instanceof Error && error.message === "INVALID_JSON"
+        ? "Invalid request body"
+        : "Could not create Litecoin invoice. Try again in a minute.";
+    return json({ error: message }, message === "Request body too large" ? 413 : 500);
   }
 });
+
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw || "{}");
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+  for (const key of Object.keys(parsed)) {
+    if (!ALLOWED_FIELDS.has(key)) throw new Error("INVALID_JSON");
+  }
+  return parsed;
+}
 
 async function getLtcUsdRate() {
   const override = Number(Deno.env.get("LTC_USD_RATE_OVERRIDE") || "");
@@ -120,9 +148,8 @@ async function getLtcUsdRate() {
 }
 
 function json(body: Record<string, unknown>, status = 200) {
-  const responseStatus = body.error ? 200 : status;
   return new Response(JSON.stringify(body), {
-    status: responseStatus,
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

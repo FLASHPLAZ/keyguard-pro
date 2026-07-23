@@ -9,6 +9,7 @@ const LITOSHI_PER_LTC = 100_000_000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -40,7 +41,10 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(100);
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) {
+      console.error("Could not load pending Litecoin invoices:", error);
+      return json({ error: "Could not load pending Litecoin invoices" }, 500);
+    }
     if (!invoices?.length) return json({ checked: 0, confirmed: 0, message: "No pending Litecoin invoices" });
 
     const chain = await fetchLitecoinAddress(address);
@@ -154,7 +158,8 @@ Deno.serve(async (req) => {
 
     return json({ checked: invoices.length, outputs: receivedOutputs.length, detected, confirmed, expired });
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unexpected tracker error" }, 500);
+    console.error("Litecoin sync error:", error);
+    return json({ error: "Unexpected tracker error" }, 500);
   }
 });
 
@@ -215,9 +220,8 @@ function mergeRawPayload(raw: unknown, patch: Record<string, unknown>) {
 }
 
 function json(body: Record<string, unknown>, status = 200) {
-  const responseStatus = body.error ? 200 : status;
   return new Response(JSON.stringify(body), {
-    status: responseStatus,
+    status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

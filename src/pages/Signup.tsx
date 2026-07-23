@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Sparkles, UserPlus } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { notifyDiscord } from "@/lib/discord-notify";
 import { getClientMeta } from "@/lib/client-meta";
@@ -29,6 +29,23 @@ function getAuthErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function isEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export default function Signup() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -39,6 +56,8 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [done, setDone] = useState(false);
+  const [inlineError, setInlineError] = useState("");
+  const [inlineStatus, setInlineStatus] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -55,26 +74,52 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim().length < 3) {
-      toast.error("Username must be at least 3 characters");
+    const cleanEmail = email.trim().toLowerCase();
+    const rawUsername = username.trim();
+    const cleanUsername = (rawUsername.includes("@") ? cleanEmail.split("@")[0] : rawUsername || cleanEmail.split("@")[0])
+      .replace(/[^\w-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 32);
+
+    setInlineError("");
+    setInlineStatus("");
+
+    if (cleanUsername.length < 3) {
+      const message = "Username must be at least 3 characters";
+      setInlineError(message);
+      toast.error(message);
+      return;
+    }
+    if (!isEmail(cleanEmail)) {
+      const message = "Enter a valid email address";
+      setInlineError(message);
+      toast.error(message);
       return;
     }
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      const message = "Password must be at least 8 characters";
+      setInlineError(message);
+      toast.error(message);
       return;
     }
     setLoading(true);
+    setInlineStatus("Creating your workspace...");
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: { username: username.trim() },
-        },
-      });
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+            data: { username: cleanUsername },
+          },
+        }),
+        15000,
+        "Signup request timed out. Please check your connection and try again.",
+      );
       if (error) throw error;
       if (data.session) {
+        setInlineStatus("Finishing workspace setup...");
         const { error: bootstrapError } = await (supabase as any).rpc("ensure_user_bootstrap");
         if (bootstrapError) console.error("Signup bootstrap failed", bootstrapError);
       }
@@ -83,15 +128,18 @@ export default function Signup() {
       try {
         const meta = await getClientMeta();
         notifyDiscord("New user signup", {
-          Username: username.trim(),
-          Email: email.trim(),
+          Username: cleanUsername,
+          Email: cleanEmail,
           IP: meta.ip,
           Country: meta.country,
         });
       } catch { /* best-effort */ }
     } catch (err) {
-      toast.error(getAuthErrorMessage(err, "Sign up failed. Please try again or contact support."));
+      const message = getAuthErrorMessage(err, "Sign up failed. Please try again or contact support.");
+      setInlineError(message);
+      toast.error(message);
     } finally {
+      setInlineStatus("");
       setLoading(false);
     }
   };
@@ -149,7 +197,7 @@ export default function Signup() {
                 <h2 className="mb-1 text-center text-lg font-semibold text-foreground">Get started in 30 seconds</h2>
                 <p className="mb-6 text-center text-sm text-muted-foreground">Your own license & auth backend</p>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} noValidate className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">Username</label>
                     <Input
@@ -157,11 +205,10 @@ export default function Signup() {
                       placeholder="yourname"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      required
-                      minLength={3}
                       maxLength={32}
                       className="h-11 bg-secondary/50 border-border/50 focus:border-primary/50"
                     />
+                    <p className="text-[11px] text-muted-foreground/70">Use a simple display name. If left blank, we use your email name.</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">Email address</label>
@@ -201,13 +248,27 @@ export default function Signup() {
                     className="w-full h-11 gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
                   >
                     {loading ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                        Creating...
+                      </>
                     ) : (
                       <>
                         <UserPlus className="h-4 w-4" /> Create workspace
                       </>
                     )}
                   </Button>
+                  {inlineStatus && !inlineError && (
+                    <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-primary">
+                      {inlineStatus}
+                    </div>
+                  )}
+                  {inlineError && (
+                    <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{inlineError}</span>
+                    </div>
+                  )}
                 </form>
               </>
             )}

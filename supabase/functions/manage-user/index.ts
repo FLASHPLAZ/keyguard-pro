@@ -7,6 +7,11 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const supabase = createClient(
@@ -34,7 +39,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const action = body.action as "ban" | "unban" | "delete";
     const userId = body.userId as string;
     const reason = (body.reason as string) || null;
@@ -46,6 +51,11 @@ Deno.serve(async (req) => {
     }
     if (userId === caller.id) {
       return new Response(JSON.stringify({ error: "Cannot act on your own account" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(userId))) {
+      return new Response(JSON.stringify({ error: "Invalid userId" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -83,7 +93,8 @@ Deno.serve(async (req) => {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error("Manage-user error:", err);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
