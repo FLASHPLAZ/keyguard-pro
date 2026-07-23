@@ -1,11 +1,91 @@
 import { RoleLayout } from "@/components/RoleLayout";
-import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2, Download } from "lucide-react";
+import { Copy, CheckCircle, AlertTriangle, Shield, Zap, BookOpen, Server, Code2, Download, Bot, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
 
 const API_BASE = "https://gxauth.xyz/api";
+
+const gxAuthAioBot = `# GX Auth AIO Discord Bot
+# pip install -U discord.py aiohttp python-dotenv
+#
+# .env
+# DISCORD_BOT_TOKEN=your_discord_bot_token
+# GXAUTH_BOT_API_KEY=gk_your_key_from_gxauth_settings
+# GXAUTH_API_BASE=https://gxauth.xyz/api
+
+import os
+import re
+import aiohttp
+import discord
+from discord import app_commands
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
+GXAUTH_API_BASE = os.getenv("GXAUTH_API_BASE", "https://gxauth.xyz/api").rstrip("/")
+GXAUTH_BOT_API_KEY = os.getenv("GXAUTH_BOT_API_KEY", "")
+LICENSE_RE = re.compile(r"^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$")
+
+intents = discord.Intents.default()
+bot = discord.Client(intents=intents)
+tree = app_commands.CommandTree(bot)
+
+async def gxauth_post(endpoint: str, payload: dict, use_key: bool = False):
+    headers = {"Content-Type": "application/json"}
+    if use_key:
+        headers["X-API-Key"] = GXAUTH_BOT_API_KEY
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=12)) as session:
+        async with session.post(f"{GXAUTH_API_BASE}/{endpoint}", json=payload, headers=headers) as response:
+            data = await response.json(content_type=None)
+            return response.status, data
+
+def clean_key(key: str) -> str:
+    return key.strip().upper()
+
+@tree.command(name="check_license", description="Check a GX Auth license without binding HWID")
+async def check_license(interaction: discord.Interaction, license_key: str):
+    key = clean_key(license_key)
+    if not LICENSE_RE.match(key):
+        return await interaction.response.send_message("Invalid license key format.", ephemeral=True)
+
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_post("check-license", {"license_key": key})
+    if status == 200 and data.get("valid"):
+        embed = discord.Embed(title="License active", color=0x5C72FF)
+        embed.add_field(name="Application", value=data.get("application") or "Unknown", inline=True)
+        embed.add_field(name="Status", value=data.get("status") or "active", inline=True)
+        embed.add_field(name="Expires", value=data.get("expires_readable") or "Unknown", inline=False)
+    else:
+        embed = discord.Embed(title="License check failed", description=data.get("error", "Unknown error"), color=0xFF4D4D)
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+@tree.command(name="reset_hwid", description="Reset HWID for a customer license")
+async def reset_hwid(interaction: discord.Interaction, license_key: str):
+    key = clean_key(license_key)
+    if not GXAUTH_BOT_API_KEY:
+        return await interaction.response.send_message("GXAUTH_BOT_API_KEY is missing in bot config.", ephemeral=True)
+    if not LICENSE_RE.match(key):
+        return await interaction.response.send_message("Invalid license key format.", ephemeral=True)
+
+    await interaction.response.defer(ephemeral=True)
+    status, data = await gxauth_post("reset-hwid", {"license_key": key}, use_key=True)
+    if status == 200 and data.get("success"):
+        embed = discord.Embed(title="HWID reset complete", color=0x35D399)
+        embed.add_field(name="License", value=f"\`{key}\`", inline=False)
+        embed.add_field(name="Previous HWID", value=f"\`{data.get('previous_hwid') or 'none'}\`", inline=False)
+    else:
+        embed = discord.Embed(title="HWID reset failed", description=data.get("error", "Unknown error"), color=0xFF4D4D)
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+@bot.event
+async def on_ready():
+    await tree.sync()
+    print(f"GX Auth AIO bot online as {bot.user}")
+
+bot.run(BOT_TOKEN)`;
 
 const endpoints = [
   {
@@ -216,6 +296,7 @@ export default function ApiDocs() {
           <li><a href="#endpoints" className="hover:text-primary transition-colors">API Endpoints</a></li>
           <li><a href="#hwid" className="hover:text-primary transition-colors">HWID Binding</a></li>
           <li><a href="#request-signing" className="hover:text-primary transition-colors">Request Signing (HMAC)</a></li>
+          <li><a href="#discord-bot" className="hover:text-primary transition-colors">GX Auth AIO Discord Bot</a></li>
           <li><a href="#security" className="hover:text-primary transition-colors">Security Features</a></li>
           <li><a href="#examples" className="hover:text-primary transition-colors">Code Examples</a></li>
           <li><a href="#quickstart" className="hover:text-primary transition-colors">Quick Start</a></li>
@@ -430,6 +511,43 @@ export default function ApiDocs() {
             </ul>
           </div>
         </div>
+      </div>
+
+      {/* GX Auth AIO Discord Bot */}
+      <div id="discord-bot" className="mb-8 rounded-lg border border-border bg-card p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+              <Bot className="h-5 w-5 text-primary" /> GX Auth AIO Discord Bot
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+              Owners can generate a Bot API Key in Settings, paste it into the bot config, and let Discord staff check licenses or reset customer HWIDs without logging into the dashboard.
+            </p>
+          </div>
+          <button
+            onClick={() => copyCode(gxAuthAioBot, "gxauth-aio-bot")}
+            className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          >
+            {copiedText === "gxauth-aio-bot" ? <><CheckCircle className="h-3 w-3 text-emerald-400" /> Copied</> : <><Copy className="h-3 w-3" /> Copy Bot</>}
+          </button>
+        </div>
+        <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground"><KeyRound className="h-4 w-4 text-primary" /> 1. Generate Key</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">Open Settings, generate a Bot API Key, then save. This key can only control resources owned by that account.</p>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="mb-1 text-sm font-semibold text-foreground">2. Add Config</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">Put the key in <code className="text-primary">GXAUTH_BOT_API_KEY</code> with your Discord bot token.</p>
+          </div>
+          <div className="rounded-md border border-border bg-secondary/30 p-3">
+            <h3 className="mb-1 text-sm font-semibold text-foreground">3. Manage in Discord</h3>
+            <p className="text-xs leading-relaxed text-muted-foreground">Use <code className="text-primary">/check_license</code> and <code className="text-primary">/reset_hwid</code>. Requests are scoped by the API key owner.</p>
+          </div>
+        </div>
+        <pre className="max-h-[520px] overflow-auto rounded-lg border border-border bg-secondary/40 p-4 font-mono text-xs leading-relaxed text-foreground">
+          {gxAuthAioBot}
+        </pre>
       </div>
 
       {/* Security Features */}

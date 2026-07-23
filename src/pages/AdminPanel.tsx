@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +20,7 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy, Code2, Bot,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -671,6 +672,7 @@ export default function AdminPanel() {
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
             <TabsTrigger value="payments" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Payments</TabsTrigger>
+            <TabsTrigger value="api" className="gap-1.5 text-xs"><Code2 className="h-3.5 w-3.5" />API Center</TabsTrigger>
             <TabsTrigger value="all-apps" className="gap-1.5 text-xs"><AppWindow className="h-3.5 w-3.5" />All Apps</TabsTrigger>
             <TabsTrigger value="all-licenses" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" />All Licenses</TabsTrigger>
             <TabsTrigger value="logs" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Audit Logs</TabsTrigger>
@@ -819,6 +821,66 @@ export default function AdminPanel() {
           </TabsContent>
 
           {/* ─── USERS TAB ─── */}
+          <TabsContent value="api" className="space-y-4">
+            <Card className="border-border/60">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Code2 className="h-4 w-4 text-primary" /> Platform API Center
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-lg border border-border/70 bg-secondary/30 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Client APIs</p>
+                    <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                      <p><code className="text-foreground">POST /api/validate</code> validates licenses and binds HWID.</p>
+                      <p><code className="text-foreground">POST /api/heartbeat</code> checks bans, expiry, and kill-switch state.</p>
+                      <p><code className="text-foreground">POST /api/check-license</code> gives a read-only portal lookup.</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-secondary/30 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Bot APIs</p>
+                    <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                      <p><code className="text-foreground">POST /api/reset-hwid</code> accepts a seller Bot API Key.</p>
+                      <p>Seller keys are workspace-scoped. Platform admin credentials can manage globally.</p>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-secondary/30 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Payment APIs</p>
+                    <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                      <p><code className="text-foreground">create-nowpayments-checkout</code> creates LTC invoices.</p>
+                      <p><code className="text-foreground">sync-litecoin-payments</code> scans confirmations and upgrades plans.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold text-foreground">GX Auth AIO Discord Bot</p>
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Owners generate a Bot API Key in Settings, paste it into the Python bot config, then use Discord slash commands to check licenses and reset HWIDs.
+                    </p>
+                    <Button asChild size="sm" className="mt-4">
+                      <Link to="/api-docs#discord-bot">Open Bot Guide</Link>
+                    </Button>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-card p-4">
+                    <p className="text-sm font-semibold text-foreground">Full API Documentation</p>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      Request and response schemas, HMAC signing rules, error codes, and examples for Python, C#, Node.js, C++, Go, Java, and Rust.
+                    </p>
+                    <Button asChild variant="outline" size="sm" className="mt-4">
+                      <Link to="/api-docs">Open API Docs</Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="users" className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

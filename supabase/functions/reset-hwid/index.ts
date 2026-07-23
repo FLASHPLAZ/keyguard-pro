@@ -7,6 +7,8 @@ const corsHeaders = {
 
 const DEFAULT_RATE_LIMIT_MAX = 10;
 const DEFAULT_RATE_LIMIT_WINDOW_MIN = 5;
+const MAX_BODY_BYTES = 16_384;
+const LICENSE_KEY_PATTERN = /^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$/;
 
 async function getResetHwidSettings(supabase: any) {
   const { data } = await supabase.from("settings").select("key, value");
@@ -64,11 +66,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  if (req.method !== "POST") {
+    return json({ success: false, error: "Method not allowed" }, 405);
+  }
 
   try {
-    const { license_key } = await req.json();
+    const body = await readJsonBody(req);
+    const license_key = typeof body.license_key === "string" ? body.license_key.trim().toUpperCase() : body.license_key;
 
-    if (!license_key || typeof license_key !== "string" || license_key.length > 50) {
+    if (!license_key || typeof license_key !== "string" || !LICENSE_KEY_PATTERN.test(license_key)) {
       return new Response(JSON.stringify({ success: false, error: "Invalid license_key" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -96,17 +102,29 @@ Deno.serve(async (req) => {
     const apiKey = req.headers.get("x-api-key");
     const authHeader = req.headers.get("authorization");
     let authenticatedUserId: string | null = null;
+    let isPlatformAdmin = false;
 
     if (apiKey) {
-      const { data: settingsData } = await supabase.from("settings").select("key, value, user_id");
-      const storedKey = settingsData?.find((s: any) => s.key === "bot_api_key" && s.value)?.value;
-      if (!storedKey || storedKey !== apiKey) {
+      const { data: apiKeyRows } = await supabase
+        .from("settings")
+        .select("user_id")
+        .eq("key", "bot_api_key")
+        .eq("value", apiKey)
+        .limit(1);
+      const apiKeyOwner = apiKeyRows?.[0]?.user_id || null;
+      if (!apiKeyOwner) {
         return new Response(JSON.stringify({ success: false, error: "Invalid API key" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const adminSetting = settingsData?.find((s: any) => s.key === "bot_api_key");
-      authenticatedUserId = (adminSetting as any)?.user_id || null;
+      authenticatedUserId = apiKeyOwner;
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", apiKeyOwner)
+        .eq("role", "admin")
+        .maybeSingle();
+      isPlatformAdmin = !!adminRole;
     } else if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.replace("Bearer ", "");
       const supabaseAuth = createClient(
@@ -131,6 +149,7 @@ Deno.serve(async (req) => {
         });
       }
       authenticatedUserId = user.id;
+      isPlatformAdmin = true;
     } else {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized — provide X-API-Key or Authorization header" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -140,7 +159,7 @@ Deno.serve(async (req) => {
     // Find and reset HWID
     const { data: license, error: findError } = await supabase
       .from("licenses")
-      .select("id, hwid, license_key, application_id, applications(name)")
+      .select("id, hwid, license_key, application_id, tenant_id, applications(name, tenant_id)")
       .eq("license_key", license_key)
       .single();
 
@@ -152,6 +171,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: "License not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!isPlatformAdmin) {
+      const { data: ownedTenant } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("owner_user_id", authenticatedUserId)
+        .maybeSingle();
+      const ownedTenantId = ownedTenant?.id || null;
+      const appTenantId = (license as any).applications?.tenant_id || null;
+      if (!ownedTenantId || (license.tenant_id !== ownedTenantId && appTenantId !== ownedTenantId)) {
+        return new Response(JSON.stringify({ success: false, error: "License does not belong to your workspace" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (!license.hwid) {
@@ -177,7 +211,10 @@ Deno.serve(async (req) => {
     });
 
     // Discord notification
-    const { data: settingsData } = await supabase.from("settings").select("key, value");
+    const { data: settingsData } = await supabase
+      .from("settings")
+      .select("key, value")
+      .eq("user_id", authenticatedUserId);
     let webhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
     if (settingsData) {
       const found = settingsData.find((s: any) => s.key === "discord_webhook_url" && s.value);
@@ -220,8 +257,34 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: "Internal server error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("Reset-HWID error:", err);
+    if ((err as Error).message === "PAYLOAD_TOO_LARGE") {
+      return json({ success: false, error: "Request body too large" }, 413);
+    }
+    if ((err as Error).message === "INVALID_JSON") {
+      return json({ success: false, error: "Invalid JSON body" }, 400);
+    }
+    return json({ success: false, error: "Internal server error" }, 500);
   }
 });
+
+async function readJsonBody(req: Request) {
+  const contentLength = Number(req.headers.get("content-length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) throw new Error("PAYLOAD_TOO_LARGE");
+  try {
+    const parsed = JSON.parse(raw || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+    return parsed;
+  } catch {
+    throw new Error("INVALID_JSON");
+  }
+}
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}

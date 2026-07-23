@@ -20,12 +20,16 @@ interface PlanLimits {
 }
 
 export function usePlanLimits() {
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [data, setData] = useState<PlanLimits | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { data: result, error } = await supabase.functions.invoke("check-plan-limits", {
@@ -39,6 +43,38 @@ export function usePlanLimits() {
   }, [session?.access_token]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+
+    const interval = window.setInterval(refresh, 30_000);
+    const channel = supabase
+      .channel(`plan-limits-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tenants", filter: `owner_user_id=eq.${user.id}` },
+        () => refresh(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "payment_transactions", filter: `user_id=eq.${user.id}` },
+        () => refresh(),
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [refresh, user?.id]);
 
   const canCreate = (resource: "apps" | "keys" | "resellers" | "managers") => {
     if (!data) return true; // allow while loading
