@@ -232,8 +232,9 @@ export default function Licenses() {
     if (!selectedApp) { setFormError("Select an application first."); toast.error("Select an application first."); return; }
     const normalizedCount = Math.max(1, Math.min(100, Number(keyCount) || 1));
     if (normalizedCount !== keyCount) setKeyCount(normalizedCount);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
-      const msg = "Buyer email is required so the customer can verify on the download panel first.";
+    const normalizedOwnerEmail = ownerEmail.trim().toLowerCase();
+    if (normalizedOwnerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedOwnerEmail)) {
+      const msg = "Enter a valid buyer email, or leave it blank so the customer can verify on the download panel.";
       setFormError(msg);
       toast.error(msg);
       return;
@@ -256,7 +257,7 @@ export default function Licenses() {
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
       owner_name: ownerName.trim() || null,
-      owner_email: ownerEmail.trim().toLowerCase(),
+      owner_email: normalizedOwnerEmail || null,
     }));
     const { error } = await supabase.from("licenses").insert(inserts as any);
     if (error) {
@@ -281,7 +282,7 @@ export default function Licenses() {
     setOwnerEmail("");
     refreshLimits();
     toast.success(`Generated ${normalizedCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: normalizedCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
+    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: normalizedCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A", Email: normalizedOwnerEmail || "Customer self-verify" });
     fetchData();
     setGenerating(false);
   };
@@ -491,8 +492,8 @@ export default function Licenses() {
                 <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. John, Discord#1234..." className="bg-secondary border-border" />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(required before customer activation)</span></label>
-                <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="buyer@example.com" className="bg-secondary border-border" />
+                <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(optional - customer can verify on download panel)</span></label>
+                <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="leave blank for customer self-verify" className="bg-secondary border-border" />
               </div>
               {formError && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
