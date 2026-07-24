@@ -47,12 +47,14 @@ export default function Licenses() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<{ ids: string[]; keys: string[]; mode: "single" | "bulk" } | null>(null);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   const fetchData = async () => {
     if (!user) return;
+    setLoading(true);
     let licenseQuery = supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false });
     let appQuery = supabase.from("applications").select("*").eq("suspended", false);
     if (!isAdminRoute) {
@@ -63,6 +65,8 @@ export default function Licenses() {
       licenseQuery,
       appQuery,
     ]);
+    if (licRes.error) toast.error(`Failed to load licenses: ${licRes.error.message}`);
+    if (appRes.error) toast.error(`Failed to load apps: ${appRes.error.message}`);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
     setLoading(false);
@@ -117,7 +121,8 @@ export default function Licenses() {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     const keys = selectedLicenses.map(l => l.license_key).join(", ");
-    await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).in("id", ids);
+    const { error } = await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).in("id", ids);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk banned ${ids.length} license(s)` } as any);
     toast.success(`Banned ${ids.length} license(s)`);
     notifyDiscord("License banned", { Action: "Bulk ban", Count: ids.length, Keys: keys.slice(0, 200) });
@@ -134,7 +139,8 @@ export default function Licenses() {
 
   const deleteSelectedLicenses = async (ids: string[], keys: string[]) => {
     if (!user || ids.length === 0) return;
-    await supabase.from("licenses").delete().in("id", ids);
+    const { error } = await supabase.from("licenses").delete().in("id", ids);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` } as any);
     toast.success(`Deleted ${ids.length} license(s)`);
     notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.join(", ").slice(0, 200) });
@@ -148,7 +154,8 @@ export default function Licenses() {
     const keys = toUpdate.map(l => l.license_key).join(", ");
     for (const lic of toUpdate) {
       const newExpiry = new Date(new Date(lic.expires_at).getTime() + 30 * 86400000).toISOString();
-      await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", lic.id);
+      const { error } = await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", lic.id);
+      if (error) { toast.error(error.message); return; }
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk extended ${toUpdate.length} license(s) +30 days` } as any);
     toast.success(`Extended ${toUpdate.length} license(s) by 30 days`);
@@ -164,7 +171,8 @@ export default function Licenses() {
     if (toUnban.length === 0) { toast.error("No banned licenses selected"); return; }
     for (const lic of toUnban) {
       const restoredStatus = lic.hwid ? "active" : "unused";
-      await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", lic.id);
+      const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", lic.id);
+      if (error) { toast.error(error.message); return; }
       await supabase.from("license_ips").delete().eq("license_id", lic.id);
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk unbanned ${toUnban.length} license(s)` } as any);
@@ -179,7 +187,8 @@ export default function Licenses() {
     const toReset = selectedLicenses.filter(l => l.hwid);
     if (toReset.length === 0) { toast.error("No licenses with HWID selected"); return; }
     for (const lic of toReset) {
-      await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+      const { error } = await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+      if (error) { toast.error(error.message); return; }
       await supabase.from("license_ips").delete().eq("license_id", lic.id);
     }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk reset HWID for ${toReset.length} license(s)` } as any);
@@ -219,24 +228,31 @@ export default function Licenses() {
   const generateKeys = async () => {
     if (!user) return;
     if (generating) return;
-    if (!selectedApp) { toast.error("Select an application first."); return; }
+    setFormError("");
+    if (!selectedApp) { setFormError("Select an application first."); toast.error("Select an application first."); return; }
     const normalizedCount = Math.max(1, Math.min(100, Number(keyCount) || 1));
     if (normalizedCount !== keyCount) setKeyCount(normalizedCount);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
-      toast.error("Buyer email is required so the customer can verify on the download panel first.");
+      const msg = "Buyer email is required so the customer can verify on the download panel first.";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     const keyLimit = planLimits?.limits.keys;
     if (!canCreate("keys") || (typeof keyLimit === "number" && getUsage("keys") + normalizedCount > keyLimit)) {
-      toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan or lower the quantity.`);
+      const msg = `Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan or lower the quantity.`;
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     setGenerating(true);
     const days = Number(duration);
+    const app = apps.find(a => a.id === selectedApp);
     const inserts = Array.from({ length: normalizedCount }, () => ({
       license_key: generateLicenseKey(),
       application_id: selectedApp,
       user_id: user.id,
+      tenant_id: app?.tenant_id || null,
       expires_at: new Date(Date.now() + days * 86400000).toISOString(),
       status: "unused",
       owner_name: ownerName.trim() || null,
@@ -245,6 +261,7 @@ export default function Licenses() {
     const { error } = await supabase.from("licenses").insert(inserts as any);
     if (error) {
       const msg = error.message.includes("Subscription expired") ? "Your subscription expired. Renew your plan to generate keys." : error.message;
+      setFormError(msg);
       toast.error(msg);
       setGenerating(false);
       return;
@@ -259,6 +276,7 @@ export default function Licenses() {
     } as any);
 
     setDialogOpen(false);
+    setFormError("");
     setOwnerName("");
     setOwnerEmail("");
     refreshLimits();
@@ -271,7 +289,8 @@ export default function Licenses() {
   const banKey = async (id: string, licenseKey: string) => {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
-    await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ banned: true, status: "banned", banned_by_admin: true }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License banned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License banned");
     notifyDiscord("License banned", { Key: licenseKey, App: appName, HWID: lic?.hwid || "N/A", IP: lic?.ip || "N/A" });
@@ -286,7 +305,8 @@ export default function Licenses() {
     }
     const appName = lic?.applications?.name || "Unknown";
     const restoredStatus = hwid ? "active" : "unused";
-    await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ banned: false, status: restoredStatus, banned_by_admin: false, ip: null }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License unbanned", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License unbanned and IP history cleared");
@@ -297,7 +317,8 @@ export default function Licenses() {
   const resetHwid = async (id: string, licenseKey: string) => {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
-    await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("license_ips").delete().eq("license_id", id);
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "HWID reset", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("HWID and IP history reset");
@@ -309,7 +330,8 @@ export default function Licenses() {
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
     const newExpiry = new Date(new Date(currentExpiry).getTime() + 30 * 86400000).toISOString();
-    await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
+    const { error } = await supabase.from("licenses").update({ expires_at: newExpiry, status: "active" }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License extended", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
     toast.success("License extended by 30 days");
     notifyDiscord("License extended", { Key: licenseKey, App: appName, Added: "+30 days", "New Expiry": formatDate(newExpiry) });
@@ -328,10 +350,13 @@ export default function Licenses() {
   };
 
   const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    setCopiedKey(key);
-    toast.success("Copied to clipboard");
-    setTimeout(() => setCopiedKey(null), 1500);
+    navigator.clipboard.writeText(key)
+      .then(() => {
+        setCopiedKey(key);
+        toast.success("Copied to clipboard");
+        setTimeout(() => setCopiedKey(null), 1500);
+      })
+      .catch(() => toast.error("Could not copy key"));
   };
 
   const [editOwnerName, setEditOwnerName] = useState("");
@@ -347,7 +372,8 @@ export default function Licenses() {
   const saveDetails = async () => {
     if (!editingLicense) return;
     const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
-    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
+    const { error } = await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
+    if (error) { toast.error(error.message); return; }
     toast.success("License details saved");
     setDetailsDialogOpen(false);
     fetchData();
@@ -430,7 +456,7 @@ export default function Licenses() {
           <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
             <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setFormError(""); }}>
           <DialogTrigger asChild>
             <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
           </DialogTrigger>
@@ -468,6 +494,11 @@ export default function Licenses() {
                 <label className="mb-1 block text-xs text-muted-foreground">Buyer Email <span className="text-muted-foreground/60">(required before customer activation)</span></label>
                 <Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} placeholder="buyer@example.com" className="bg-secondary border-border" />
               </div>
+              {formError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {formError}
+                </div>
+              )}
               <Button onClick={generateKeys} disabled={generating} className="w-full btn-glow">{generating ? "Generating..." : "Generate"}</Button>
             </div>
           </DialogContent>
