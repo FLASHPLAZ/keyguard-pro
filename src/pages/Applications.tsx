@@ -103,21 +103,25 @@ export default function Applications() {
   };
 
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
-    await supabase.from("applications").update({ suspended: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ suspended: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setApps(items => items.map(app => app.id === id ? { ...app, suspended: !current } : app));
     const action = !current ? "Application suspended" : "Application resumed";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Application status updated");
     notifyDiscord(action, { App: name, "App ID": id });
-    fetchApps();
+    await fetchApps();
   };
 
   const toggleKillSwitch = async (id: string, current: boolean, name: string) => {
-    await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setApps(items => items.map(app => app.id === id ? { ...app, kill_switch: !current } : app));
     const action = !current ? "Kill switch enabled" : "Kill switch disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Kill switch toggled");
     notifyDiscord(action, { App: name, "App ID": id });
-    fetchApps();
+    await fetchApps();
   };
 
   const deleteApp = async (id: string, name: string) => {
@@ -130,18 +134,21 @@ export default function Applications() {
     notifyDiscord("Application deleted", { App: name, "App ID": id });
     if (detailApp?.id === id) setDetailApp(null);
     setPendingDeleteApp(null);
-    fetchApps();
+    setApps(items => items.filter(app => app.id !== id));
+    await fetchApps();
   };
 
   const toggleSignatureRequired = async (id: string, current: boolean) => {
     const app = apps.find(a => a.id === id);
     const appName = app?.name || "Unknown";
-    await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setApps(items => items.map(item => item.id === id ? { ...item, signature_required: !current } : item));
     const action = !current ? "Request signing enabled" : "Request signing disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName } as any);
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
     notifyDiscord(action, { App: appName, "App ID": id });
-    fetchApps();
+    await fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
   };
 
@@ -152,12 +159,14 @@ export default function Applications() {
     crypto.getRandomValues(bytes);
     const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
     
-    await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setApps(items => items.map(item => item.id === id ? { ...item, signing_secret: newSecret } : item));
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName } as any);
     toast.success("Signing secret regenerated");
     notifyDiscord("Signing secret regenerated", { App: appName, "App ID": id });
     setRegenerateAppId(null);
-    fetchApps();
+    await fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });
   };
 

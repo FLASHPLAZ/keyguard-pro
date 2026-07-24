@@ -47,14 +47,15 @@ export default function Licenses() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<{ ids: string[]; keys: string[]; mode: "single" | "bulk" } | null>(null);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     if (!user) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     let licenseQuery = supabase.from("licenses").select("*, applications(name), resellers(username)").order("created_at", { ascending: false });
     let appQuery = supabase.from("applications").select("*").eq("suspended", false);
     if (!isAdminRoute) {
@@ -69,10 +70,23 @@ export default function Licenses() {
     if (appRes.error) toast.error(`Failed to load apps: ${appRes.error.message}`);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [user, isAdminRoute]);
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`licenses-live-${user.id}-${isAdminRoute ? "admin" : "owner"}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, () => fetchData(true))
+      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData(true))
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isAdminRoute]);
 
   const filtered = licenses.filter((l) => {
     const s = search.toLowerCase();
@@ -139,13 +153,23 @@ export default function Licenses() {
 
   const deleteSelectedLicenses = async (ids: string[], keys: string[]) => {
     if (!user || ids.length === 0) return;
-    const { error } = await supabase.from("licenses").delete().in("id", ids);
-    if (error) { toast.error(error.message); return; }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` } as any);
-    toast.success(`Deleted ${ids.length} license(s)`);
-    notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.join(", ").slice(0, 200) });
-    clearSelection();
-    fetchData();
+    setActionBusy("delete-bulk");
+    const previous = licenses;
+    setLicenses(current => current.filter(lic => !ids.includes(lic.id)));
+    try {
+      const { error } = await supabase.from("licenses").delete().in("id", ids);
+      if (error) throw error;
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: `Bulk deleted ${ids.length} license(s)` } as any);
+      toast.success(`Deleted ${ids.length} license(s)`);
+      notifyDiscord("License deleted", { Action: "Bulk delete", Count: ids.length, Keys: keys.join(", ").slice(0, 200) });
+      clearSelection();
+      await fetchData(true);
+    } catch (err: any) {
+      setLicenses(previous);
+      toast.error(err.message || "Failed to delete licenses");
+    } finally {
+      setActionBusy(null);
+    }
   };
 
   const bulkExtend = async () => {
@@ -247,44 +271,47 @@ export default function Licenses() {
       return;
     }
     setGenerating(true);
-    const days = Number(duration);
-    const app = apps.find(a => a.id === selectedApp);
-    const inserts = Array.from({ length: normalizedCount }, () => ({
-      license_key: generateLicenseKey(),
-      application_id: selectedApp,
-      user_id: user.id,
-      tenant_id: app?.tenant_id || null,
-      expires_at: new Date(Date.now() + days * 86400000).toISOString(),
-      status: "unused",
-      owner_name: ownerName.trim() || null,
-      owner_email: normalizedOwnerEmail || null,
-    }));
-    const { error } = await supabase.from("licenses").insert(inserts as any);
-    if (error) {
-      const msg = error.message.includes("Subscription expired") ? "Your subscription expired. Renew your plan to generate keys." : error.message;
+    try {
+      const days = Number(duration);
+      const app = apps.find(a => a.id === selectedApp);
+      const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+      const inserts = Array.from({ length: normalizedCount }, () => ({
+        license_key: generateLicenseKey(),
+        application_id: selectedApp,
+        user_id: user.id,
+        tenant_id: app?.tenant_id || null,
+        expires_at: expiresAt,
+        status: "unused",
+        owner_name: ownerName.trim() || null,
+        owner_email: normalizedOwnerEmail || null,
+      }));
+      const { data, error } = await supabase.from("licenses").insert(inserts as any).select("*, applications(name), resellers(username)");
+      if (error) throw error;
+
+      const appName = app?.name || "Unknown";
+      setLicenses(current => [...(data || []), ...current]);
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "License keys generated",
+        application_id: selectedApp,
+        application_name: appName,
+      } as any);
+
+      setDialogOpen(false);
+      setFormError("");
+      setOwnerName("");
+      setOwnerEmail("");
+      refreshLimits();
+      toast.success(`Generated ${normalizedCount} license key(s)`);
+      notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: normalizedCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A", Email: normalizedOwnerEmail || "Customer self-verify" });
+      await fetchData(true);
+    } catch (err: any) {
+      const msg = err.message?.includes("Subscription expired") ? "Your subscription expired. Renew your plan to generate keys." : err.message || "Failed to generate license keys";
       setFormError(msg);
       toast.error(msg);
+    } finally {
       setGenerating(false);
-      return;
     }
-
-    const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      action: "License keys generated",
-      application_id: selectedApp,
-      application_name: appName,
-    } as any);
-
-    setDialogOpen(false);
-    setFormError("");
-    setOwnerName("");
-    setOwnerEmail("");
-    refreshLimits();
-    toast.success(`Generated ${normalizedCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: normalizedCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A", Email: normalizedOwnerEmail || "Customer self-verify" });
-    fetchData();
-    setGenerating(false);
   };
 
   const banKey = async (id: string, licenseKey: string) => {
@@ -340,14 +367,25 @@ export default function Licenses() {
   };
 
   const deleteKey = async (id: string, licenseKey: string) => {
+    if (actionBusy) return;
     const lic = licenses.find(l => l.id === id);
     const appName = lic?.applications?.name || "Unknown";
-    const { error } = await supabase.from("licenses").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
-    toast.success("License deleted");
-    notifyDiscord("License deleted", { Key: licenseKey, App: appName });
-    fetchData();
+    setActionBusy(id);
+    const previous = licenses;
+    setLicenses(current => current.filter(item => item.id !== id));
+    try {
+      const { error } = await supabase.from("licenses").delete().eq("id", id);
+      if (error) throw error;
+      if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "License deleted", license_key: licenseKey, application_id: lic?.application_id, application_name: appName } as any);
+      toast.success("License deleted");
+      notifyDiscord("License deleted", { Key: licenseKey, App: appName });
+      await fetchData(true);
+    } catch (err: any) {
+      setLicenses(previous);
+      toast.error(err.message || "Failed to delete license");
+    } finally {
+      setActionBusy(null);
+    }
   };
 
   const copyKey = (key: string) => {
@@ -750,14 +788,15 @@ export default function Licenses() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              disabled={!!actionBusy}
+              onClick={async () => {
                 if (!pendingDelete) return;
-                if (pendingDelete.mode === "single") deleteKey(pendingDelete.ids[0], pendingDelete.keys[0]);
-                else deleteSelectedLicenses(pendingDelete.ids, pendingDelete.keys);
+                if (pendingDelete.mode === "single") await deleteKey(pendingDelete.ids[0], pendingDelete.keys[0]);
+                else await deleteSelectedLicenses(pendingDelete.ids, pendingDelete.keys);
                 setPendingDelete(null);
               }}
             >
-              Delete forever
+              {actionBusy ? "Deleting..." : "Delete forever"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
