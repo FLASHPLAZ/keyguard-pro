@@ -27,7 +27,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 export default function Licenses() {
   const { user } = useAuth();
   const location = useLocation();
-  const { canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
+  const { data: planLimits, canCreate, getUsage, getLimit, refresh: refreshLimits } = usePlanLimits();
   const [licenses, setLicenses] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -76,6 +76,7 @@ export default function Licenses() {
       (l.applications?.name || "").toLowerCase().includes(s) ||
       (l.notes || "").toLowerCase().includes(s) ||
       (l.owner_name || "").toLowerCase().includes(s) ||
+      (l.owner_email || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
     return matchSearch && matchStatus;
@@ -189,11 +190,12 @@ export default function Licenses() {
   };
 
   const exportCsv = () => {
-    const headers = ["License Key", "Application", "Owner", "Status", "HWID", "IP", "Device", "Expires", "Created", "Notes", "Tags"];
+    const headers = ["License Key", "Application", "Owner", "Buyer Email", "Status", "HWID", "IP", "Device", "Expires", "Generated", "Notes", "Tags"];
     const rows = filtered.map(l => [
       l.license_key,
       l.applications?.name || "",
       l.owner_name || "",
+      l.owner_email || "",
       l.status,
       l.hwid || "",
       l.ip || "",
@@ -215,19 +217,23 @@ export default function Licenses() {
   };
 
   const generateKeys = async () => {
-    if (!selectedApp || !user) return;
+    if (!user) return;
     if (generating) return;
+    if (!selectedApp) { toast.error("Select an application first."); return; }
+    const normalizedCount = Math.max(1, Math.min(100, Number(keyCount) || 1));
+    if (normalizedCount !== keyCount) setKeyCount(normalizedCount);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail.trim())) {
       toast.error("Buyer email is required so the customer can verify on the download panel first.");
       return;
     }
-    if (!canCreate("keys")) {
-      toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan.`);
+    const keyLimit = planLimits?.limits.keys;
+    if (!canCreate("keys") || (typeof keyLimit === "number" && getUsage("keys") + normalizedCount > keyLimit)) {
+      toast.error(`Plan limit reached (${getUsage("keys")}/${getLimit("keys")} keys). Upgrade your plan or lower the quantity.`);
       return;
     }
     setGenerating(true);
     const days = Number(duration);
-    const inserts = Array.from({ length: keyCount }, () => ({
+    const inserts = Array.from({ length: normalizedCount }, () => ({
       license_key: generateLicenseKey(),
       application_id: selectedApp,
       user_id: user.id,
@@ -237,7 +243,12 @@ export default function Licenses() {
       owner_email: ownerEmail.trim().toLowerCase(),
     }));
     const { error } = await supabase.from("licenses").insert(inserts as any);
-    if (error) { toast.error(error.message); setGenerating(false); return; }
+    if (error) {
+      const msg = error.message.includes("Subscription expired") ? "Your subscription expired. Renew your plan to generate keys." : error.message;
+      toast.error(msg);
+      setGenerating(false);
+      return;
+    }
 
     const appName = apps.find(a => a.id === selectedApp)?.name || "Unknown";
     await supabase.from("activity_logs").insert({
@@ -251,8 +262,8 @@ export default function Licenses() {
     setOwnerName("");
     setOwnerEmail("");
     refreshLimits();
-    toast.success(`Generated ${keyCount} license key(s)`);
-    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: keyCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
+    toast.success(`Generated ${normalizedCount} license key(s)`);
+    notifyDiscord("License keys generated", { App: appName, "App ID": selectedApp, Quantity: normalizedCount, Duration: getDurationLabel(Number(duration)), Owner: ownerName.trim() || "N/A" });
     fetchData();
     setGenerating(false);
   };
@@ -535,6 +546,10 @@ export default function Licenses() {
                 <span className="text-muted-foreground">Expires: </span>
                 <span className="text-muted-foreground">{formatDate(lic.expires_at)}</span>
               </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Generated: </span>
+                <span className="text-muted-foreground">{formatDate(lic.created_at)}</span>
+              </div>
               {(lic.tags?.length > 0 || lic.notes) && (
                 <div className="col-span-2 flex flex-wrap gap-1 mt-1">
                   {lic.notes && <span className="text-xs text-muted-foreground italic truncate max-w-full">📝 {lic.notes.slice(0, 50)}</span>}
@@ -573,6 +588,7 @@ export default function Licenses() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -616,6 +632,7 @@ export default function Licenses() {
                   </td>
                   <td className="px-4 py-3 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.created_at)}</td>
                   <td className="px-4 py-3">
                     <ActionButtons lic={lic} />
                   </td>

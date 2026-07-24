@@ -13,13 +13,17 @@ import secrets
 
 API_URL = "${API_BASE}/validate"
 HEARTBEAT_URL = "${API_BASE}/heartbeat"
-HEARTBEAT_INTERVAL = 30  # seconds — check every 30s for instant kill
+VERIFY_URL = "https://gxauth.xyz/download"
+HEARTBEAT_INTERVAL = 30
 LICENSE_FILE = "license.dat"
-SIGNING_SECRET = ""  # Set your app's signing secret here (from dashboard)
-APPLICATION_ID = ""  # Set your application UUID here (from dashboard)
+SIGNING_SECRET = ""  # Paste your app signing secret when HMAC is enabled
+APPLICATION_ID = ""  # Paste your application UUID from the dashboard
+
+def pause_exit(code=1):
+    input("\nPress Enter to close...")
+    sys.exit(code)
 
 def get_hwid():
-    """Create a stable device fingerprint without deprecated shell commands."""
     raw = f"{socket.gethostname()}:{os.getenv('USERNAME') or os.getenv('USER') or ''}:{sys.platform}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
@@ -28,104 +32,89 @@ def get_device_name():
 
 def load_saved_key():
     if os.path.exists(LICENSE_FILE):
-        with open(LICENSE_FILE, "r") as f:
+        with open(LICENSE_FILE, "r", encoding="utf-8") as f:
             return f.read().strip()
     return None
 
 def save_key(key):
-    with open(LICENSE_FILE, "w") as f:
+    with open(LICENSE_FILE, "w", encoding="utf-8") as f:
         f.write(key)
 
-def sign_request(body_str: str, secret: str) -> tuple:
-    """Generate HMAC-SHA256 signature and timestamp for request signing."""
+def sign_request(body_str, secret):
     timestamp = str(int(time.time()))
     nonce = secrets.token_hex(16)
-    signing_payload = f"{timestamp}.{nonce}.{body_str}"
-    signature = hmac.new(
-        secret.encode(), signing_payload.encode(), hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(secret.encode(), f"{timestamp}.{nonce}.{body_str}".encode(), hashlib.sha256).hexdigest()
     return signature, timestamp, nonce
 
-def validate_license(key: str) -> bool:
-    try:
-        payload = {
-            "license_key": key,
-            "hwid": get_hwid(),
-            "device_name": get_device_name()
-        }
-        if APPLICATION_ID:
-            payload["application_id"] = APPLICATION_ID
-        body_str = json.dumps(payload, separators=(',', ':'))
-        
-        headers = {"Content-Type": "application/json"}
-        
-        # Add HMAC signature if signing secret is configured
-        if SIGNING_SECRET:
-            signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
-            headers["X-Signature"] = signature
-            headers["X-Timestamp"] = timestamp
-            headers["X-Nonce"] = nonce
-        
-        response = requests.post(API_URL, data=body_str, headers=headers, timeout=10)
-        data = response.json()
-        
-        if data.get("valid"):
-            expires = data.get("expires_readable", data.get("expires"))
-            country = data.get("country", "Unknown")
-            print(f"✅ License valid")
-            print(f"   Expires: {expires}")
-            print(f"   Country: {country}")
-            print(f"   Device:  {get_device_name()}")
-            return True
-        else:
-            print(f"❌ {data.get('error', 'Invalid license')}")
-            return False
-    except Exception as e:
-        print(f"⚠️ Connection error: {e}")
-        return False
+def build_headers(body_str):
+    headers = {"Content-Type": "application/json"}
+    if SIGNING_SECRET:
+        signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
+        headers["X-Signature"] = signature
+        headers["X-Timestamp"] = timestamp
+        headers["X-Nonce"] = nonce
+    return headers
 
-def heartbeat_loop(key: str):
-    """Background thread: periodically checks if license is still active.
-    Exits the program immediately if banned, expired, or app disabled."""
+def validate_license(key):
+    payload = {
+        "license_key": key.strip().upper(),
+        "hwid": get_hwid(),
+        "device_name": get_device_name(),
+    }
+    if APPLICATION_ID:
+        payload["application_id"] = APPLICATION_ID
+
+    body_str = json.dumps(payload, separators=(",", ":"))
+    response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=12)
+    data = response.json()
+
+    if data.get("valid"):
+        print("[OK] License verified")
+        print(f"     App     : {data.get('app', 'Unknown')}")
+        print(f"     Expires : {data.get('expires_readable', data.get('expires', 'Unknown'))}")
+        print(f"     HWID    : {data.get('hwid', get_hwid())}")
+        return True
+
+    error = data.get("error", "Invalid license")
+    print(f"[X] {error}")
+    if data.get("verify_url") or "download" in error.lower() or "verify" in error.lower():
+        print(f"\nVerify this key first at: {data.get('verify_url', VERIFY_URL)}")
+    return False
+
+def heartbeat_loop(key):
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         try:
-            hb_payload = {"license_key": key}
+            payload = {"license_key": key.strip().upper()}
             if APPLICATION_ID:
-                hb_payload["application_id"] = APPLICATION_ID
-            resp = requests.post(HEARTBEAT_URL, json=hb_payload, timeout=5)
+                payload["application_id"] = APPLICATION_ID
+            resp = requests.post(HEARTBEAT_URL, json=payload, timeout=6)
             data = resp.json()
             if not data.get("active"):
-                reason = data.get("reason", "License no longer active")
-                print(f"\\n🚫 KILLED: {reason}")
-                os._exit(1)  # Force exit immediately
+                print(f"\n[X] License disabled: {data.get('reason', 'License no longer active')}")
+                pause_exit(1)
         except Exception:
-            pass  # Network error — retry next cycle
+            pass
 
 if __name__ == "__main__":
     saved = load_saved_key()
-    if saved:
-        print(f"🔑 Using saved license: {saved[:20]}...")
-        key = saved
-    else:
-        key = input("Enter license key: ").strip()
-    
-    if not validate_license(key):
-        sys.exit(1)
-    
-    if not saved:
-        save = input("\\n💾 Save license key for next time? (y/n): ").strip().lower()
-        if save == "y":
-            save_key(key)
-            print("✅ Key saved to license.dat")
-    
-    # Start heartbeat thread — will kill the app if license is banned/expired
-    hb = threading.Thread(target=heartbeat_loop, args=(key,), daemon=True)
-    hb.start()
-    print(f"💓 Heartbeat active (checking every {HEARTBEAT_INTERVAL}s)")
-    
-    print("\\n🚀 Application starting...")
-    # Your app code here
+    key = saved or input("License key > ").strip()
+
+    try:
+        if not validate_license(key):
+            pause_exit(1)
+    except Exception as e:
+        print(f"[!] Connection error: {e}")
+        pause_exit(1)
+
+    if not saved and input("\nSave license on this device? [y/N] > ").strip().lower() == "y":
+        save_key(key)
+        print("[OK] Key saved to license.dat")
+
+    threading.Thread(target=heartbeat_loop, args=(key,), daemon=True).start()
+    print(f"[*] Protection active - checking every {HEARTBEAT_INTERVAL} seconds")
+    print("[OK] Starting application...")
+    # Start your app below this line.
 `;
 
 export const pythonCliGateSnippet = `import hashlib
@@ -143,6 +132,7 @@ import requests
 
 API_URL = "${API_BASE}/validate"
 HEARTBEAT_URL = "${API_BASE}/heartbeat"
+VERIFY_URL = "https://gxauth.xyz/download"
 HEARTBEAT_INTERVAL = 30
 LICENSE_FILE = "license.dat"
 
@@ -150,18 +140,24 @@ SIGNING_SECRET = ""  # Paste your app signing secret when HMAC is enabled
 APPLICATION_ID = ""  # Paste your application UUID
 
 APP_NAME = "MY APP"
-APP_TAGLINE = "Protected by GX Auth"
+APP_TAGLINE = "Premium License Manager by gxauth.xyz"
 
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def pause_exit(code=1):
+    input("\n  Press Enter to close...")
+    sys.exit(code)
+
+
 def print_banner():
+    width = max(46, len(APP_NAME) + 8, len(APP_TAGLINE) + 8)
     print()
-    print("  " + APP_NAME.upper())
-    print("  " + APP_TAGLINE)
-    print("  " + "-" * max(len(APP_NAME), len(APP_TAGLINE)))
+    print("  " + APP_NAME.upper().center(width))
+    print("  " + APP_TAGLINE.center(width))
+    print("  " + ("-" * width))
     print()
 
 
@@ -170,11 +166,11 @@ class Spinner:
         self.message = message
         self._stop_event = threading.Event()
         self._thread = None
-        self._frames = itertools.cycle("|/-\\\\")
+        self._frames = itertools.cycle("|/-\\")
 
     def _spin(self):
         while not self._stop_event.is_set():
-            sys.stdout.write(f"\\r  {next(self._frames)} {self.message}...")
+            sys.stdout.write(f"\r  {next(self._frames)} {self.message}...")
             sys.stdout.flush()
             time.sleep(0.08)
 
@@ -186,7 +182,7 @@ class Spinner:
         self._stop_event.set()
         if self._thread:
             self._thread.join()
-        sys.stdout.write("\\r" + " " * (len(self.message) + 20) + "\\r")
+        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
         sys.stdout.flush()
 
 
@@ -210,11 +206,7 @@ def save_key(key):
 def sign_request(body_str, secret):
     timestamp = str(int(time.time()))
     nonce = secrets.token_hex(16)
-    signature = hmac.new(
-        secret.encode(),
-        f"{timestamp}.{nonce}.{body_str}".encode(),
-        hashlib.sha256,
-    ).hexdigest()
+    signature = hmac.new(secret.encode(), f"{timestamp}.{nonce}.{body_str}".encode(), hashlib.sha256).hexdigest()
     return signature, timestamp, nonce
 
 
@@ -233,7 +225,7 @@ def validate_license(key):
     spinner.start()
     try:
         payload = {
-            "license_key": key.strip(),
+            "license_key": key.strip().upper(),
             "hwid": get_hwid(),
             "device_name": socket.gethostname(),
         }
@@ -241,7 +233,7 @@ def validate_license(key):
             payload["application_id"] = APPLICATION_ID
 
         body_str = json.dumps(payload, separators=(",", ":"))
-        response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=10)
+        response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=12)
         data = response.json()
         spinner.stop()
 
@@ -252,7 +244,10 @@ def validate_license(key):
             print(f"       HWID    : {data.get('hwid', get_hwid())}")
             return True
 
-        print(f"  [X]  {data.get('error', 'Invalid license')}")
+        error = data.get("error", "Invalid license")
+        print(f"  [X]  {error}")
+        if data.get("verify_url") or "download" in error.lower() or "verify" in error.lower():
+            print(f"\n  Verify this key first at: {data.get('verify_url', VERIFY_URL)}")
         return False
     except Exception as error:
         spinner.stop()
@@ -264,16 +259,16 @@ def heartbeat_loop(key):
     while True:
         time.sleep(HEARTBEAT_INTERVAL)
         try:
-            payload = {"license_key": key.strip()}
+            payload = {"license_key": key.strip().upper()}
             if APPLICATION_ID:
                 payload["application_id"] = APPLICATION_ID
-            response = requests.post(HEARTBEAT_URL, json=payload, timeout=5)
+            response = requests.post(HEARTBEAT_URL, json=payload, timeout=6)
             data = response.json()
             if not data.get("active"):
                 clear_screen()
                 print_banner()
                 print(f"  [X] License disabled: {data.get('reason', 'License no longer active')}")
-                os._exit(1)
+                pause_exit(1)
         except Exception:
             pass
 
@@ -285,10 +280,10 @@ def license_gate():
     key = saved or input("  License key > ").strip()
 
     if not validate_license(key):
-        print("\\n  [X] Startup aborted - license is invalid or unreachable.")
-        sys.exit(1)
+        print("\n  [X] Startup aborted - license is invalid or not verified.")
+        pause_exit(1)
 
-    if not saved and input("\\n  Save license on this device? [y/N] > ").strip().lower() == "y":
+    if not saved and input("\n  Save license on this device? [y/N] > ").strip().lower() == "y":
         save_key(key)
         print("  [OK] License saved")
 
