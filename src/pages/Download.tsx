@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Download as DownloadIcon, KeyRound, Mail, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabasePublishableKey, supabaseUrl } from "@/integrations/supabase/client";
 
 export default function Download() {
   const [step, setStep] = useState<"email" | "key" | "ready">("email");
@@ -29,11 +30,11 @@ export default function Download() {
     if (!licenseKey.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-download`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/get-download`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          apikey: supabasePublishableKey,
         },
         body: JSON.stringify({ email, license_key: licenseKey.trim() }),
       });

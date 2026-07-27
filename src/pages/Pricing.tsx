@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowRight, CheckCircle2, Coins, Copy, Crown, Infinity as InfinityIcon, Loader2, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 import discordIcon from "@/assets/discord-icon.png";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabasePublishableKey, supabaseUrl } from "@/integrations/supabase/client";
 
 const premiumFeatures = [
   { text: "Unlimited Applications", ok: true },
@@ -129,7 +129,7 @@ export default function Pricing() {
       navigate("/login");
       return;
     }
-    const checkoutUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-nowpayments-checkout`;
+    const checkoutUrl = `${supabaseUrl}/functions/v1/create-nowpayments-checkout`;
     let data: any = null;
     let errorMessage = "";
 
@@ -138,7 +138,7 @@ export default function Pricing() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          apikey: supabasePublishableKey,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ plan, payCurrency: "ltc" }),

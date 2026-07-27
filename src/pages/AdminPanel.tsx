@@ -14,7 +14,7 @@ import { TablePagination } from "@/components/TablePagination";
 import { formatDate, getLicenseStatusColor } from "@/lib/license";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { notifyDiscord } from "@/lib/discord-notify";
 import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,

@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag, Download } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";

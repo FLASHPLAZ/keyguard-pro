@@ -1,6 +1,6 @@
 import { RoleLayout } from "@/components/RoleLayout";
 import { Bot, Copy, CheckCircle, Terminal, Shield, Zap, MessageSquare, Code2, AlertTriangle, Hash } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 

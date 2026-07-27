@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Search, Copy, Plus, Ban, ShieldCheck, RotateCcw, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TablePagination } from "@/components/TablePagination";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useManagerPermissions } from "@/hooks/useManagerPermissions";
@@ -43,6 +43,8 @@ export default function ManagerLicenses() {
       supabase.from("licenses").select("*, applications(name)").order("created_at", { ascending: false }),
       supabase.from("applications").select("*").eq("suspended", false),
     ]);
+    if (licRes.error) toast.error(`Failed to load licenses: ${licRes.error.message}`);
+    if (appRes.error) toast.error(`Failed to load applications: ${appRes.error.message}`);
     setLicenses(licRes.data || []);
     setApps(appRes.data || []);
   };
@@ -79,7 +81,7 @@ export default function ManagerLicenses() {
       expiresAt.setDate(expiresAt.getDate() + durationDays);
       keys.push(key);
 
-      await supabase.from("licenses").insert({
+      const { error } = await supabase.from("licenses").insert({
         license_key: key,
         application_id: selectedApp,
         user_id: user.id,
@@ -87,6 +89,7 @@ export default function ManagerLicenses() {
         status: "unused",
         owner_name: ownerName.trim() || null,
       } as any);
+      if (error) { toast.error(error.message); return; }
     }
 
     await supabase.from("activity_logs").insert({
@@ -113,7 +116,8 @@ export default function ManagerLicenses() {
   };
 
   const banLicense = async (lic: any) => {
-    await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", lic.id);
+    const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).eq("id", lic.id);
+    if (error) { toast.error(error.message); return; }
     const appName = lic.applications?.name || "Unknown";
     await supabase.from("activity_logs").insert({
       user_id: user!.id,
@@ -131,7 +135,8 @@ export default function ManagerLicenses() {
 
   const unbanLicense = async (lic: any) => {
     const newStatus = lic.hwid ? "active" : "unused";
-    await supabase.from("licenses").update({ banned: false, status: newStatus, ip: null }).eq("id", lic.id);
+    const { error } = await supabase.from("licenses").update({ banned: false, status: newStatus, ip: null }).eq("id", lic.id);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("license_ips").delete().eq("license_id", lic.id);
     const appName = lic.applications?.name || "Unknown";
     await supabase.from("activity_logs").insert({
@@ -148,7 +153,8 @@ export default function ManagerLicenses() {
 
   const resetHwid = async (lic: any) => {
     const previousHwid = lic.hwid;
-    await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    const { error } = await supabase.from("licenses").update({ hwid: null, ip: null, status: "unused" }).eq("id", lic.id);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("license_ips").delete().eq("license_id", lic.id);
     const appName = lic.applications?.name || "Unknown";
     await supabase.from("activity_logs").insert({
@@ -176,7 +182,8 @@ export default function ManagerLicenses() {
   const saveDetails = async () => {
     if (!editingLicense) return;
     const tagsArray = editTags.split(",").map(t => t.trim()).filter(Boolean);
-    await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
+    const { error } = await supabase.from("licenses").update({ notes: editNotes || null, tags: tagsArray, owner_name: editOwnerName.trim() || null }).eq("id", editingLicense.id);
+    if (error) { toast.error(error.message); return; }
     toast.success("License details saved");
     setDetailsDialogOpen(false);
     fetchData();
