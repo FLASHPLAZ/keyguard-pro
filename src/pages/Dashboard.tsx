@@ -109,16 +109,21 @@ export default function Dashboard() {
       fetchData();
     };
 
-    const channel = supabase
-      .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, handleNewActivity)
-      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, handleNewActivity)
-      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "resellers" }, () => fetchData())
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`dashboard-realtime-${user.id}-${Date.now()}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, handleNewActivity)
+        .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, handleNewActivity)
+        .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData())
+        .on("postgres_changes", { event: "*", schema: "public", table: "resellers" }, () => fetchData())
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user]);
 

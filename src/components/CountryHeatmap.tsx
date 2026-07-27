@@ -58,16 +58,21 @@ export function CountryHeatmap() {
     fetchCountryData();
     const interval = setInterval(fetchCountryData, 30_000);
 
-    const channel = supabase
-      .channel("country-heatmap")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs" }, () => {
-        fetchCountryData();
-      })
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`country-heatmap-${Date.now()}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_logs" }, () => {
+          fetchCountryData();
+        })
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [fetchCountryData]);
 

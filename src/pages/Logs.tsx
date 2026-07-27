@@ -82,17 +82,22 @@ export default function Logs() {
   useEffect(() => {
     if (!user) return;
     fetchLogs();
-    const channel = supabase
-      .channel(`activity-logs-live-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "activity_logs", filter: `user_id=eq.${user.id}` },
-        () => fetchLogs(true),
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`activity-logs-live-${user.id}-${Date.now()}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "activity_logs", filter: `user_id=eq.${user.id}` },
+          () => fetchLogs(true),
+        )
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user]);
 

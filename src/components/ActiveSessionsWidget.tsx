@@ -63,24 +63,29 @@ export function ActiveSessionsWidget() {
     const interval = setInterval(fetchActiveSessions, 30_000);
 
     // Realtime subscription for instant updates
-    const channel = supabase
-      .channel("active-sessions")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "activity_logs",
-        },
-        () => {
-          fetchActiveSessions();
-        }
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`active-sessions-${Date.now()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "activity_logs",
+          },
+          () => {
+            fetchActiveSessions();
+          }
+        )
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [fetchActiveSessions]);
 

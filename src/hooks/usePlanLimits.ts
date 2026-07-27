@@ -54,25 +54,11 @@ export function usePlanLimits() {
     document.addEventListener("visibilitychange", onVisible);
 
     const interval = window.setInterval(refresh, 30_000);
-    const channel = supabase
-      .channel(`plan-limits-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "tenants", filter: `owner_user_id=eq.${user.id}` },
-        () => refresh(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "payment_transactions", filter: `user_id=eq.${user.id}` },
-        () => refresh(),
-      )
-      .subscribe();
 
     return () => {
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", onVisible);
       window.clearInterval(interval);
-      supabase.removeChannel(channel);
     };
   }, [refresh, user?.id]);
 
