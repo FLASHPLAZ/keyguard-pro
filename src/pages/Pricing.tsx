@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowRight, CheckCircle2, Coins, Copy, Crown, Infinity as InfinityIcon, Loader2, Lock, Sparkles, Wallet, X, Zap, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { BrandLogo } from "@/components/BrandLogo";
 import discordIcon from "@/assets/discord-icon.png";
 import { useAuth } from "@/contexts/AuthContext";

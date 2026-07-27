@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { TablePagination } from "@/components/TablePagination";
+import { toast } from "@/components/ui/sonner";
 
 function getActionBadge(action: string) {
   const lower = action.toLowerCase();
@@ -41,23 +42,58 @@ export default function Logs() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchLogs = async (silent = false) => {
     if (!user) return;
-    (async () => {
-      const { data: logsData } = await supabase
-        .from("activity_logs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1000);
-      const list = logsData || [];
-      setLogs(list);
-      const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));
-      if (ids.length) {
-        const { data: profs } = await supabase
-          .from("profiles").select("user_id, username, email, role").in("user_id", ids);
+    if (!silent) setLoading(true);
+    const { data: logsData, error: logsError } = await supabase
+      .from("activity_logs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    if (logsError) {
+      toast.error(`Failed to load logs: ${logsError.message}`);
+      if (!silent) setLoading(false);
+      return;
+    }
+
+    const list = logsData || [];
+    setLogs(list);
+    const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));
+    if (ids.length) {
+      const { data: profs, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id, username, email, role")
+        .in("user_id", ids);
+      if (profileError) {
+        toast.error(`Failed to load log users: ${profileError.message}`);
+      } else {
         const map: Record<string, any> = {};
         (profs || []).forEach((p: any) => { map[p.user_id] = p; });
         setProfileMap(map);
       }
-      setLoading(false);
-    })();
+    } else {
+      setProfileMap({});
+    }
+    if (!silent) setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchLogs();
+    const channel = supabase
+      .channel(`activity-logs-live-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "activity_logs", filter: `user_id=eq.${user.id}` },
+        () => fetchLogs(true),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const filtered = logs.filter(

@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MaintenanceGate } from "@/components/MaintenanceGate";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
+import { GlobalErrorToasts } from "@/components/GlobalErrorToasts";
 import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Pricing from "./pages/Pricing";
@@ -42,6 +43,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <GlobalErrorToasts />
           <BrowserRouter>
             <MaintenanceGate>
             <Routes>

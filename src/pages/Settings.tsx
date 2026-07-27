@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { RoleLayout } from "@/components/RoleLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { Shield, Bell, Settings2, Save, Loader2, Lock, Ban, ShieldCheck, Plus, Trash2, Search, Copy, Clock, RotateCcw, ShieldBan, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

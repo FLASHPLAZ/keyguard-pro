@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
@@ -26,7 +26,11 @@ export default function ManagerApps() {
 
   const fetchApps = async () => {
     if (!user) return;
-    const { data } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("applications").select("*").order("created_at", { ascending: false });
+    if (error) {
+      toast.error(`Failed to load applications: ${error.message}`);
+      return;
+    }
     setApps(data || []);
   };
 
@@ -52,7 +56,8 @@ export default function ManagerApps() {
   };
 
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
-    await supabase.from("applications").update({ suspended: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ suspended: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     const action = !current ? "Application suspended" : "Application resumed";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Application status updated");
@@ -61,7 +66,8 @@ export default function ManagerApps() {
   };
 
   const toggleKillSwitch = async (id: string, current: boolean, name: string) => {
-    await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     const action = !current ? "Kill switch enabled" : "Kill switch disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Kill switch toggled");
@@ -70,7 +76,8 @@ export default function ManagerApps() {
   };
 
   const deleteApp = async (id: string, name: string) => {
-    await supabase.from("applications").delete().eq("id", id);
+    const { error } = await supabase.from("applications").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id, "Action by": "Manager" });
@@ -80,7 +87,8 @@ export default function ManagerApps() {
   const toggleSignatureRequired = async (id: string, current: boolean) => {
     const app = apps.find(a => a.id === id);
     const appName = app?.name || "Unknown";
-    await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     const action = !current ? "Request signing enabled" : "Request signing disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName } as any);
     toast.success(`Request signing ${!current ? "enabled" : "disabled"}`);
@@ -95,7 +103,8 @@ export default function ManagerApps() {
     const bytes = new Uint8Array(32);
     crypto.getRandomValues(bytes);
     const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
+    const { error } = await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName } as any);
     toast.success("Signing secret regenerated");
     notifyDiscord("Signing secret regenerated", { App: appName, "App ID": id, "Action by": "Manager" });

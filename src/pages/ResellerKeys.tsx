@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Copy, Search, Ban, ShieldCheck, RotateCcw, Trash2, CheckSquare, X } from "lucide-react";
 import { TablePagination } from "@/components/TablePagination";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
@@ -32,8 +32,12 @@ export default function ResellerKeys() {
 
   const fetchData = async () => {
     if (!user) return;
-    const { data: resellerData } = await supabase
+    const { data: resellerData, error: resellerError } = await supabase
       .from("resellers").select("*").eq("user_id", user.id).single();
+    if (resellerError) {
+      toast.error(`Failed to load reseller profile: ${resellerError.message}`);
+      return;
+    }
     setReseller(resellerData);
 
     if (resellerData) {
@@ -46,6 +50,9 @@ export default function ResellerKeys() {
           .order("created_at", { ascending: false }),
         supabase.from("reseller_app_credits").select("*").eq("reseller_id", resellerData.id),
       ]);
+      if ((appsRes as any).error) toast.error(`Failed to load applications: ${(appsRes as any).error.message}`);
+      if ((licRes as any).error) toast.error(`Failed to load licenses: ${(licRes as any).error.message}`);
+      if ((creditsRes as any).error) toast.error(`Failed to load credits: ${(creditsRes as any).error.message}`);
       setAllowedApps(appsRes.data || []);
       setLicenses(licRes.data || []);
       setAppCredits(creditsRes.data || []);
@@ -98,7 +105,8 @@ export default function ResellerKeys() {
   const bulkBan = async () => {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    await supabase.from("licenses").update({ banned: true, status: "banned" }).in("id", ids);
+    const { error } = await supabase.from("licenses").update({ banned: true, status: "banned" }).in("id", ids);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk banned ${ids.length} license(s)` } as any);
     toast.success(`Banned ${ids.length} license(s)`);
     notifyDiscord("Reseller bulk ban", { Reseller: reseller?.username, Count: ids.length });
@@ -109,7 +117,8 @@ export default function ResellerKeys() {
   const bulkDelete = async () => {
     if (!user || selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    await supabase.from("licenses").delete().in("id", ids);
+    const { error } = await supabase.from("licenses").delete().in("id", ids);
+    if (error) { toast.error(error.message); return; }
     await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller bulk deleted ${ids.length} license(s)` } as any);
     toast.success(`Deleted ${ids.length} license(s)`);
     notifyDiscord("Reseller bulk delete", { Reseller: reseller?.username, Count: ids.length });

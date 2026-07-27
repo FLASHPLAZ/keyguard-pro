@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { CheckCircle2, Minus, Crown, Calendar, AlertTriangle, ArrowUpRight, AppWindow, Key, Users, ShieldCheck, Sparkles, Receipt, Copy, RefreshCw } from "lucide-react";
 
 type PaymentTransaction = {
