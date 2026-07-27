@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MaintenanceGate } from "@/components/MaintenanceGate";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Pricing from "./pages/Pricing";
@@ -35,14 +36,15 @@ import Download from "./pages/Download";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <MaintenanceGate>
-          <Routes>
+  <AppErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <MaintenanceGate>
+            <Routes>
             {/* Public marketing */}
             <Route path="/" element={<Landing />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -85,12 +87,13 @@ const App = () => (
             <Route path="/manager/api-docs" element={<ProtectedRoute requiredRole="manager"><ApiDocs /></ProtectedRoute>} />
             
             <Route path="*" element={<NotFound />} />
-          </Routes>
-          </MaintenanceGate>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+            </Routes>
+            </MaintenanceGate>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </AppErrorBoundary>
 );
 
 export default App;
