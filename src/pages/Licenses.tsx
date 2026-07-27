@@ -77,14 +77,19 @@ export default function Licenses() {
 
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel(`licenses-live-${user.id}-${isAdminRoute ? "admin" : "owner"}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, () => fetchData(true))
-      .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData(true))
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`licenses-live-${user.id}-${isAdminRoute ? "admin" : "owner"}-${Date.now()}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "licenses" }, () => fetchData(true))
+        .on("postgres_changes", { event: "*", schema: "public", table: "applications" }, () => fetchData(true))
+        .subscribe();
+    } catch {
+      channel = null;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user, isAdminRoute]);
 
