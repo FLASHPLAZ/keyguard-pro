@@ -50,13 +50,16 @@ export default function Managers() {
 
   const fetchManagers = async () => {
     if (!user) return;
-    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "manager");
+    const { data: roles, error: rolesError } = await supabase.from("user_roles").select("user_id").eq("role", "manager");
+    if (rolesError) { toast.error(`Failed to load managers: ${rolesError.message}`); return; }
     if (!roles || roles.length === 0) { setManagers([]); return; }
     const userIds = roles.map(r => r.user_id);
-    const [{ data: profiles }, { data: perms }] = await Promise.all([
+    const [{ data: profiles, error: profilesError }, { data: perms, error: permsError }] = await Promise.all([
       supabase.from("profiles").select("*").in("user_id", userIds),
       supabase.from("manager_permissions").select("*").in("user_id", userIds),
     ]);
+    if (profilesError) toast.error(`Failed to load manager profiles: ${profilesError.message}`);
+    if (permsError) toast.error(`Failed to load manager permissions: ${permsError.message}`);
     setManagers(profiles || []);
     const permsMap: Record<string, ManagerPerms> = {};
     (perms || []).forEach((p: any) => {
@@ -110,6 +113,7 @@ export default function Managers() {
   };
 
   const deleteManager = async (userId: string, username: string) => {
+    if (!window.confirm(`Delete manager "${username}" permanently? This cannot be undone.`)) return;
     try {
       const { data, error } = await supabase.functions.invoke("delete-manager", {
         body: { userId },
@@ -118,9 +122,10 @@ export default function Managers() {
       if (data?.error) { toast.error(data.error); return; }
 
       if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Manager removed" } as any);
+      setManagers(current => current.filter(manager => manager.user_id !== userId));
       toast.success("Manager permanently deleted");
       notifyDiscord("Manager removed", { Username: username });
-      fetchManagers();
+      await fetchManagers();
     } catch (err: any) {
       toast.error(err.message || "Failed to delete manager");
     }
