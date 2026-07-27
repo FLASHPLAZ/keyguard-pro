@@ -33,6 +33,8 @@ export default function Applications() {
   const [downloadUrlInput, setDownloadUrlInput] = useState("");
   const [savingDownload, setSavingDownload] = useState(false);
   const [pendingDeleteApp, setPendingDeleteApp] = useState<any>(null);
+  const [creatingApp, setCreatingApp] = useState(false);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
 
   const isPremium = planName === "lifetime" || planName === "platform";
   const isAdminRoute = location.pathname.startsWith("/admin");
@@ -40,21 +42,28 @@ export default function Applications() {
   const saveDownloadUrl = async () => {
     if (!detailApp || !user) return;
     setSavingDownload(true);
-    const url = downloadUrlInput.trim() || null;
-    const { error } = await supabase.from("applications").update({ download_url: url } as any).eq("id", detailApp.id);
-    if (error) { toast.error(error.message); setSavingDownload(false); return; }
-    await supabase.from("activity_logs").insert({ user_id: user.id, action: url ? "Download URL updated" : "Download URL removed", application_id: detailApp.id, application_name: detailApp.name } as any);
-    setDetailApp({ ...detailApp, download_url: url });
-    toast.success("Download link saved");
-    fetchApps();
-    setSavingDownload(false);
+    try {
+      const url = downloadUrlInput.trim() || null;
+      const { error } = await supabase.from("applications").update({ download_url: url } as any).eq("id", detailApp.id);
+      if (error) throw error;
+      await supabase.from("activity_logs").insert({ user_id: user.id, action: url ? "Download URL updated" : "Download URL removed", application_id: detailApp.id, application_name: detailApp.name } as any);
+      setDetailApp({ ...detailApp, download_url: url });
+      setApps(items => items.map(app => app.id === detailApp.id ? { ...app, download_url: url } : app));
+      toast.success("Download link saved");
+      await fetchApps();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save download link");
+    } finally {
+      setSavingDownload(false);
+    }
   };
 
   const fetchApps = async () => {
     if (!user) return;
     let query = supabase.from("applications").select("*").order("created_at", { ascending: false });
     if (!isAdminRoute) query = query.eq("user_id", user.id);
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) { toast.error(`Failed to load applications: ${error.message}`); setLoading(false); return; }
     setApps(data || []);
     setLoading(false);
   };
@@ -65,70 +74,88 @@ export default function Applications() {
   const filtered = apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()));
 
   const createApp = async () => {
-    if (!newAppName.trim() || !user) return;
+    if (!newAppName.trim() || !user || creatingApp) return;
     if (!canCreate("apps")) {
       toast.error(`Plan limit reached (${getUsage("apps")}/${getLimit("apps")} apps). Upgrade your plan to create more.`);
       return;
     }
-    const { data, error } = await supabase.from("applications").insert({
-      name: newAppName.trim(),
-      description: newAppDesc.trim(),
-      user_id: user.id,
-    } as any).select().single();
-    if (error) { toast.error(error.message); return; }
-    const meta = await getClientMeta();
-    await supabase.from("activity_logs").insert({
-      user_id: user.id,
-      action: "Application created",
-      application_id: data?.id,
-      application_name: newAppName.trim(),
-      ip: meta.ip,
-      country: meta.country,
-    } as any);
-    setNewAppName("");
-    setNewAppDesc("");
-    setDialogOpen(false);
-    toast.success(`Application "${newAppName}" created`);
-    notifyDiscord("Application created", {
-      Name: newAppName.trim(),
-      "App ID": data?.id,
-      Description: newAppDesc.trim() || "None",
-      "Created By": user.email || user.id,
-      IP: meta.ip,
-      Country: meta.country,
-    });
-    if (data) setDetailApp(data);
-    fetchApps();
-    refreshLimits();
+    const appName = newAppName.trim();
+    const appDesc = newAppDesc.trim();
+    setCreatingApp(true);
+    try {
+      const { data, error } = await supabase.from("applications").insert({
+        name: appName,
+        description: appDesc,
+        user_id: user.id,
+      } as any).select().single();
+      if (error) throw error;
+      const meta = await getClientMeta();
+      await supabase.from("activity_logs").insert({
+        user_id: user.id,
+        action: "Application created",
+        application_id: data?.id,
+        application_name: appName,
+        ip: meta.ip,
+        country: meta.country,
+      } as any);
+      setApps(items => data ? [data, ...items] : items);
+      setNewAppName("");
+      setNewAppDesc("");
+      setDialogOpen(false);
+      toast.success(`Application "${appName}" created`);
+      notifyDiscord("Application created", {
+        Name: appName,
+        "App ID": data?.id,
+        Description: appDesc || "None",
+        "Created By": user.email || user.id,
+        IP: meta.ip,
+        Country: meta.country,
+      });
+      if (data) setDetailApp(data);
+      await fetchApps();
+      refreshLimits();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create application");
+    } finally {
+      setCreatingApp(false);
+    }
   };
 
   const toggleSuspend = async (id: string, current: boolean, name: string) => {
+    if (actionBusy) return;
+    setActionBusy(id);
     const { error } = await supabase.from("applications").update({ suspended: !current }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setActionBusy(null); return; }
     setApps(items => items.map(app => app.id === id ? { ...app, suspended: !current } : app));
     const action = !current ? "Application suspended" : "Application resumed";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Application status updated");
     notifyDiscord(action, { App: name, "App ID": id });
     await fetchApps();
+    setActionBusy(null);
   };
 
   const toggleKillSwitch = async (id: string, current: boolean, name: string) => {
+    if (actionBusy) return;
+    setActionBusy(id);
     const { error } = await supabase.from("applications").update({ kill_switch: !current }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setActionBusy(null); return; }
     setApps(items => items.map(app => app.id === id ? { ...app, kill_switch: !current } : app));
     const action = !current ? "Kill switch enabled" : "Kill switch disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: name } as any);
     toast.success("Kill switch toggled");
     notifyDiscord(action, { App: name, "App ID": id });
     await fetchApps();
+    setActionBusy(null);
   };
 
   const deleteApp = async (id: string, name: string) => {
+    if (actionBusy) return;
+    setActionBusy(id);
     let query = supabase.from("applications").delete().eq("id", id);
     if (!isAdminRoute && user) query = query.eq("user_id", user.id);
     const { error } = await query;
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setActionBusy(null); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id });
@@ -136,13 +163,16 @@ export default function Applications() {
     setPendingDeleteApp(null);
     setApps(items => items.filter(app => app.id !== id));
     await fetchApps();
+    setActionBusy(null);
   };
 
   const toggleSignatureRequired = async (id: string, current: boolean) => {
+    if (actionBusy) return;
+    setActionBusy(id);
     const app = apps.find(a => a.id === id);
     const appName = app?.name || "Unknown";
     const { error } = await supabase.from("applications").update({ signature_required: !current }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setActionBusy(null); return; }
     setApps(items => items.map(item => item.id === id ? { ...item, signature_required: !current } : item));
     const action = !current ? "Request signing enabled" : "Request signing disabled";
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action, application_id: id, application_name: appName } as any);
@@ -150,9 +180,12 @@ export default function Applications() {
     notifyDiscord(action, { App: appName, "App ID": id });
     await fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signature_required: !current });
+    setActionBusy(null);
   };
 
   const regenerateSecret = async (id: string) => {
+    if (actionBusy) return;
+    setActionBusy(id);
     const app = apps.find(a => a.id === id);
     const appName = app?.name || "Unknown";
     const bytes = new Uint8Array(32);
@@ -160,7 +193,7 @@ export default function Applications() {
     const newSecret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
     
     const { error } = await supabase.from("applications").update({ signing_secret: newSecret }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setActionBusy(null); return; }
     setApps(items => items.map(item => item.id === id ? { ...item, signing_secret: newSecret } : item));
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Signing secret regenerated", application_id: id, application_name: appName } as any);
     toast.success("Signing secret regenerated");
@@ -168,6 +201,7 @@ export default function Applications() {
     setRegenerateAppId(null);
     await fetchApps();
     if (detailApp?.id === id) setDetailApp({ ...detailApp, signing_secret: newSecret });
+    setActionBusy(null);
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -198,7 +232,9 @@ export default function Applications() {
               <div className="space-y-4 pt-4">
                 <Input placeholder="Application name" value={newAppName} onChange={(e) => setNewAppName(e.target.value)} className="bg-secondary border-border" />
                 <Input placeholder="Description" value={newAppDesc} onChange={(e) => setNewAppDesc(e.target.value)} className="bg-secondary border-border" />
-                <Button onClick={createApp} className="w-full btn-glow">Create</Button>
+                <Button onClick={createApp} disabled={creatingApp} className="w-full btn-glow">
+                  {creatingApp ? "Creating..." : "Create"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -498,9 +534,10 @@ export default function Applications() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!!actionBusy}
               onClick={() => pendingDeleteApp && deleteApp(pendingDeleteApp.id, pendingDeleteApp.name)}
             >
-              Delete application
+              {actionBusy ? "Deleting..." : "Delete application"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

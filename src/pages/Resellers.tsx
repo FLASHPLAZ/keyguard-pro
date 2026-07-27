@@ -41,6 +41,9 @@ export default function Resellers() {
       supabase.from("applications").select("id, name").eq("user_id", user.id),
       supabase.from("reseller_app_credits").select("*, resellers!inner(admin_id)").eq("resellers.admin_id", user.id),
     ]);
+    if (resRes.error) toast.error(`Failed to load resellers: ${resRes.error.message}`);
+    if (appRes.error) toast.error(`Failed to load apps: ${appRes.error.message}`);
+    if (creditsRes.error) toast.error(`Failed to load reseller credits: ${creditsRes.error.message}`);
     setResellers(resRes.data || []);
     setApps(appRes.data || []);
 
@@ -209,11 +212,14 @@ export default function Resellers() {
   };
 
   const deleteReseller = async (id: string, username: string) => {
-    await supabase.from("resellers").delete().eq("id", id);
+    if (!window.confirm(`Delete reseller "${username}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from("resellers").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setResellers(current => current.filter(reseller => reseller.id !== id));
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: `Reseller "${username}" deleted` } as any);
     toast.success("Reseller deleted");
     notifyDiscord("Reseller deleted", { Username: username });
-    fetchData();
+    await fetchData();
   };
 
   const getAppCreditsDisplay = (resellerId: string) => {
