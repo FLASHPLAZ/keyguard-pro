@@ -26,6 +26,8 @@
     { "source": "/api/delete-manager", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/delete-manager" },
     { "source": "/api/notify-discord", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/notify-discord" },
     { "source": "/api/check-license", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-license" },
+    { "source": "/api/check-plan-limits", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-plan-limits" },
+    { "source": "/api/public-settings", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/public-settings" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
