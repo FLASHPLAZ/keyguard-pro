@@ -125,7 +125,7 @@ export default function Billing() {
       .order("created_at", { ascending: false })
       .limit(8)
       .then(({ data }) => {
-        setPayments((data || []) as PaymentTransaction[]);
+        setPayments(((data || []) as unknown) as PaymentTransaction[]);
         setPaymentsLoading(false);
       });
   };
