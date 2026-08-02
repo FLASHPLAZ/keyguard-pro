@@ -26,6 +26,7 @@ export type Database = {
           id: string
           ip: string | null
           license_key: string | null
+          metadata: Json
           response_time_ms: number | null
           tenant_id: string
           user_id: string | null
@@ -41,6 +42,7 @@ export type Database = {
           id?: string
           ip?: string | null
           license_key?: string | null
+          metadata?: Json
           response_time_ms?: number | null
           tenant_id: string
           user_id?: string | null
@@ -56,6 +58,7 @@ export type Database = {
           id?: string
           ip?: string | null
           license_key?: string | null
+          metadata?: Json
           response_time_ms?: number | null
           tenant_id?: string
           user_id?: string | null
@@ -185,6 +188,8 @@ export type Database = {
           created_at: string
           created_by_reseller: string | null
           device_name: string | null
+          download_verified_at: string | null
+          download_verified_email: string | null
           expires_at: string
           hwid: string | null
           id: string
@@ -210,6 +215,8 @@ export type Database = {
           created_at?: string
           created_by_reseller?: string | null
           device_name?: string | null
+          download_verified_at?: string | null
+          download_verified_email?: string | null
           expires_at: string
           hwid?: string | null
           id?: string
@@ -235,6 +242,8 @@ export type Database = {
           created_at?: string
           created_by_reseller?: string | null
           device_name?: string | null
+          download_verified_at?: string | null
+          download_verified_email?: string | null
           expires_at?: string
           hwid?: string | null
           id?: string
@@ -314,6 +323,80 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_transactions: {
+        Row: {
+          actually_paid: number | null
+          created_at: string
+          id: string
+          invoice_id: string | null
+          order_id: string
+          pay_address: string | null
+          pay_amount: number | null
+          pay_currency: string
+          payment_id: string | null
+          payment_url: string | null
+          plan: string
+          price_amount: number
+          price_currency: string
+          provider: string
+          raw_payload: Json
+          status: string
+          tenant_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actually_paid?: number | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          order_id: string
+          pay_address?: string | null
+          pay_amount?: number | null
+          pay_currency?: string
+          payment_id?: string | null
+          payment_url?: string | null
+          plan: string
+          price_amount: number
+          price_currency?: string
+          provider?: string
+          raw_payload?: Json
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actually_paid?: number | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          order_id?: string
+          pay_address?: string | null
+          pay_amount?: number | null
+          pay_currency?: string
+          payment_id?: string | null
+          payment_url?: string | null
+          plan?: string
+          price_amount?: number
+          price_currency?: string
+          provider?: string
+          raw_payload?: Json
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -554,6 +637,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_user_bootstrap: { Args: never; Returns: string }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

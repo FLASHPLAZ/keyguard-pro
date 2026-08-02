@@ -8,24 +8,26 @@
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://qygthejhzgbjaawqhuny.supabase.co https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" }
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://mcpbzkekllhsmtelfvbe.supabase.co https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" }
       ]
     }
   ],
   "rewrites": [
-    { "source": "/api/validate", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/validate" },
-    { "source": "/api/heartbeat", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/heartbeat" },
-    { "source": "/api/reset-hwid", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/reset-hwid" },
-    { "source": "/api/bot-manage", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/bot-manage" },
-    { "source": "/api/get-download", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/get-download" },
-    { "source": "/api/create-nowpayments-checkout", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/create-nowpayments-checkout" },
-    { "source": "/api/sync-litecoin-payments", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/sync-litecoin-payments" },
-    { "source": "/api/nowpayments-webhook", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/nowpayments-webhook" },
-    { "source": "/api/create-reseller", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/create-reseller" },
-    { "source": "/api/create-manager", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/create-manager" },
-    { "source": "/api/delete-manager", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/delete-manager" },
-    { "source": "/api/notify-discord", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/notify-discord" },
-    { "source": "/api/check-license", "destination": "https://qygthejhzgbjaawqhuny.supabase.co/functions/v1/check-license" },
+    { "source": "/api/validate", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/validate" },
+    { "source": "/api/heartbeat", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/heartbeat" },
+    { "source": "/api/reset-hwid", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/reset-hwid" },
+    { "source": "/api/bot-manage", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/bot-manage" },
+    { "source": "/api/get-download", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/get-download" },
+    { "source": "/api/create-nowpayments-checkout", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/create-nowpayments-checkout" },
+    { "source": "/api/sync-litecoin-payments", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/sync-litecoin-payments" },
+    { "source": "/api/nowpayments-webhook", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/nowpayments-webhook" },
+    { "source": "/api/create-reseller", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/create-reseller" },
+    { "source": "/api/create-manager", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/create-manager" },
+    { "source": "/api/delete-manager", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/delete-manager" },
+    { "source": "/api/notify-discord", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/notify-discord" },
+    { "source": "/api/check-license", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-license" },
+    { "source": "/api/check-plan-limits", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-plan-limits" },
+    { "source": "/api/public-settings", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/public-settings" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

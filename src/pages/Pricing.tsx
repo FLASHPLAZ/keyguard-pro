@@ -449,7 +449,7 @@ export default function Pricing() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Status</div>
-                  <div className="mt-1 capitalize text-primary">{checkout.payment_status.replaceAll("_", " ")}</div>
+                  <div className="mt-1 capitalize text-primary">{checkout.payment_status.replace(/_/g, " ")}</div>
                 </div>
                 <div className="sm:col-span-2">
                   <div className="text-xs text-muted-foreground">Order ID</div>
