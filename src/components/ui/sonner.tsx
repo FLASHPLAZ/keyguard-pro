@@ -57,7 +57,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       expand={false}
       richColors
       closeButton
-      duration={3000}
+      duration={4500}
       visibleToasts={5}
       toastOptions={{
         classNames: {
@@ -67,10 +67,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-lg group-[.toast]:text-xs group-[.toast]:font-medium",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-lg",
           closeButton: "group-[.toast]:bg-secondary group-[.toast]:border-border group-[.toast]:text-muted-foreground group-[.toast]:hover:text-foreground",
-          success: "group-[.toaster]:!border-emerald-500/20 group-[.toaster]:!bg-emerald-950/40",
-          error: "group-[.toaster]:!border-red-500/20 group-[.toaster]:!bg-red-950/40",
-          warning: "group-[.toaster]:!border-amber-500/20 group-[.toaster]:!bg-amber-950/40",
-          info: "group-[.toaster]:!border-blue-500/20 group-[.toaster]:!bg-blue-950/40",
+          success: "group-[.toaster]:!border-emerald-500/40 group-[.toaster]:!bg-emerald-950/90 group-[.toaster]:!text-emerald-50",
+          error: "group-[.toaster]:!border-red-500/40 group-[.toaster]:!bg-red-950/90 group-[.toaster]:!text-red-50",
+          warning: "group-[.toaster]:!border-amber-500/40 group-[.toaster]:!bg-amber-950/90 group-[.toaster]:!text-amber-50",
+          info: "group-[.toaster]:!border-primary/40 group-[.toaster]:!bg-card group-[.toaster]:!text-foreground",
         },
       }}
       icons={{
