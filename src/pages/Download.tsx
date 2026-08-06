@@ -146,6 +146,16 @@ export default function Download() {
                   <DownloadIcon className="mr-2 h-4 w-4" /> Download Now
                 </Button>
               </a>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(result.download_url);
+                  toast.success("Download link copied");
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Copy download link
+              </Button>
               <button onClick={reset} className="text-xs text-muted-foreground hover:text-foreground">
                 Verify another license
               </button>
