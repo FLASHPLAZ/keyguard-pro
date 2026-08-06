@@ -23,6 +23,7 @@ export default function ManagerApps() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
   const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchApps = async () => {
     if (!user) return;
@@ -77,10 +78,11 @@ export default function ManagerApps() {
 
   const deleteApp = async (id: string, name: string) => {
     const { error } = await supabase.from("applications").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setDeleteTarget(null); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id, "Action by": "Manager" });
+    setDeleteTarget(null);
     fetchApps();
   };
 
@@ -217,6 +219,21 @@ export default function ManagerApps() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => regenerateAppId && regenerateSecret(regenerateAppId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Regenerate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the application and every license key tied to it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteApp(deleteTarget.id, deleteTarget.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
