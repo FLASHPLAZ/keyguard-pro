@@ -24,16 +24,27 @@ function toastText(value: unknown, fallback: string) {
   return fallback;
 }
 
-const toast = Object.assign(sonnerToast, {
-  error: (message: unknown, data?: Parameters<typeof sonnerToast.error>[1]) =>
-    sonnerToast.error(toastText(message, "Something went wrong. Please try again."), data),
-  success: (message: unknown, data?: Parameters<typeof sonnerToast.success>[1]) =>
-    sonnerToast.success(toastText(message, "Done."), data),
-  warning: (message: unknown, data?: Parameters<typeof sonnerToast.warning>[1]) =>
-    sonnerToast.warning(toastText(message, "Please check this and try again."), data),
-  info: (message: unknown, data?: Parameters<typeof sonnerToast.info>[1]) =>
-    sonnerToast.info(toastText(message, "Heads up."), data),
-});
+// Capture the originals BEFORE wrapping — assigning wrappers back onto
+// `sonnerToast` would otherwise make them call themselves recursively.
+const baseError = sonnerToast.error.bind(sonnerToast);
+const baseSuccess = sonnerToast.success.bind(sonnerToast);
+const baseWarning = sonnerToast.warning.bind(sonnerToast);
+const baseInfo = sonnerToast.info.bind(sonnerToast);
+
+const toast = Object.assign(
+  ((...args: Parameters<typeof sonnerToast>) => sonnerToast(...args)) as typeof sonnerToast,
+  sonnerToast,
+  {
+    error: (message: unknown, data?: Parameters<typeof sonnerToast.error>[1]) =>
+      baseError(toastText(message, "Something went wrong. Please try again."), data),
+    success: (message: unknown, data?: Parameters<typeof sonnerToast.success>[1]) =>
+      baseSuccess(toastText(message, "Done."), data),
+    warning: (message: unknown, data?: Parameters<typeof sonnerToast.warning>[1]) =>
+      baseWarning(toastText(message, "Please check this and try again."), data),
+    info: (message: unknown, data?: Parameters<typeof sonnerToast.info>[1]) =>
+      baseInfo(toastText(message, "Heads up."), data),
+  },
+);
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
@@ -46,7 +57,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       expand={false}
       richColors
       closeButton
-      duration={3000}
+      duration={4500}
       visibleToasts={5}
       toastOptions={{
         classNames: {
@@ -56,10 +67,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-lg group-[.toast]:text-xs group-[.toast]:font-medium",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-lg",
           closeButton: "group-[.toast]:bg-secondary group-[.toast]:border-border group-[.toast]:text-muted-foreground group-[.toast]:hover:text-foreground",
-          success: "group-[.toaster]:!border-emerald-500/20 group-[.toaster]:!bg-emerald-950/40",
-          error: "group-[.toaster]:!border-red-500/20 group-[.toaster]:!bg-red-950/40",
-          warning: "group-[.toaster]:!border-amber-500/20 group-[.toaster]:!bg-amber-950/40",
-          info: "group-[.toaster]:!border-blue-500/20 group-[.toaster]:!bg-blue-950/40",
+          success: "group-[.toaster]:!border-emerald-500/40 group-[.toaster]:!bg-emerald-950/90 group-[.toaster]:!text-emerald-50",
+          error: "group-[.toaster]:!border-red-500/40 group-[.toaster]:!bg-red-950/90 group-[.toaster]:!text-red-50",
+          warning: "group-[.toaster]:!border-amber-500/40 group-[.toaster]:!bg-amber-950/90 group-[.toaster]:!text-amber-50",
+          info: "group-[.toaster]:!border-primary/40 group-[.toaster]:!bg-card group-[.toaster]:!text-foreground",
         },
       }}
       icons={{
