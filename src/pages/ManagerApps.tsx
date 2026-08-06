@@ -308,7 +308,7 @@ export default function ManagerApps() {
                         </>
                       )}
                       {permissions.can_delete_apps && (
-                        <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ id: app.id, name: app.name })} title="Delete" className="hover:bg-destructive/10">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
