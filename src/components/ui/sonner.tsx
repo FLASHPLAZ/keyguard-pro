@@ -24,16 +24,27 @@ function toastText(value: unknown, fallback: string) {
   return fallback;
 }
 
-const toast = Object.assign(sonnerToast, {
-  error: (message: unknown, data?: Parameters<typeof sonnerToast.error>[1]) =>
-    sonnerToast.error(toastText(message, "Something went wrong. Please try again."), data),
-  success: (message: unknown, data?: Parameters<typeof sonnerToast.success>[1]) =>
-    sonnerToast.success(toastText(message, "Done."), data),
-  warning: (message: unknown, data?: Parameters<typeof sonnerToast.warning>[1]) =>
-    sonnerToast.warning(toastText(message, "Please check this and try again."), data),
-  info: (message: unknown, data?: Parameters<typeof sonnerToast.info>[1]) =>
-    sonnerToast.info(toastText(message, "Heads up."), data),
-});
+// Capture the originals BEFORE wrapping — assigning wrappers back onto
+// `sonnerToast` would otherwise make them call themselves recursively.
+const baseError = sonnerToast.error.bind(sonnerToast);
+const baseSuccess = sonnerToast.success.bind(sonnerToast);
+const baseWarning = sonnerToast.warning.bind(sonnerToast);
+const baseInfo = sonnerToast.info.bind(sonnerToast);
+
+const toast = Object.assign(
+  ((...args: Parameters<typeof sonnerToast>) => sonnerToast(...args)) as typeof sonnerToast,
+  sonnerToast,
+  {
+    error: (message: unknown, data?: Parameters<typeof sonnerToast.error>[1]) =>
+      baseError(toastText(message, "Something went wrong. Please try again."), data),
+    success: (message: unknown, data?: Parameters<typeof sonnerToast.success>[1]) =>
+      baseSuccess(toastText(message, "Done."), data),
+    warning: (message: unknown, data?: Parameters<typeof sonnerToast.warning>[1]) =>
+      baseWarning(toastText(message, "Please check this and try again."), data),
+    info: (message: unknown, data?: Parameters<typeof sonnerToast.info>[1]) =>
+      baseInfo(toastText(message, "Heads up."), data),
+  },
+);
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
