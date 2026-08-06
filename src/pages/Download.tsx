@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
-import { Download as DownloadIcon, KeyRound, Mail, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Download as DownloadIcon, KeyRound, Mail, ShieldCheck, ArrowLeft, Copy } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabasePublishableKey, supabaseUrl } from "@/integrations/supabase/client";
 
@@ -13,6 +13,10 @@ export default function Download() {
   const [licenseKey, setLicenseKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ application: string; download_url: string } | null>(null);
+
+  useEffect(() => {
+    document.title = "Customer Download Portal | GX Auth";
+  }, []);
 
   const submitEmail = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +48,7 @@ export default function Download() {
       const payload = data as { application: string; download_url: string };
       setResult(payload);
       setStep("ready");
+      toast.success("License verified — your download is ready");
     } catch (err) {
       toast.error((err as Error).message || "Verification failed");
     } finally {
@@ -141,6 +146,16 @@ export default function Download() {
                   <DownloadIcon className="mr-2 h-4 w-4" /> Download Now
                 </Button>
               </a>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(result.download_url);
+                  toast.success("Download link copied");
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Copy download link
+              </Button>
               <button onClick={reset} className="text-xs text-muted-foreground hover:text-foreground">
                 Verify another license
               </button>

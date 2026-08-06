@@ -23,6 +23,7 @@ export default function ManagerApps() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailApp, setDetailApp] = useState<any>(null);
   const [regenerateAppId, setRegenerateAppId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchApps = async () => {
     if (!user) return;
@@ -77,10 +78,11 @@ export default function ManagerApps() {
 
   const deleteApp = async (id: string, name: string) => {
     const { error } = await supabase.from("applications").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message); setDeleteTarget(null); return; }
     if (user) await supabase.from("activity_logs").insert({ user_id: user.id, action: "Application deleted", application_id: id, application_name: name } as any);
     toast.success("Application deleted");
     notifyDiscord("Application deleted", { App: name, "App ID": id, "Action by": "Manager" });
+    setDeleteTarget(null);
     fetchApps();
   };
 
@@ -221,6 +223,21 @@ export default function ManagerApps() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the application and every license key tied to it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTarget && deleteApp(deleteTarget.id, deleteTarget.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -291,7 +308,7 @@ export default function ManagerApps() {
                         </>
                       )}
                       {permissions.can_delete_apps && (
-                        <Button variant="ghost" size="icon" onClick={() => deleteApp(app.id, app.name)} title="Delete" className="hover:bg-destructive/10">
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ id: app.id, name: app.name })} title="Delete" className="hover:bg-destructive/10">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
