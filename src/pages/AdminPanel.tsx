@@ -1536,12 +1536,6 @@ export default function AdminPanel() {
             </div>
             <Card className="border-border/60">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary" />Discord Webhook Routing</CardTitle>
-              </CardHeader>
-              <CardContent className="hidden" />
-            </Card>
-            <Card className="border-border/60">
-              <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="h-4 w-4 text-primary" />Mobile App Builds</CardTitle>
                 <p className="text-xs text-muted-foreground">These links power the “Install the app” banner on the landing page. Visitors pick Android or iOS and the download starts instantly.</p>
               </CardHeader>
