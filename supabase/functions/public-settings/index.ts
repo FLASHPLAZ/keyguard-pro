@@ -16,12 +16,25 @@ Deno.serve(async (req) => {
   const { data } = await adminClient
     .from("settings")
     .select("key, value")
-    .in("key", ["maintenance_mode", "maintenance_message"]);
+    .in("key", [
+      "maintenance_mode",
+      "maintenance_message",
+      "app_download_android",
+      "app_download_ios",
+      "app_version",
+    ]);
 
-  const map = new Map((data || []).map((row: any) => [row.key, row.value]));
+  const rows = data || [];
+  const map = new Map(rows.map((row: any) => [row.key, row.value]));
+  const firstNonEmpty = (key: string) =>
+    (rows.find((row: any) => row.key === key && String(row.value || "").trim())?.value as string) || "";
+
   return json({
     maintenance_mode: map.get("maintenance_mode") === "true",
     maintenance_message: map.get("maintenance_message") || "GX Auth is currently under maintenance. Please check back soon.",
+    app_download_android: firstNonEmpty("app_download_android"),
+    app_download_ios: firstNonEmpty("app_download_ios"),
+    app_version: firstNonEmpty("app_version"),
   });
 });
 
