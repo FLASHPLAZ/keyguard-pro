@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { AnimatedCodeBlock, type CodeTab } from "@/components/AnimatedCodeBlock";
 import { BrandLogo } from "@/components/BrandLogo";
+import { InstallAppBanner } from "@/components/InstallAppBanner";
 import discordIcon from "@/assets/discord-icon.png";
 
 /* ── Animation helpers ── */
@@ -462,6 +463,15 @@ export default function Landing() {
                 {item}
               </span>
             ))}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            className="mt-7 max-w-xl"
+          >
+            <InstallAppBanner />
           </motion.div>
           </div>
 
