@@ -587,10 +587,6 @@ export default function AdminPanel() {
     localStorage.setItem("gxauth_maintenance_message", maintenanceMessage);
   }
 
-  async function saveSecuritySettings() {
-    return saveSecuritySettingsInner();
-  }
-
   async function saveMobileAppSettings() {
     if (!user) return;
     const invalid = [mobileApp.app_download_android, mobileApp.app_download_ios]
@@ -613,7 +609,7 @@ export default function AdminPanel() {
     });
   }
 
-  async function saveSecuritySettingsInner() {
+  async function saveSecuritySettings() {
     if (!user) return;
     const { error } = await supabase.from("settings").upsert(
       Object.entries(securitySettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
