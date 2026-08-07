@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag, Download } from "lucide-react";
+import { Plus, Search, Ban, ShieldCheck, RotateCcw, Clock, Copy, Trash2, CheckSquare, X, StickyNote, Tag, Download, Eye } from "lucide-react";
+import { LicenseInspector } from "@/components/LicenseInspector";
 import { TablePagination } from "@/components/TablePagination";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,8 @@ export default function Licenses() {
   const [editNotes, setEditNotes] = useState("");
   const [editTags, setEditTags] = useState("");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [inspecting, setInspecting] = useState<any>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -425,6 +428,9 @@ export default function Licenses() {
 
   const ActionButtons = ({ lic }: { lic: any }) => (
     <div className="flex items-center gap-1 flex-wrap">
+      <Button variant="ghost" size="icon" onClick={() => { setInspecting(lic); setInspectorOpen(true); }} title="Inspect license" className="hover:bg-primary/10 h-8 w-8">
+        <Eye className="h-4 w-4 text-primary" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={() => copyKey(lic.license_key)} title="Copy key" className="hover:bg-primary/10 h-8 w-8">
         <Copy className="h-4 w-4 text-primary" />
       </Button>
@@ -806,6 +812,7 @@ export default function Licenses() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <LicenseInspector license={inspecting} open={inspectorOpen} onOpenChange={setInspectorOpen} />
     </RoleLayout>
   );
 }
