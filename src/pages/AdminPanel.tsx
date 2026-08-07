@@ -20,7 +20,7 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy, Code2, Bot,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy, Code2, Bot, Smartphone,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
