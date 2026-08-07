@@ -93,6 +93,7 @@ export default function AdminPanel() {
   const [blacklistLicense, setBlacklistLicense] = useState("");
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
+  const [mobileApp, setMobileApp] = useState({ app_download_android: "", app_download_ios: "", app_version: "" });
   const [securitySettings, setSecuritySettings] = useState({
     rate_limit_max: "10",
     rate_limit_window: "5",
@@ -485,10 +486,20 @@ export default function AdminPanel() {
         "admin_webhook_billing",
         "admin_webhook_security",
         "admin_webhook_team",
+        "app_download_android",
+        "app_download_ios",
+        "app_version",
       ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
     if (map.has("maintenance_message")) setMaintenanceMessage(map.get("maintenance_message") || maintenanceMessage);
+    setMobileApp((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key) || "";
+      });
+      return next;
+    });
     setSecuritySettings((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((key) => {
@@ -577,6 +588,32 @@ export default function AdminPanel() {
   }
 
   async function saveSecuritySettings() {
+    return saveSecuritySettingsInner();
+  }
+
+  async function saveMobileAppSettings() {
+    if (!user) return;
+    const invalid = [mobileApp.app_download_android, mobileApp.app_download_ios]
+      .filter(Boolean)
+      .some((url) => !/^https:\/\/\S+$/i.test(url.trim()));
+    if (invalid) {
+      toast.error("Download links must be full https:// URLs");
+      return;
+    }
+    const { error } = await supabase.from("settings").upsert(
+      Object.entries(mobileApp).map(([key, value]) => ({ user_id: user.id, key, value: value.trim(), updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success("Mobile app download links saved");
+    notifyDiscord("Admin updated mobile app builds", {
+      Android: mobileApp.app_download_android ? "Set" : "Empty",
+      iOS: mobileApp.app_download_ios ? "Set" : "Empty",
+      Version: mobileApp.app_version || "N/A",
+    });
+  }
+
+  async function saveSecuritySettingsInner() {
     if (!user) return;
     const { error } = await supabase.from("settings").upsert(
       Object.entries(securitySettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
