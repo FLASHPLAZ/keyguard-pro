@@ -812,6 +812,7 @@ export default function Licenses() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <LicenseInspector license={inspecting} open={inspectorOpen} onOpenChange={setInspectorOpen} />
     </RoleLayout>
   );
 }
