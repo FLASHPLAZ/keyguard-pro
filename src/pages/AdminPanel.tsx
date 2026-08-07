@@ -1537,6 +1537,51 @@ export default function AdminPanel() {
             <Card className="border-border/60">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary" />Discord Webhook Routing</CardTitle>
+              </CardHeader>
+              <CardContent className="hidden" />
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="h-4 w-4 text-primary" />Mobile App Builds</CardTitle>
+                <p className="text-xs text-muted-foreground">These links power the “Install the app” banner on the landing page. Visitors pick Android or iOS and the download starts instantly.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-foreground">Android build (.apk)</span>
+                    <Input
+                      value={mobileApp.app_download_android}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_android: e.target.value }))}
+                      placeholder="https://cdn.example.com/gxauth.apk"
+                      className="bg-secondary border-border"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-foreground">iOS build (.ipa or App Store link)</span>
+                    <Input
+                      value={mobileApp.app_download_ios}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_ios: e.target.value }))}
+                      placeholder="https://apps.apple.com/app/..."
+                      className="bg-secondary border-border"
+                    />
+                  </label>
+                </div>
+                <label className="space-y-1 block max-w-xs">
+                  <span className="text-xs font-medium text-foreground">Version label (optional)</span>
+                  <Input
+                    value={mobileApp.app_version}
+                    onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
+                    placeholder="1.0.0"
+                    className="bg-secondary border-border"
+                  />
+                </label>
+                <Button onClick={saveMobileAppSettings} className="w-full sm:w-auto">Save App Links</Button>
+                <p className="text-xs text-muted-foreground">Leave a field empty to hide that platform's download until the build is ready.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary" />Discord Webhook Routing</CardTitle>
                 <p className="text-xs text-muted-foreground">Platform-wide admin webhooks. These receive activity across all users, resellers, managers, apps, licenses, payments, and security actions.</p>
               </CardHeader>
               <CardContent className="space-y-4">
