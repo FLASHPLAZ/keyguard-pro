@@ -20,7 +20,7 @@ import {
   Users, Key, AppWindow, ShieldCheck, CreditCard, BarChart3,
   Search, Ban, CheckCircle, XCircle, Trash2, Eye, RefreshCw,
   TrendingUp, Activity, Globe, Clock, Crown, UserX, UserCheck,
-  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy, Code2, Bot,
+  AlertTriangle, Shield, Calendar, Infinity as InfinityIcon, ShieldBan, Wrench, Copy, Code2, Bot, Smartphone,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -93,6 +93,7 @@ export default function AdminPanel() {
   const [blacklistLicense, setBlacklistLicense] = useState("");
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
+  const [mobileApp, setMobileApp] = useState({ app_download_android: "", app_download_ios: "", app_version: "" });
   const [securitySettings, setSecuritySettings] = useState({
     rate_limit_max: "10",
     rate_limit_window: "5",
@@ -485,10 +486,20 @@ export default function AdminPanel() {
         "admin_webhook_billing",
         "admin_webhook_security",
         "admin_webhook_team",
+        "app_download_android",
+        "app_download_ios",
+        "app_version",
       ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
     if (map.has("maintenance_message")) setMaintenanceMessage(map.get("maintenance_message") || maintenanceMessage);
+    setMobileApp((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key) || "";
+      });
+      return next;
+    });
     setSecuritySettings((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((key) => {
@@ -574,6 +585,28 @@ export default function AdminPanel() {
     notifyDiscord("Maintenance mode updated", { Enabled: maintenanceEnabled ? "Yes" : "No" });
     localStorage.setItem("gxauth_maintenance_mode", maintenanceEnabled ? "true" : "false");
     localStorage.setItem("gxauth_maintenance_message", maintenanceMessage);
+  }
+
+  async function saveMobileAppSettings() {
+    if (!user) return;
+    const invalid = [mobileApp.app_download_android, mobileApp.app_download_ios]
+      .filter(Boolean)
+      .some((url) => !/^https:\/\/\S+$/i.test(url.trim()));
+    if (invalid) {
+      toast.error("Download links must be full https:// URLs");
+      return;
+    }
+    const { error } = await supabase.from("settings").upsert(
+      Object.entries(mobileApp).map(([key, value]) => ({ user_id: user.id, key, value: value.trim(), updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+    if (error) { toast.error(error.message); return; }
+    toast.success("Mobile app download links saved");
+    notifyDiscord("Admin updated mobile app builds", {
+      Android: mobileApp.app_download_android ? "Set" : "Empty",
+      iOS: mobileApp.app_download_ios ? "Set" : "Empty",
+      Version: mobileApp.app_version || "N/A",
+    });
   }
 
   async function saveSecuritySettings() {
@@ -1501,6 +1534,45 @@ export default function AdminPanel() {
                 </CardContent>
               </Card>
             </div>
+            <Card className="border-border/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="h-4 w-4 text-primary" />Mobile App Builds</CardTitle>
+                <p className="text-xs text-muted-foreground">These links power the “Install the app” banner on the landing page. Visitors pick Android or iOS and the download starts instantly.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-foreground">Android build (.apk)</span>
+                    <Input
+                      value={mobileApp.app_download_android}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_android: e.target.value }))}
+                      placeholder="https://cdn.example.com/gxauth.apk"
+                      className="bg-secondary border-border"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-foreground">iOS build (.ipa or App Store link)</span>
+                    <Input
+                      value={mobileApp.app_download_ios}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_ios: e.target.value }))}
+                      placeholder="https://apps.apple.com/app/..."
+                      className="bg-secondary border-border"
+                    />
+                  </label>
+                </div>
+                <label className="space-y-1 block max-w-xs">
+                  <span className="text-xs font-medium text-foreground">Version label (optional)</span>
+                  <Input
+                    value={mobileApp.app_version}
+                    onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
+                    placeholder="1.0.0"
+                    className="bg-secondary border-border"
+                  />
+                </label>
+                <Button onClick={saveMobileAppSettings} className="w-full sm:w-auto">Save App Links</Button>
+                <p className="text-xs text-muted-foreground">Leave a field empty to hide that platform's download until the build is ready.</p>
+              </CardContent>
+            </Card>
             <Card className="border-border/60">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary" />Discord Webhook Routing</CardTitle>
