@@ -634,6 +634,64 @@ export default function AdminPanel() {
     });
   }
 
+  async function upsertSettings(entries: Record<string, string>) {
+    if (!user) return { error: { message: "Not signed in" } } as any;
+    return await supabase.from("settings").upsert(
+      Object.entries(entries).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+  }
+
+  async function uploadAppBuild(platform: "android" | "ios", file: File | null) {
+    if (!file || !user) return;
+    const maxBytes = 250 * 1024 * 1024;
+    if (file.size > maxBytes) { toast.error("Build must be smaller than 250 MB"); return; }
+    setUploading(platform);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${platform}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("app-builds")
+      .upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+    if (uploadError) { setUploading(null); toast.error(uploadError.message); return; }
+
+    const previous = platform === "android" ? appBuilds.app_build_android_path : appBuilds.app_build_ios_path;
+    const { error } = await upsertSettings({
+      [`app_build_${platform}_path`]: path,
+      [`app_build_${platform}_name`]: safeName,
+    });
+    setUploading(null);
+    if (error) { toast.error(error.message); return; }
+    if (previous && previous !== path) await supabase.storage.from("app-builds").remove([previous]);
+    setAppBuilds((prev) => ({
+      ...prev,
+      [`app_build_${platform}_path`]: path,
+      [`app_build_${platform}_name`]: safeName,
+    }));
+    toast.success(`${platform === "ios" ? "iOS" : "Android"} build uploaded — downloads are live`);
+    notifyDiscord("Admin uploaded a mobile build", { Platform: platform, File: safeName, Size: `${(file.size / 1048576).toFixed(1)} MB` });
+  }
+
+  async function removeAppBuild(platform: "android" | "ios") {
+    const path = platform === "android" ? appBuilds.app_build_android_path : appBuilds.app_build_ios_path;
+    if (!path) return;
+    const { error } = await upsertSettings({ [`app_build_${platform}_path`]: "", [`app_build_${platform}_name`]: "" });
+    if (error) { toast.error(error.message); return; }
+    await supabase.storage.from("app-builds").remove([path]);
+    setAppBuilds((prev) => ({ ...prev, [`app_build_${platform}_path`]: "", [`app_build_${platform}_name`]: "" }));
+    toast.success(`${platform === "ios" ? "iOS" : "Android"} build removed`);
+  }
+
+  async function saveReleaseStatus() {
+    const { error } = await upsertSettings({
+      app_release_status: appRelease.app_release_status,
+      app_release_message: appRelease.app_release_message.trim(),
+      app_version: mobileApp.app_version.trim(),
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Release status updated on the landing page");
+    notifyDiscord("Admin updated app release status", { Status: appRelease.app_release_status, Version: mobileApp.app_version || "N/A" });
+  }
+
   async function saveSecuritySettings() {
     if (!user) return;
     const { error } = await supabase.from("settings").upsert(
