@@ -497,6 +497,12 @@ export default function AdminPanel() {
         "app_download_android",
         "app_download_ios",
         "app_version",
+        "app_build_android_path",
+        "app_build_ios_path",
+        "app_build_android_name",
+        "app_build_ios_name",
+        "app_release_status",
+        "app_release_message",
       ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
@@ -508,6 +514,17 @@ export default function AdminPanel() {
       });
       return next;
     });
+    setAppBuilds((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key) || "";
+      });
+      return next;
+    });
+    setAppRelease((prev) => ({
+      app_release_status: map.get("app_release_status") || prev.app_release_status,
+      app_release_message: map.get("app_release_message") ?? prev.app_release_message,
+    }));
     setSecuritySettings((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((key) => {
