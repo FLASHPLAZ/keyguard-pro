@@ -1620,40 +1620,76 @@ export default function AdminPanel() {
             <Card className="border-border/60">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="h-4 w-4 text-primary" />Mobile App Builds</CardTitle>
-                <p className="text-xs text-muted-foreground">These links power the “Install the app” banner on the landing page. Visitors pick Android or iOS and the download starts instantly.</p>
+                <p className="text-xs text-muted-foreground">Upload the actual build files — visitors pick Android or iOS on the landing page and the file downloads directly (no redirect).</p>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-2">
+                  {([
+                    { id: "android" as const, label: "Android build (.apk)", accept: ".apk,application/vnd.android.package-archive", name: appBuilds.app_build_android_name, path: appBuilds.app_build_android_path },
+                    { id: "ios" as const, label: "iOS build (.ipa)", accept: ".ipa,.plist,application/octet-stream", name: appBuilds.app_build_ios_name, path: appBuilds.app_build_ios_path },
+                  ]).map((slot) => (
+                    <div key={slot.id} className="rounded-lg border border-border/70 bg-secondary/40 p-3">
+                      <p className="text-xs font-semibold text-foreground">{slot.label}</p>
+                      {slot.path ? (
+                        <p className="mt-1 truncate font-mono text-[11px] text-emerald-400">{slot.name || slot.path}</p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-muted-foreground">No file uploaded yet</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <label className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
+                          {uploading === slot.id ? "Uploading…" : slot.path ? "Replace file" : "Upload file"}
+                          <input
+                            type="file"
+                            accept={slot.accept}
+                            className="hidden"
+                            disabled={uploading !== null}
+                            onChange={(e) => { uploadAppBuild(slot.id, e.target.files?.[0] || null); e.currentTarget.value = ""; }}
+                          />
+                        </label>
+                        {slot.path && (
+                          <Button variant="outline" size="sm" className="min-h-[40px]" onClick={() => removeAppBuild(slot.id)}>
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
                   <label className="space-y-1">
-                    <span className="text-xs font-medium text-foreground">Android build (.apk)</span>
-                    <Input
-                      value={mobileApp.app_download_android}
-                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_android: e.target.value }))}
-                      placeholder="https://cdn.example.com/gxauth.apk"
-                      className="bg-secondary border-border"
-                    />
+                    <span className="text-xs font-medium text-foreground">Release status</span>
+                    <select
+                      value={appRelease.app_release_status}
+                      onChange={(e) => setAppRelease((prev) => ({ ...prev, app_release_status: e.target.value }))}
+                      className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
+                    >
+                      <option value="live">Available now</option>
+                      <option value="beta">Open beta</option>
+                      <option value="soon">Coming soon</option>
+                    </select>
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-medium text-foreground">iOS build (.ipa or App Store link)</span>
+                    <span className="text-xs font-medium text-foreground">Version label</span>
                     <Input
-                      value={mobileApp.app_download_ios}
-                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_ios: e.target.value }))}
-                      placeholder="https://apps.apple.com/app/..."
-                      className="bg-secondary border-border"
+                      value={mobileApp.app_version}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
+                      placeholder="1.0.0"
+                      className="h-10 bg-secondary border-border"
+                    />
+                  </label>
+                  <label className="space-y-1 md:col-span-1">
+                    <span className="text-xs font-medium text-foreground">Status message (shown on landing)</span>
+                    <Input
+                      value={appRelease.app_release_message}
+                      onChange={(e) => setAppRelease((prev) => ({ ...prev, app_release_message: e.target.value }))}
+                      placeholder="Android build live — iOS lands next week"
+                      className="h-10 bg-secondary border-border"
                     />
                   </label>
                 </div>
-                <label className="space-y-1 block max-w-xs">
-                  <span className="text-xs font-medium text-foreground">Version label (optional)</span>
-                  <Input
-                    value={mobileApp.app_version}
-                    onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
-                    placeholder="1.0.0"
-                    className="bg-secondary border-border"
-                  />
-                </label>
-                <Button onClick={saveMobileAppSettings} className="w-full sm:w-auto">Save App Links</Button>
-                <p className="text-xs text-muted-foreground">Leave a field empty to hide that platform's download until the build is ready.</p>
+                <Button onClick={saveReleaseStatus} className="min-h-[44px] w-full sm:w-auto">Save Release Status</Button>
+                <p className="text-xs text-muted-foreground">Builds are stored privately and served through a short-lived signed download link. Max 250 MB per file.</p>
               </CardContent>
             </Card>
             <Card className="border-border/60">
