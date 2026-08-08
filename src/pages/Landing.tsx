@@ -387,7 +387,7 @@ export default function Landing() {
             className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-card/75 px-4 py-1.5 text-xs text-foreground/90 shadow-lg shadow-primary/5 md:backdrop-blur sm:text-sm"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-300" />
-            <span className="font-medium">Protected changes are live</span>
+            <span className="font-medium">Live API · 99.9% uptime · free to start</span>
           </motion.div>
 
           <motion.h1
@@ -404,25 +404,25 @@ export default function Landing() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.6 }}
-            className="mt-6 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed"
+            className="mt-5 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed"
           >
-            GX Auth gives software owners a clean license system for apps, users,
-            HWID binding, subscriptions, and security events without touching your
-            production data.
+            GX Auth is a production-ready license system — HWID binding, resellers,
+            managers, subscriptions and live security events. Ship your first key in
+            under two minutes, no credit card.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="mt-10 flex flex-col gap-3 sm:flex-row"
+            className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
           >
             <Link to="/signup" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 className="group relative h-14 w-full rounded-md border-0 bg-gradient-to-r from-primary to-accent text-base font-semibold text-primary-foreground shadow-[0_18px_45px_-24px_hsl(var(--primary)/0.65)] transition-all duration-300 hover:scale-[1.01] sm:w-[210px]"
               >
-                Get started
+                Start free
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 group-hover:translate-x-0.5 transition-transform">
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
@@ -432,23 +432,22 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[210px]"
+                className="group h-14 w-full rounded-md border-border/70 bg-card/55 text-base font-semibold text-foreground hover:border-primary/40 hover:bg-card/75 md:backdrop-blur sm:w-[190px]"
               >
-                View features
+                See how it works
                 <span className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border/70 group-hover:border-primary/60 group-hover:translate-x-0.5 transition-all">
                   <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </Button>
             </a>
-            <a href="https://discord.gg/galaticboosts" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="outline"
-                className="group h-14 w-full rounded-md border-[#5865F2]/50 bg-[#5865F2]/15 text-base font-semibold text-foreground shadow-[0_16px_44px_-30px_#5865F2] hover:border-[#5865F2]/80 hover:bg-[#5865F2]/25 md:backdrop-blur sm:w-[210px]"
-              >
-                <img src={discordIcon} alt="" className="mr-2 h-5 w-5" />
-                Discord
-              </Button>
+            <a
+              href="https://discord.gg/galaticboosts"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-14 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground sm:h-14"
+            >
+              <img src={discordIcon} alt="" className="h-5 w-5" />
+              Join Discord
             </a>
           </motion.div>
 
@@ -456,10 +455,11 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="mt-7 flex flex-wrap gap-2"
+            className="mt-6 flex flex-wrap gap-x-5 gap-y-2"
           >
-            {["Safe license deletes", "Owner scoped", "Admin controls", "Live logs"].map((item) => (
-              <span key={item} className="rounded-md border border-border/40 bg-card/30 px-2.5 py-1 md:backdrop-blur font-mono text-[11px] text-muted-foreground/80">
+            {["Free plan forever", "HWID + IP binding", "Resellers & managers", "Live Discord logs"].map((item) => (
+              <span key={item} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                 {item}
               </span>
             ))}
