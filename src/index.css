@@ -299,6 +299,33 @@
   .mobile-card:active {
     @apply scale-[0.99] bg-card/80;
   }
+
+  /* Native-feel scrollable tables */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  @media (max-width: 767px) {
+    .overflow-x-auto > table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: hsl(var(--card));
+    }
+
+    /* Comfortable touch targets across dashboards */
+    button:not(.no-touch-pad),
+    [role="tab"],
+    a[role="button"] {
+      min-height: 40px;
+    }
+
+    table td,
+    table th {
+      white-space: nowrap;
+    }
+  }
 }
 
 /* Smooth scrollbar */
