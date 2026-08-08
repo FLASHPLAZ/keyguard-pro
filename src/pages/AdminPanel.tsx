@@ -640,6 +640,11 @@ export default function AdminPanel() {
       Object.entries(securitySettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
       { onConflict: "user_id,key" }
     );
+    if (!user) return;
+    const { error } = await supabase.from("settings").upsert(
+      Object.entries(securitySettings).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
     if (error) { toast.error(error.message); return; }
     toast.success("Platform security settings saved");
     notifyDiscord("Admin updated platform security settings", {
