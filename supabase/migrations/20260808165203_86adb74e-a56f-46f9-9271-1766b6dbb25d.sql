@@ -1,0 +1,4 @@
+CREATE POLICY "Admins manage app builds read" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'app-builds' AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins manage app builds insert" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'app-builds' AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins manage app builds update" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'app-builds' AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins manage app builds delete" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'app-builds' AND public.has_role(auth.uid(), 'admin'));

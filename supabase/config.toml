@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.sync-litecoin-payments]
 verify_jwt = false
+
+[functions.app-download]
+verify_jwt = false

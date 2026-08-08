@@ -22,6 +22,12 @@ Deno.serve(async (req) => {
       "app_download_android",
       "app_download_ios",
       "app_version",
+      "app_build_android_path",
+      "app_build_ios_path",
+      "app_build_android_name",
+      "app_build_ios_name",
+      "app_release_status",
+      "app_release_message",
     ]);
 
   const rows = data || [];
@@ -35,6 +41,12 @@ Deno.serve(async (req) => {
     app_download_android: firstNonEmpty("app_download_android"),
     app_download_ios: firstNonEmpty("app_download_ios"),
     app_version: firstNonEmpty("app_version"),
+    app_build_android_name: firstNonEmpty("app_build_android_name"),
+    app_build_ios_name: firstNonEmpty("app_build_ios_name"),
+    android_available: Boolean(firstNonEmpty("app_build_android_path") || firstNonEmpty("app_download_android")),
+    ios_available: Boolean(firstNonEmpty("app_build_ios_path") || firstNonEmpty("app_download_ios")),
+    app_release_status: firstNonEmpty("app_release_status") || "live",
+    app_release_message: firstNonEmpty("app_release_message"),
   });
 });
 

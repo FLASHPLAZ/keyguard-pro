@@ -94,6 +94,14 @@ export default function AdminPanel() {
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
   const [mobileApp, setMobileApp] = useState({ app_download_android: "", app_download_ios: "", app_version: "" });
+  const [appRelease, setAppRelease] = useState({ app_release_status: "live", app_release_message: "" });
+  const [appBuilds, setAppBuilds] = useState({
+    app_build_android_path: "",
+    app_build_ios_path: "",
+    app_build_android_name: "",
+    app_build_ios_name: "",
+  });
+  const [uploading, setUploading] = useState<"android" | "ios" | null>(null);
   const [securitySettings, setSecuritySettings] = useState({
     rate_limit_max: "10",
     rate_limit_window: "5",
@@ -489,6 +497,12 @@ export default function AdminPanel() {
         "app_download_android",
         "app_download_ios",
         "app_version",
+        "app_build_android_path",
+        "app_build_ios_path",
+        "app_build_android_name",
+        "app_build_ios_name",
+        "app_release_status",
+        "app_release_message",
       ]);
     const map = new Map((data || []).map((row: any) => [row.key, row.value]));
     if (map.has("maintenance_mode")) setMaintenanceEnabled(map.get("maintenance_mode") === "true");
@@ -500,6 +514,17 @@ export default function AdminPanel() {
       });
       return next;
     });
+    setAppBuilds((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (map.has(key)) (next as any)[key] = map.get(key) || "";
+      });
+      return next;
+    });
+    setAppRelease((prev) => ({
+      app_release_status: map.get("app_release_status") || prev.app_release_status,
+      app_release_message: map.get("app_release_message") ?? prev.app_release_message,
+    }));
     setSecuritySettings((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((key) => {
@@ -607,6 +632,64 @@ export default function AdminPanel() {
       iOS: mobileApp.app_download_ios ? "Set" : "Empty",
       Version: mobileApp.app_version || "N/A",
     });
+  }
+
+  async function upsertSettings(entries: Record<string, string>) {
+    if (!user) return { error: { message: "Not signed in" } } as any;
+    return await supabase.from("settings").upsert(
+      Object.entries(entries).map(([key, value]) => ({ user_id: user.id, key, value, updated_at: new Date().toISOString() } as any)),
+      { onConflict: "user_id,key" }
+    );
+  }
+
+  async function uploadAppBuild(platform: "android" | "ios", file: File | null) {
+    if (!file || !user) return;
+    const maxBytes = 250 * 1024 * 1024;
+    if (file.size > maxBytes) { toast.error("Build must be smaller than 250 MB"); return; }
+    setUploading(platform);
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+    const path = `${platform}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("app-builds")
+      .upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+    if (uploadError) { setUploading(null); toast.error(uploadError.message); return; }
+
+    const previous = platform === "android" ? appBuilds.app_build_android_path : appBuilds.app_build_ios_path;
+    const { error } = await upsertSettings({
+      [`app_build_${platform}_path`]: path,
+      [`app_build_${platform}_name`]: safeName,
+    });
+    setUploading(null);
+    if (error) { toast.error(error.message); return; }
+    if (previous && previous !== path) await supabase.storage.from("app-builds").remove([previous]);
+    setAppBuilds((prev) => ({
+      ...prev,
+      [`app_build_${platform}_path`]: path,
+      [`app_build_${platform}_name`]: safeName,
+    }));
+    toast.success(`${platform === "ios" ? "iOS" : "Android"} build uploaded — downloads are live`);
+    notifyDiscord("Admin uploaded a mobile build", { Platform: platform, File: safeName, Size: `${(file.size / 1048576).toFixed(1)} MB` });
+  }
+
+  async function removeAppBuild(platform: "android" | "ios") {
+    const path = platform === "android" ? appBuilds.app_build_android_path : appBuilds.app_build_ios_path;
+    if (!path) return;
+    const { error } = await upsertSettings({ [`app_build_${platform}_path`]: "", [`app_build_${platform}_name`]: "" });
+    if (error) { toast.error(error.message); return; }
+    await supabase.storage.from("app-builds").remove([path]);
+    setAppBuilds((prev) => ({ ...prev, [`app_build_${platform}_path`]: "", [`app_build_${platform}_name`]: "" }));
+    toast.success(`${platform === "ios" ? "iOS" : "Android"} build removed`);
+  }
+
+  async function saveReleaseStatus() {
+    const { error } = await upsertSettings({
+      app_release_status: appRelease.app_release_status,
+      app_release_message: appRelease.app_release_message.trim(),
+      app_version: mobileApp.app_version.trim(),
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Release status updated on the landing page");
+    notifyDiscord("Admin updated app release status", { Status: appRelease.app_release_status, Version: mobileApp.app_version || "N/A" });
   }
 
   async function saveSecuritySettings() {
@@ -738,7 +821,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-secondary/50 border border-border/60 flex-wrap h-auto gap-1 p-1">
+          <TabsList className="-mx-1 flex w-full h-auto flex-nowrap gap-1 overflow-x-auto border border-border/60 bg-secondary/50 p-1 md:flex-wrap md:overflow-visible">
             <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
@@ -1537,40 +1620,76 @@ export default function AdminPanel() {
             <Card className="border-border/60">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-sm"><Smartphone className="h-4 w-4 text-primary" />Mobile App Builds</CardTitle>
-                <p className="text-xs text-muted-foreground">These links power the “Install the app” banner on the landing page. Visitors pick Android or iOS and the download starts instantly.</p>
+                <p className="text-xs text-muted-foreground">Upload the actual build files — visitors pick Android or iOS on the landing page and the file downloads directly (no redirect).</p>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-2">
+                  {([
+                    { id: "android" as const, label: "Android build (.apk)", accept: ".apk,application/vnd.android.package-archive", name: appBuilds.app_build_android_name, path: appBuilds.app_build_android_path },
+                    { id: "ios" as const, label: "iOS build (.ipa)", accept: ".ipa,.plist,application/octet-stream", name: appBuilds.app_build_ios_name, path: appBuilds.app_build_ios_path },
+                  ]).map((slot) => (
+                    <div key={slot.id} className="rounded-lg border border-border/70 bg-secondary/40 p-3">
+                      <p className="text-xs font-semibold text-foreground">{slot.label}</p>
+                      {slot.path ? (
+                        <p className="mt-1 truncate font-mono text-[11px] text-emerald-400">{slot.name || slot.path}</p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-muted-foreground">No file uploaded yet</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <label className="inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20">
+                          {uploading === slot.id ? "Uploading…" : slot.path ? "Replace file" : "Upload file"}
+                          <input
+                            type="file"
+                            accept={slot.accept}
+                            className="hidden"
+                            disabled={uploading !== null}
+                            onChange={(e) => { uploadAppBuild(slot.id, e.target.files?.[0] || null); e.currentTarget.value = ""; }}
+                          />
+                        </label>
+                        {slot.path && (
+                          <Button variant="outline" size="sm" className="min-h-[40px]" onClick={() => removeAppBuild(slot.id)}>
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
                   <label className="space-y-1">
-                    <span className="text-xs font-medium text-foreground">Android build (.apk)</span>
-                    <Input
-                      value={mobileApp.app_download_android}
-                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_android: e.target.value }))}
-                      placeholder="https://cdn.example.com/gxauth.apk"
-                      className="bg-secondary border-border"
-                    />
+                    <span className="text-xs font-medium text-foreground">Release status</span>
+                    <select
+                      value={appRelease.app_release_status}
+                      onChange={(e) => setAppRelease((prev) => ({ ...prev, app_release_status: e.target.value }))}
+                      className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
+                    >
+                      <option value="live">Available now</option>
+                      <option value="beta">Open beta</option>
+                      <option value="soon">Coming soon</option>
+                    </select>
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-medium text-foreground">iOS build (.ipa or App Store link)</span>
+                    <span className="text-xs font-medium text-foreground">Version label</span>
                     <Input
-                      value={mobileApp.app_download_ios}
-                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_download_ios: e.target.value }))}
-                      placeholder="https://apps.apple.com/app/..."
-                      className="bg-secondary border-border"
+                      value={mobileApp.app_version}
+                      onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
+                      placeholder="1.0.0"
+                      className="h-10 bg-secondary border-border"
+                    />
+                  </label>
+                  <label className="space-y-1 md:col-span-1">
+                    <span className="text-xs font-medium text-foreground">Status message (shown on landing)</span>
+                    <Input
+                      value={appRelease.app_release_message}
+                      onChange={(e) => setAppRelease((prev) => ({ ...prev, app_release_message: e.target.value }))}
+                      placeholder="Android build live — iOS lands next week"
+                      className="h-10 bg-secondary border-border"
                     />
                   </label>
                 </div>
-                <label className="space-y-1 block max-w-xs">
-                  <span className="text-xs font-medium text-foreground">Version label (optional)</span>
-                  <Input
-                    value={mobileApp.app_version}
-                    onChange={(e) => setMobileApp((prev) => ({ ...prev, app_version: e.target.value }))}
-                    placeholder="1.0.0"
-                    className="bg-secondary border-border"
-                  />
-                </label>
-                <Button onClick={saveMobileAppSettings} className="w-full sm:w-auto">Save App Links</Button>
-                <p className="text-xs text-muted-foreground">Leave a field empty to hide that platform's download until the build is ready.</p>
+                <Button onClick={saveReleaseStatus} className="min-h-[44px] w-full sm:w-auto">Save Release Status</Button>
+                <p className="text-xs text-muted-foreground">Builds are stored privately and served through a short-lived signed download link. Max 250 MB per file.</p>
               </CardContent>
             </Card>
             <Card className="border-border/60">
