@@ -94,6 +94,14 @@ export default function AdminPanel() {
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("GX Auth is currently under maintenance. Please check back soon.");
   const [mobileApp, setMobileApp] = useState({ app_download_android: "", app_download_ios: "", app_version: "" });
+  const [appRelease, setAppRelease] = useState({ app_release_status: "live", app_release_message: "" });
+  const [appBuilds, setAppBuilds] = useState({
+    app_build_android_path: "",
+    app_build_ios_path: "",
+    app_build_android_name: "",
+    app_build_ios_name: "",
+  });
+  const [uploading, setUploading] = useState<"android" | "ios" | null>(null);
   const [securitySettings, setSecuritySettings] = useState({
     rate_limit_max: "10",
     rate_limit_window: "5",
