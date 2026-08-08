@@ -821,7 +821,7 @@ export default function AdminPanel() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-secondary/50 border border-border/60 flex-wrap h-auto gap-1 p-1">
+          <TabsList className="-mx-1 flex w-full h-auto flex-nowrap gap-1 overflow-x-auto border border-border/60 bg-secondary/50 p-1 md:flex-wrap md:overflow-visible">
             <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Overview</TabsTrigger>
             <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Users</TabsTrigger>
             <TabsTrigger value="tenants" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Subscriptions</TabsTrigger>
