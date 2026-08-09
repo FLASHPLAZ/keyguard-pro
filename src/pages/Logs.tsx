@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { formatDate } from "@/lib/license";
 import { Input } from "@/components/ui/input";
-import { Search, Globe, Monitor, MapPin, Download, FileText, User } from "lucide-react";
+import { Search, Globe, Monitor, MapPin, Download, FileText, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { TablePagination } from "@/components/TablePagination";
@@ -32,56 +33,91 @@ function getActionBadge(action: string) {
   return { color: "bg-muted text-muted-foreground border-border", label: action };
 }
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const SEARCHABLE_COLUMNS = ["license_key", "application_name", "action", "ip", "country", "device_name", "hwid"];
 
 export default function Logs() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, { username: string; email: string; role: string }>>({});
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const fetchLogs = async (silent = false) => {
-    if (!user) return;
-    if (!silent) setLoading(true);
-    const { data: logsData, error: logsError } = await supabase
-      .from("activity_logs")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1000);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-    if (logsError) {
-      toast.error(`Failed to load logs: ${logsError.message}`);
-      if (!silent) setLoading(false);
-      return;
-    }
+  const buildQuery = useCallback(
+    (select: string, options?: { count?: "exact" }) => {
+      let q = supabase
+        .from("activity_logs")
+        .select(select, options as any)
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (debouncedSearch) {
+        const escaped = debouncedSearch.replace(/[%,()]/g, "");
+        if (escaped) q = q.or(SEARCHABLE_COLUMNS.map((c) => `${c}.ilike.%${escaped}%`).join(","));
+      }
+      return q;
+    },
+    [user, debouncedSearch],
+  );
 
-    const list = logsData || [];
-    setLogs(list);
-    const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));
-    if (ids.length) {
-      const { data: profs, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id, username, email, role")
-        .in("user_id", ids);
-      if (profileError) {
-        toast.error(`Failed to load log users: ${profileError.message}`);
-      } else {
+  const fetchLogs = useCallback(
+    async (silent = false) => {
+      if (!user) return;
+      if (silent) setFetching(true);
+      else setLoading(true);
+
+      const from = (page - 1) * pageSize;
+      const { data: logsData, error: logsError, count } = await buildQuery("*", { count: "exact" }).range(from, from + pageSize - 1);
+
+      if (logsError) {
+        toast.error(`Failed to load logs: ${logsError.message}`);
+        setLoading(false);
+        setFetching(false);
+        return;
+      }
+
+      const list = logsData || [];
+      setLogs(list);
+      setTotalCount(count ?? list.length);
+
+      const ids = Array.from(new Set(list.map((l: any) => l.user_id).filter(Boolean)));
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, username, email, role")
+          .in("user_id", ids);
         const map: Record<string, any> = {};
         (profs || []).forEach((p: any) => { map[p.user_id] = p; });
         setProfileMap(map);
+      } else {
+        setProfileMap({});
       }
-    } else {
-      setProfileMap({});
-    }
-    if (!silent) setLoading(false);
-  };
+      setLoading(false);
+      setFetching(false);
+    },
+    [user, page, pageSize, buildQuery],
+  );
 
   useEffect(() => {
     if (!user) return;
     fetchLogs();
+  }, [fetchLogs, user]);
+
+  useEffect(() => {
+    if (!user) return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       channel = supabase
@@ -99,27 +135,21 @@ export default function Logs() {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchLogs]);
 
-  const filtered = logs.filter(
-    (l) =>
-      (l.license_key || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.application_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.action || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.ip || "").includes(search) ||
-      (l.country || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.device_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.hwid || "").toLowerCase().includes(search.toLowerCase()) ||
-      (profileMap[l.user_id]?.username || "").toLowerCase().includes(search.toLowerCase()) ||
-      (profileMap[l.user_id]?.email || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const paginated = logs;
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const exportCsv = () => {
+  const exportCsv = async () => {
+    if (!user) return;
+    setExporting(true);
+    const { data, error } = await buildQuery("*").range(0, 4999);
+    if (error) {
+      toast.error(`Export failed: ${error.message}`);
+      setExporting(false);
+      return;
+    }
     const headers = ["Timestamp", "Action", "By User", "Email", "Role", "License Key", "Application", "IP", "Country", "Device", "HWID"];
-    const rows = filtered.map(l => [
+    const rows = (data || []).map((l: any) => [
       l.created_at,
       l.action,
       profileMap[l.user_id]?.username || "",
@@ -140,6 +170,8 @@ export default function Logs() {
     a.download = `activity_logs_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    setExporting(false);
+    toast.success(`Exported ${rows.length} log ${rows.length === 1 ? "entry" : "entries"}`);
   };
 
   return (
@@ -148,28 +180,42 @@ export default function Logs() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
-          <p className="text-sm text-muted-foreground">Track all license activity — {filtered.length} entries</p>
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            Track all license activity — {totalCount.toLocaleString()} {totalCount === 1 ? "entry" : "entries"}
+            {fetching && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+          </p>
         </div>
-        <Button variant="outline" onClick={exportCsv} className="w-full sm:w-auto h-9 text-xs">
-          <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+        <Button variant="outline" onClick={exportCsv} disabled={exporting || totalCount === 0} className="h-9 w-full text-xs sm:w-auto">
+          {exporting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1.5 h-3.5 w-3.5" />}
+          {exporting ? "Exporting…" : "Export CSV"}
         </Button>
       </div>
 
-      <div className="mb-4">
-        <div className="relative sm:max-w-sm">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by key, app, action, IP, country, device..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search by key, app, action, IP, country, device..." value={search} onChange={(e) => setSearch(e.target.value)} className="border-border bg-secondary pl-10" />
         </div>
+        <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+          <SelectTrigger className="h-10 w-full border-border bg-secondary text-xs sm:w-[130px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <SelectItem key={n} value={String(n)} className="text-xs">{n} per page</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
-        <TableSkeleton columns={8} rows={8} />
+        <TableSkeleton columns={8} rows={Math.min(pageSize, 10)} />
       ) : (
-        <>
+        <div className={fetching ? "opacity-60 transition-opacity" : "transition-opacity"}>
           {/* Mobile card view */}
           <div className="block sm:hidden space-y-3">
             {paginated.length === 0 ? (
-              <EmptyState icon={FileText} title="No logs found" description="Activity will appear here" />
+              <EmptyState icon={FileText} title={debouncedSearch ? "No matching logs" : "No logs yet"} description={debouncedSearch ? "Try a different search term" : "Activity will appear here as your licenses are used"} />
             ) : paginated.map((log, i) => {
               const badge = getActionBadge(log.action);
               return (
@@ -247,17 +293,17 @@ export default function Logs() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
-            <EmptyState icon={FileText} title="No logs found" description="Activity will appear here" />
+          {paginated.length === 0 && (
+            <EmptyState icon={FileText} title={debouncedSearch ? "No matching logs" : "No logs yet"} description={debouncedSearch ? "Try a different search term" : "Activity will appear here as your licenses are used"} />
           )}
         </div>
       </div>
-        </>
+        </div>
       )}
 
-      {filtered.length > PAGE_SIZE && (
+      {totalCount > pageSize && (
         <div className="mt-4">
-          <TablePagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          <TablePagination currentPage={page} totalItems={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}
       </PageTransition>

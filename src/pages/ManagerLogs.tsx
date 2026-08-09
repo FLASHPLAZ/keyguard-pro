@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ManagerLayout } from "@/components/ManagerLayout";
 import { formatDate } from "@/lib/license";
 import { Input } from "@/components/ui/input";
-import { Search, Globe, Monitor, MapPin } from "lucide-react";
+import { Search, Globe, Monitor, MapPin, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { TablePagination } from "@/components/TablePagination";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 function getActionBadge(action: string) {
   const lower = action.toLowerCase();
@@ -28,47 +30,67 @@ function getActionBadge(action: string) {
 }
 
 const PAGE_SIZE = 25;
+const SEARCHABLE_COLUMNS = ["license_key", "application_name", "action", "ip", "country", "device_name", "hwid"];
 
 export default function ManagerLogs() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const fetchLogs = useCallback(async () => {
     if (!user) return;
-    supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(1000)
-      .then(({ data }) => setLogs(data || []));
-  }, [user]);
+    setFetching(true);
+    let q = supabase
+      .from("activity_logs")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
+    if (debouncedSearch) {
+      const escaped = debouncedSearch.replace(/[%,()]/g, "");
+      if (escaped) q = q.or(SEARCHABLE_COLUMNS.map((c) => `${c}.ilike.%${escaped}%`).join(","));
+    }
+    const from = (page - 1) * PAGE_SIZE;
+    const { data, count } = await q.range(from, from + PAGE_SIZE - 1);
+    setLogs(data || []);
+    setTotalCount(count ?? (data || []).length);
+    setLoading(false);
+    setFetching(false);
+  }, [user, debouncedSearch, page]);
 
-  const filtered = logs.filter(
-    (l) =>
-      (l.license_key || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.application_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.action || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.ip || "").includes(search) ||
-      (l.country || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.device_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (l.hwid || "").toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const paginated = logs;
 
   return (
     <ManagerLayout>
       <div className="mb-6 animate-fade-in">
         <h1 className="text-2xl font-bold text-foreground">Activity Logs</h1>
-        <p className="text-sm text-muted-foreground">View all license activity (read-only) — {filtered.length} entries</p>
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          View all license activity (read-only) — {totalCount.toLocaleString()} entries
+          {fetching && !loading && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+        </p>
       </div>
 
       <div className="mb-4">
         <div className="relative sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by key, app, action, IP, country, device..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="bg-secondary border-border pl-10" />
+          <Input placeholder="Search by key, app, action, IP, country, device..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-secondary border-border pl-10" />
         </div>
       </div>
 
-      <div className="table-responsive">
+      {loading ? (
+        <TableSkeleton columns={8} rows={8} />
+      ) : (
+      <div className={`table-responsive ${fetching ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
         <div className="rounded-lg border border-border overflow-hidden min-w-[900px]">
           <table className="w-full text-sm">
             <thead>
@@ -103,15 +125,16 @@ export default function ManagerLogs() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground">No logs found</div>
+          {paginated.length === 0 && (
+            <EmptyState icon={FileText} title={debouncedSearch ? "No matching logs" : "No logs yet"} description={debouncedSearch ? "Try a different search term" : "Activity will appear here as licenses are used"} />
           )}
         </div>
       </div>
+      )}
 
-      {filtered.length > PAGE_SIZE && (
+      {totalCount > PAGE_SIZE && (
         <div className="mt-4">
-          <TablePagination currentPage={page} totalItems={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+          <TablePagination currentPage={page} totalItems={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       )}
     </ManagerLayout>
