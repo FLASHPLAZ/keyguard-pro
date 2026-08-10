@@ -347,8 +347,11 @@ export default function Applications() {
               {/* Download Link (Lifetime plan only) */}
               <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-foreground">Customer Download Link</label>
-                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Lifetime only</span>}
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    {!isPremium && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    Customer Download Link
+                  </label>
+                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Paid plans</span>}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Buyers verify their license at <code className="text-primary">/download</code> and get this file. Leave blank to disable.
@@ -366,7 +369,10 @@ export default function Applications() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Upgrade to Lifetime to publish downloadable files for your buyers.</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input disabled value="" placeholder="https://your-cdn.com/tool.zip" className="bg-secondary/50 border-border flex-1 opacity-60" />
+                    <Link to="/pricing"><Button size="sm" variant="outline" className="text-xs">Unlock</Button></Link>
+                  </div>
                 )}
               </div>
             </div>
