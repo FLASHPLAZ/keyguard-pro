@@ -33,6 +33,9 @@ export default function Licenses() {
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [appFilter, setAppFilter] = useState<string>("all");
+  const [usageFilter, setUsageFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState("");
   const [keyCount, setKeyCount] = useState(1);
@@ -105,7 +108,21 @@ export default function Licenses() {
       (l.owner_email || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchApp = appFilter === "all" || l.application_id === appFilter;
+    const matchUsage =
+      usageFilter === "all" ||
+      (usageFilter === "used" && !!l.hwid) ||
+      (usageFilter === "unused" && !l.hwid) ||
+      (usageFilter === "reseller" && !!l.created_by_reseller) ||
+      (usageFilter === "expiring" &&
+        new Date(l.expires_at).getTime() - Date.now() < 7 * 86400000 &&
+        new Date(l.expires_at).getTime() > Date.now());
+    return matchSearch && matchStatus && matchApp && matchUsage;
+  }).sort((a, b) => {
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (sortBy === "expiry") return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+    if (sortBy === "app") return (a.applications?.name || "").localeCompare(b.applications?.name || "");
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
