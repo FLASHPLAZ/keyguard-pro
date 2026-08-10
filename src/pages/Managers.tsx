@@ -12,6 +12,8 @@ import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { FeatureLockGate } from "@/components/FeatureLockGate";
 
 interface ManagerPerms {
   can_create_apps: boolean;
@@ -35,6 +37,7 @@ const DEFAULT_PERMS: ManagerPerms = {
 
 export default function Managers() {
   const { user } = useAuth();
+  const { hasFeature, ready } = usePlanLimits();
   const [managers, setManagers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -197,6 +200,16 @@ export default function Managers() {
     { key: "can_ban_licenses", label: "Ban / Unban Licenses", description: "Can ban and unban license keys" },
     { key: "can_reset_hwid", label: "Reset HWID", description: "Can reset hardware IDs on licenses" },
   ];
+
+  if (ready && !hasFeature("managers")) {
+    return (
+      <FeatureLockGate
+        title="Managers"
+        description="Delegate app and license management to trusted staff accounts with granular permissions."
+        perks={["Unlimited manager accounts", "Granular permission toggles", "Full manager activity logs", "Instant permission revoke"]}
+      />
+    );
+  }
 
   return (
     <RoleLayout>

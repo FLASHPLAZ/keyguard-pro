@@ -16,6 +16,7 @@ import {
   Code2,
   Crown,
   Mail,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -26,31 +27,31 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { BrandLogo } from "@/components/BrandLogo";
 
-function useSellerNavItems() {
-  const { planName } = usePlanLimits();
-  const isFree = planName === "free" || planName === "tester";
-  const isDev = planName === "developer";
+type SellerNavItem = {
+  icon: typeof LayoutDashboard;
+  label: string;
+  path: string;
+  locked: boolean;
+};
 
-  const items = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", always: true },
-    { icon: AppWindow, label: "Applications", path: "/dashboard/apps", always: true },
-    { icon: Key, label: "Licenses", path: "/dashboard/licenses", always: true },
-    { icon: Mail, label: "Client Emails", path: "/dashboard/clients", always: true },
-    { icon: Users, label: "Resellers", path: "/dashboard/resellers", always: false, minPlan: "seller" },
-    { icon: ShieldCheck, label: "Managers", path: "/dashboard/managers", always: false, minPlan: "seller" },
-    { icon: ScrollText, label: "Logs", path: "/dashboard/logs", always: true },
-    { icon: Code2, label: "API Docs", path: "/dashboard/api-docs", always: true },
-    { icon: Bot, label: "Bot Guide", path: "/dashboard/bot-guide", always: false, minPlan: "developer" },
-    { icon: Crown, label: "Plan & Billing", path: "/dashboard/billing", always: true },
-    { icon: Settings, label: "Settings", path: "/dashboard/settings", always: true },
+function useSellerNavItems(): SellerNavItem[] {
+  const { hasFeature } = usePlanLimits();
+
+  // Every feature is always visible. Items the current plan doesn't include
+  // render with a lock badge and route to billing instead of being hidden.
+  return [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", locked: false },
+    { icon: AppWindow, label: "Applications", path: "/dashboard/apps", locked: false },
+    { icon: Key, label: "Licenses", path: "/dashboard/licenses", locked: false },
+    { icon: Mail, label: "Client Emails", path: "/dashboard/clients", locked: false },
+    { icon: Users, label: "Resellers", path: "/dashboard/resellers", locked: !hasFeature("resellers") },
+    { icon: ShieldCheck, label: "Managers", path: "/dashboard/managers", locked: !hasFeature("managers") },
+    { icon: ScrollText, label: "Logs", path: "/dashboard/logs", locked: false },
+    { icon: Code2, label: "API Docs", path: "/dashboard/api-docs", locked: false },
+    { icon: Bot, label: "Bot Guide", path: "/dashboard/bot-guide", locked: !hasFeature("bot") },
+    { icon: Crown, label: "Plan & Billing", path: "/dashboard/billing", locked: false },
+    { icon: Settings, label: "Settings", path: "/dashboard/settings", locked: false },
   ];
-
-  return items.filter(item => {
-    if (item.always) return true;
-    if (item.minPlan === "developer") return !isFree;
-    if (item.minPlan === "seller") return !isFree && !isDev;
-    return true;
-  });
 }
 
 export function SellerSidebar() {
@@ -65,19 +66,20 @@ export function SellerSidebar() {
     navigate("/login");
   };
 
-  const NavItem = ({ item }: { item: typeof navItems[0] }) => {
+  const NavItem = ({ item }: { item: SellerNavItem }) => {
     const isActive =
       location.pathname === item.path ||
       (item.path !== "/dashboard" && location.pathname.startsWith(item.path));
 
     const link = (
       <Link
-        to={item.path}
+        to={item.locked ? "/dashboard/billing" : item.path}
         className={cn(
           "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
           isActive
             ? "bg-primary/10 text-primary"
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          item.locked && "opacity-70"
         )}
       >
         {isActive && (
@@ -85,6 +87,10 @@ export function SellerSidebar() {
         )}
         <item.icon className={cn("h-4 w-4 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
         {!collapsed && <span className="truncate">{item.label}</span>}
+        {item.locked && !collapsed && <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+        {item.locked && collapsed && (
+          <Lock className="absolute right-1 top-1 h-2.5 w-2.5 text-muted-foreground" />
+        )}
       </Link>
     );
 
@@ -93,7 +99,17 @@ export function SellerSidebar() {
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{link}</TooltipTrigger>
           <TooltipContent side="right" className="bg-popover border-border">
-            {item.label}
+            {item.locked ? `${item.label} — upgrade to unlock` : item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    if (item.locked) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right" className="bg-popover border-border">
+            Included in Monthly & Lifetime plans
           </TooltipContent>
         </Tooltip>
       );
@@ -124,7 +140,7 @@ export function SellerSidebar() {
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3 scrollbar-thin">
           {navItems.map((item) => (
-            <NavItem key={item.path} item={item as any} />
+            <NavItem key={item.path} item={item} />
           ))}
         </nav>
 

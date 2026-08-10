@@ -33,6 +33,9 @@ export default function Licenses() {
   const [apps, setApps] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [appFilter, setAppFilter] = useState<string>("all");
+  const [usageFilter, setUsageFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedApp, setSelectedApp] = useState("");
   const [keyCount, setKeyCount] = useState(1);
@@ -105,7 +108,21 @@ export default function Licenses() {
       (l.owner_email || "").toLowerCase().includes(s) ||
       (l.tags || []).some((t: string) => t.toLowerCase().includes(s));
     const matchStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchApp = appFilter === "all" || l.application_id === appFilter;
+    const matchUsage =
+      usageFilter === "all" ||
+      (usageFilter === "used" && !!l.hwid) ||
+      (usageFilter === "unused" && !l.hwid) ||
+      (usageFilter === "reseller" && !!l.created_by_reseller) ||
+      (usageFilter === "expiring" &&
+        new Date(l.expires_at).getTime() - Date.now() < 7 * 86400000 &&
+        new Date(l.expires_at).getTime() > Date.now());
+    return matchSearch && matchStatus && matchApp && matchUsage;
+  }).sort((a, b) => {
+    if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    if (sortBy === "expiry") return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime();
+    if (sortBy === "app") return (a.applications?.name || "").localeCompare(b.applications?.name || "");
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -497,10 +514,12 @@ export default function Licenses() {
 
   return (
     <RoleLayout>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
-          <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
-          <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
+          <h1 className="text-lg font-bold text-foreground sm:text-xl">Licenses</h1>
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} of {licenses.length} keys
+          </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
@@ -508,7 +527,7 @@ export default function Licenses() {
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setFormError(""); }}>
           <DialogTrigger asChild>
-            <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
+            <Button className="btn-glow h-9 w-full text-xs sm:w-auto"><Plus className="mr-1.5 h-3.5 w-3.5" /> Generate Keys</Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
             <DialogHeader><DialogTitle>Generate License Keys</DialogTitle></DialogHeader>
@@ -556,21 +575,63 @@ export default function Licenses() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys, apps, owners..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <div className="relative col-span-2 sm:max-w-xs sm:flex-1">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search key, app, owner, email, tag..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="h-9 bg-secondary border-border pl-9 text-xs"
+          />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
-          <SelectTrigger className="w-full sm:w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-36"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="all">All status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="banned">Banned</SelectItem>
             <SelectItem value="unused">Unused</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={appFilter} onValueChange={(v) => { setAppFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-40"><SelectValue placeholder="All apps" /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="all">All apps</SelectItem>
+            {apps.map((app) => (
+              <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={usageFilter} onValueChange={(v) => { setUsageFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-40"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="all">Any usage</SelectItem>
+            <SelectItem value="used">HWID bound</SelectItem>
+            <SelectItem value="unused">Never used</SelectItem>
+            <SelectItem value="reseller">From reseller</SelectItem>
+            <SelectItem value="expiring">Expiring in 7d</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-36"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="newest">Newest first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="expiry">Expiring soonest</SelectItem>
+            <SelectItem value="app">Application A–Z</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || statusFilter !== "all" || appFilter !== "all" || usageFilter !== "all") && (
+          <Button
+            variant="ghost"
+            className="col-span-2 h-9 text-xs sm:col-span-1"
+            onClick={() => { setSearch(""); setStatusFilter("all"); setAppFilter("all"); setUsageFilter("all"); setCurrentPage(1); }}
+          >
+            <X className="mr-1 h-3.5 w-3.5" /> Clear filters
+          </Button>
+        )}
       </div>
 
       <BulkBar />
@@ -578,7 +639,7 @@ export default function Licenses() {
       {/* Mobile card view */}
       <div className="space-y-3 md:hidden">
         {paged.map((lic, i) => (
-          <div key={lic.id} className={`rounded-lg border bg-card p-4 animate-fade-in ${selectedIds.has(lic.id) ? 'border-primary/50 bg-primary/5' : 'border-border'}`} style={{ animationDelay: `${i * 30}ms` }}>
+          <div key={lic.id} className={`rounded-lg border bg-card p-3 animate-fade-in ${selectedIds.has(lic.id) ? 'border-primary/50 bg-primary/5' : 'border-border'}`} style={{ animationDelay: `${i * 30}ms` }}>
             <div className="flex items-start gap-3 mb-3">
               <Checkbox
                 checked={selectedIds.has(lic.id)}
@@ -655,34 +716,34 @@ export default function Licenses() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="px-3 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <Checkbox
                     checked={paged.length > 0 && paged.every(l => selectedIds.has(l.id))}
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">License Key</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Application</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Owner</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Tags</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">HWID</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Reseller</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Expires</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Generated</th>
+                <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {paged.map((lic, i) => (
                 <tr key={lic.id} className={`table-row-hover border-b border-border animate-fade-in ${selectedIds.has(lic.id) ? 'bg-primary/5' : ''}`} style={{ animationDelay: `${i * 20}ms` }}>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <Checkbox
                       checked={selectedIds.has(lic.id)}
                       onCheckedChange={() => toggleSelect(lic.id)}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                       <span className="text-xs">{lic.license_key}</span>
                       {copiedKey === lic.license_key ? (
@@ -692,14 +753,14 @@ export default function Licenses() {
                       )}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
-                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-3 py-2 text-xs text-foreground">{lic.owner_name || "—"}</td>
+                  <td className="px-3 py-2">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1 max-w-[150px]">
                       {(lic.tags || []).slice(0, 3).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
@@ -708,13 +769,13 @@ export default function Licenses() {
                       {lic.notes && <span className="text-[10px] text-muted-foreground" title={lic.notes}>📝</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
+                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
                     {lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.created_at)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(lic.created_at)}</td>
+                  <td className="px-3 py-2">
                     <ActionButtons lic={lic} />
                   </td>
                 </tr>

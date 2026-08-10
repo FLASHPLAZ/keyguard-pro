@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton, CardSkeleton } from "@/components/TableSkeleton";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +21,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 export default function Applications() {
   const { user } = useAuth();
   const location = useLocation();
-  const { canCreate, getUsage, getLimit, refresh: refreshLimits, planName } = usePlanLimits();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits, isPremium } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -36,7 +36,6 @@ export default function Applications() {
   const [creatingApp, setCreatingApp] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
-  const isPremium = planName === "lifetime" || planName === "platform";
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   const saveDownloadUrl = async () => {
@@ -214,18 +213,17 @@ export default function Applications() {
   return (
     <RoleLayout>
       <PageTransition>
-      <div className="mb-6 overflow-hidden rounded-lg border border-border/70 bg-card/90 p-5 shadow-[var(--shadow-card)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              App Vault
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Applications</h1>
-            <p className="text-sm text-muted-foreground">{isAdminRoute ? "Platform-wide application controls for admins" : "Your private software applications and signing settings"}</p>
+            <h1 className="text-lg font-bold text-foreground sm:text-xl">Applications</h1>
+            <p className="text-xs text-muted-foreground">
+              {isAdminRoute ? "Platform-wide application controls" : `${getUsage("apps")} / ${getLimit("apps")} apps used`}
+            </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
+              <Button className="btn-glow h-9 w-full text-xs sm:w-auto"><Plus className="mr-1.5 h-3.5 w-3.5" /> Create App</Button>
             </DialogTrigger>
             <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
               <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
@@ -349,8 +347,11 @@ export default function Applications() {
               {/* Download Link (Lifetime plan only) */}
               <div className="rounded-lg border border-border bg-secondary/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-foreground">Customer Download Link</label>
-                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Lifetime only</span>}
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    {!isPremium && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    Customer Download Link
+                  </label>
+                  {!isPremium && <span className="text-[10px] uppercase tracking-wider text-primary">Paid plans</span>}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Buyers verify their license at <code className="text-primary">/download</code> and get this file. Leave blank to disable.
@@ -368,7 +369,10 @@ export default function Applications() {
                     </Button>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Upgrade to Lifetime to publish downloadable files for your buyers.</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input disabled value="" placeholder="https://your-cdn.com/tool.zip" className="bg-secondary/50 border-border flex-1 opacity-60" />
+                    <Link to="/pricing"><Button size="sm" variant="outline" className="text-xs">Unlock</Button></Link>
+                  </div>
                 )}
               </div>
             </div>
@@ -450,30 +454,30 @@ export default function Applications() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Signing</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Name</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">App ID</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Signing</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Created</th>
+                    <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((app, i) => (
                     <tr key={app.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <div>
                           <p className="font-medium text-foreground">{app.name}</p>
                           <p className="text-xs text-muted-foreground">{app.description}</p>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1 max-w-[140px] truncate" title={app.id}>
                           {app.id.slice(0, 8)}…
                           <Copy className="h-3 w-3 shrink-0" />
                         </button>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {app.kill_switch ? (
                           <span className="badge-banned inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">KILLED</span>
                         ) : app.suspended ? (
@@ -482,7 +486,7 @@ export default function Applications() {
                           <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {app.signature_required ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                             <ShieldCheck className="h-3 w-3" /> On
@@ -491,8 +495,8 @@ export default function Applications() {
                           <span className="text-xs text-muted-foreground">Off</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
                             <Eye className="h-4 w-4 text-primary" />

@@ -11,9 +11,12 @@ import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { notifyDiscord } from "@/lib/discord-notify";
+import { usePlanLimits } from "@/hooks/usePlanLimits";
+import { FeatureLockGate } from "@/components/FeatureLockGate";
 
 export default function Resellers() {
   const { user } = useAuth();
+  const { hasFeature, ready } = usePlanLimits();
   const [resellers, setResellers] = useState<any[]>([]);
   const [apps, setApps] = useState<any[]>([]);
   const [appCreditsMap, setAppCreditsMap] = useState<Record<string, any[]>>({});
@@ -230,6 +233,16 @@ export default function Resellers() {
       return `${appName}: ${c.credits}`;
     }).join(", ");
   };
+
+  if (ready && !hasFeature("resellers")) {
+    return (
+      <FeatureLockGate
+        title="Resellers"
+        description="Give resellers their own login and per-app key credits so they can sell for you without touching your dashboard."
+        perks={["Unlimited reseller accounts", "Per-app credit balances", "Strict credit enforcement", "Reseller activity logs"]}
+      />
+    );
+  }
 
   return (
     <RoleLayout>
