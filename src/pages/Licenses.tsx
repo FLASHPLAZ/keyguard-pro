@@ -639,7 +639,7 @@ export default function Licenses() {
       {/* Mobile card view */}
       <div className="space-y-3 md:hidden">
         {paged.map((lic, i) => (
-          <div key={lic.id} className={`rounded-lg border bg-card p-4 animate-fade-in ${selectedIds.has(lic.id) ? 'border-primary/50 bg-primary/5' : 'border-border'}`} style={{ animationDelay: `${i * 30}ms` }}>
+          <div key={lic.id} className={`rounded-lg border bg-card p-3 animate-fade-in ${selectedIds.has(lic.id) ? 'border-primary/50 bg-primary/5' : 'border-border'}`} style={{ animationDelay: `${i * 30}ms` }}>
             <div className="flex items-start gap-3 mb-3">
               <Checkbox
                 checked={selectedIds.has(lic.id)}
@@ -716,34 +716,34 @@ export default function Licenses() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="px-3 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <Checkbox
                     checked={paged.length > 0 && paged.every(l => selectedIds.has(l.id))}
                     onCheckedChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">License Key</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Owner</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tags</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">HWID</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reseller</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Generated</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">License Key</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Application</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Owner</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Tags</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">HWID</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Reseller</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Expires</th>
+                <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Generated</th>
+                <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {paged.map((lic, i) => (
                 <tr key={lic.id} className={`table-row-hover border-b border-border animate-fade-in ${selectedIds.has(lic.id) ? 'bg-primary/5' : ''}`} style={{ animationDelay: `${i * 20}ms` }}>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-2">
                     <Checkbox
                       checked={selectedIds.has(lic.id)}
                       onCheckedChange={() => toggleSelect(lic.id)}
                     />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <button onClick={() => copyKey(lic.license_key)} className="license-key flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                       <span className="text-xs">{lic.license_key}</span>
                       {copiedKey === lic.license_key ? (
@@ -753,14 +753,14 @@ export default function Licenses() {
                       )}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
-                  <td className="px-4 py-3 text-xs text-foreground">{lic.owner_name || "—"}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-foreground text-xs">{lic.applications?.name || "Unknown"}</td>
+                  <td className="px-3 py-2 text-xs text-foreground">{lic.owner_name || "—"}</td>
+                  <td className="px-3 py-2">
                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${getLicenseStatusColor(lic.status)}`}>
                       {lic.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1 max-w-[150px]">
                       {(lic.tags || []).slice(0, 3).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
@@ -769,13 +769,13 @@ export default function Licenses() {
                       {lic.notes && <span className="text-[10px] text-muted-foreground" title={lic.notes}>📝</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
+                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground truncate max-w-[100px]" title={lic.hwid || ""}>
                     {lic.hwid ? lic.hwid.slice(0, 12) + "…" : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(lic.created_at)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-xs text-foreground">{lic.resellers?.username || "—"}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(lic.expires_at)}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(lic.created_at)}</td>
+                  <td className="px-3 py-2">
                     <ActionButtons lic={lic} />
                   </td>
                 </tr>

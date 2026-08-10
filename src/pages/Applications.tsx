@@ -450,30 +450,30 @@ export default function Applications() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">App ID</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Signing</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Name</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">App ID</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Status</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Signing</th>
+                    <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Created</th>
+                    <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((app, i) => (
                     <tr key={app.id} className="table-row-hover border-b border-border animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <div>
                           <p className="font-medium text-foreground">{app.name}</p>
                           <p className="text-xs text-muted-foreground">{app.description}</p>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <button onClick={() => copyToClipboard(app.id, "App ID")} className="font-mono text-xs text-primary hover:opacity-80 transition-opacity flex items-center gap-1 max-w-[140px] truncate" title={app.id}>
                           {app.id.slice(0, 8)}…
                           <Copy className="h-3 w-3 shrink-0" />
                         </button>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {app.kill_switch ? (
                           <span className="badge-banned inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">KILLED</span>
                         ) : app.suspended ? (
@@ -482,7 +482,7 @@ export default function Applications() {
                           <span className="badge-active inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">Active</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         {app.signature_required ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                             <ShieldCheck className="h-3 w-3" /> On
@@ -491,8 +491,8 @@ export default function Applications() {
                           <span className="text-xs text-muted-foreground">Off</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2 text-muted-foreground text-xs">{formatDate(app.created_at)}</td>
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => setDetailApp(app)} title="View Details" className="hover:bg-primary/10">
                             <Eye className="h-4 w-4 text-primary" />
