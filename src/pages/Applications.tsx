@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { RoleLayout } from "@/components/RoleLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { TableSkeleton, CardSkeleton } from "@/components/TableSkeleton";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, PauseCircle, PlayCircle, Power, Search, Copy, Eye, RefreshCw, ShieldCheck, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
