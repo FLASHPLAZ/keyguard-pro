@@ -21,7 +21,7 @@ import { usePlanLimits } from "@/hooks/usePlanLimits";
 export default function Applications() {
   const { user } = useAuth();
   const location = useLocation();
-  const { canCreate, getUsage, getLimit, refresh: refreshLimits, planName } = usePlanLimits();
+  const { canCreate, getUsage, getLimit, refresh: refreshLimits, isPremium } = usePlanLimits();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -36,7 +36,6 @@ export default function Applications() {
   const [creatingApp, setCreatingApp] = useState(false);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
 
-  const isPremium = planName === "lifetime" || planName === "platform";
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   const saveDownloadUrl = async () => {
@@ -214,18 +213,17 @@ export default function Applications() {
   return (
     <RoleLayout>
       <PageTransition>
-      <div className="mb-6 overflow-hidden rounded-lg border border-border/70 bg-card/90 p-5 shadow-[var(--shadow-card)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
-              App Vault
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Applications</h1>
-            <p className="text-sm text-muted-foreground">{isAdminRoute ? "Platform-wide application controls for admins" : "Your private software applications and signing settings"}</p>
+            <h1 className="text-lg font-bold text-foreground sm:text-xl">Applications</h1>
+            <p className="text-xs text-muted-foreground">
+              {isAdminRoute ? "Platform-wide application controls" : `${getUsage("apps")} / ${getLimit("apps")} apps used`}
+            </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Create App</Button>
+              <Button className="btn-glow h-9 w-full text-xs sm:w-auto"><Plus className="mr-1.5 h-3.5 w-3.5" /> Create App</Button>
             </DialogTrigger>
             <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
               <DialogHeader><DialogTitle>Create Application</DialogTitle></DialogHeader>
