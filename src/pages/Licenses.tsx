@@ -514,10 +514,12 @@ export default function Licenses() {
 
   return (
     <RoleLayout>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="animate-fade-in">
-          <h1 className="text-2xl font-bold text-foreground">Licenses</h1>
-          <p className="text-sm text-muted-foreground">Manage license keys — {filtered.length} total</p>
+          <h1 className="text-lg font-bold text-foreground sm:text-xl">Licenses</h1>
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} of {licenses.length} keys
+          </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" onClick={exportCsv} className="flex-1 sm:flex-none h-9 text-xs">
@@ -525,7 +527,7 @@ export default function Licenses() {
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setFormError(""); }}>
           <DialogTrigger asChild>
-            <Button className="btn-glow w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Generate Keys</Button>
+            <Button className="btn-glow h-9 w-full text-xs sm:w-auto"><Plus className="mr-1.5 h-3.5 w-3.5" /> Generate Keys</Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border max-w-[95vw] sm:max-w-md">
             <DialogHeader><DialogTitle>Generate License Keys</DialogTitle></DialogHeader>
@@ -573,21 +575,63 @@ export default function Licenses() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search keys, apps, owners..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="bg-secondary border-border pl-10" />
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <div className="relative col-span-2 sm:max-w-xs sm:flex-1">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search key, app, owner, email, tag..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="h-9 bg-secondary border-border pl-9 text-xs"
+          />
         </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
-          <SelectTrigger className="w-full sm:w-40 bg-secondary border-border"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-36"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="all">All status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="banned">Banned</SelectItem>
             <SelectItem value="unused">Unused</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={appFilter} onValueChange={(v) => { setAppFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-40"><SelectValue placeholder="All apps" /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="all">All apps</SelectItem>
+            {apps.map((app) => (
+              <SelectItem key={app.id} value={app.id}>{app.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={usageFilter} onValueChange={(v) => { setUsageFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-40"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="all">Any usage</SelectItem>
+            <SelectItem value="used">HWID bound</SelectItem>
+            <SelectItem value="unused">Never used</SelectItem>
+            <SelectItem value="reseller">From reseller</SelectItem>
+            <SelectItem value="expiring">Expiring in 7d</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-9 bg-secondary border-border text-xs sm:w-36"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border">
+            <SelectItem value="newest">Newest first</SelectItem>
+            <SelectItem value="oldest">Oldest first</SelectItem>
+            <SelectItem value="expiry">Expiring soonest</SelectItem>
+            <SelectItem value="app">Application A–Z</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || statusFilter !== "all" || appFilter !== "all" || usageFilter !== "all") && (
+          <Button
+            variant="ghost"
+            className="col-span-2 h-9 text-xs sm:col-span-1"
+            onClick={() => { setSearch(""); setStatusFilter("all"); setAppFilter("all"); setUsageFilter("all"); setCurrentPage(1); }}
+          >
+            <X className="mr-1 h-3.5 w-3.5" /> Clear filters
+          </Button>
+        )}
       </div>
 
       <BulkBar />
