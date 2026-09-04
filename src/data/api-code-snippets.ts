@@ -1,127 +1,25 @@
-const API_BASE = "https://gxauth.xyz/api";
+/**
+ * GX Auth — official client integration snippets.
+ *
+ * Every snippet follows the same shape so users can switch languages safely:
+ *   1. CONFIG block (base url, application id, optional signing secret)
+ *   2. HWID generation
+ *   3. POST /validate  -> { valid, expires, expires_readable, hwid, app, country }
+ *   4. Optional POST /heartbeat every 30s -> { active, reason? }
+ *
+ * Formatting rules: spaces only (no tabs), no trailing whitespace, no emoji.
+ */
 
-export const pythonSnippet = `import requests
+export const API_BASE = "https://gxauth.xyz/api";
+
+export const pythonSnippet = `# GX Auth - Python integration
+# pip install requests
+
 import hashlib
 import hmac
-import socket
-import os
-import sys
-import time
-import json
-import threading
-import secrets
-
-API_URL = "${API_BASE}/validate"
-HEARTBEAT_URL = "${API_BASE}/heartbeat"
-VERIFY_URL = "https://gxauth.xyz/download"
-HEARTBEAT_INTERVAL = 30
-LICENSE_FILE = "license.dat"
-SIGNING_SECRET = ""  # Paste your app signing secret when HMAC is enabled
-APPLICATION_ID = ""  # Paste your application UUID from the dashboard
-
-def pause_exit(code=1):
-    input("\nPress Enter to close...")
-    sys.exit(code)
-
-def get_hwid():
-    raw = f"{socket.gethostname()}:{os.getenv('USERNAME') or os.getenv('USER') or ''}:{sys.platform}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-def get_device_name():
-    return socket.gethostname()
-
-def load_saved_key():
-    if os.path.exists(LICENSE_FILE):
-        with open(LICENSE_FILE, "r", encoding="utf-8") as f:
-            return f.read().strip()
-    return None
-
-def save_key(key):
-    with open(LICENSE_FILE, "w", encoding="utf-8") as f:
-        f.write(key)
-
-def sign_request(body_str, secret):
-    timestamp = str(int(time.time()))
-    nonce = secrets.token_hex(16)
-    signature = hmac.new(secret.encode(), f"{timestamp}.{nonce}.{body_str}".encode(), hashlib.sha256).hexdigest()
-    return signature, timestamp, nonce
-
-def build_headers(body_str):
-    headers = {"Content-Type": "application/json"}
-    if SIGNING_SECRET:
-        signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
-        headers["X-Signature"] = signature
-        headers["X-Timestamp"] = timestamp
-        headers["X-Nonce"] = nonce
-    return headers
-
-def validate_license(key):
-    payload = {
-        "license_key": key.strip().upper(),
-        "hwid": get_hwid(),
-        "device_name": get_device_name(),
-    }
-    if APPLICATION_ID:
-        payload["application_id"] = APPLICATION_ID
-
-    body_str = json.dumps(payload, separators=(",", ":"))
-    response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=12)
-    data = response.json()
-
-    if data.get("valid"):
-        print("[OK] License verified")
-        print(f"     App     : {data.get('app', 'Unknown')}")
-        print(f"     Expires : {data.get('expires_readable', data.get('expires', 'Unknown'))}")
-        print(f"     HWID    : {data.get('hwid', get_hwid())}")
-        return True
-
-    error = data.get("error", "Invalid license")
-    print(f"[X] {error}")
-    if data.get("verify_url") or "download" in error.lower() or "verify" in error.lower():
-        print(f"\nVerify this key first at: {data.get('verify_url', VERIFY_URL)}")
-    return False
-
-def heartbeat_loop(key):
-    while True:
-        time.sleep(HEARTBEAT_INTERVAL)
-        try:
-            payload = {"license_key": key.strip().upper()}
-            if APPLICATION_ID:
-                payload["application_id"] = APPLICATION_ID
-            resp = requests.post(HEARTBEAT_URL, json=payload, timeout=6)
-            data = resp.json()
-            if not data.get("active"):
-                print(f"\n[X] License disabled: {data.get('reason', 'License no longer active')}")
-                pause_exit(1)
-        except Exception:
-            pass
-
-if __name__ == "__main__":
-    saved = load_saved_key()
-    key = saved or input("License key > ").strip()
-
-    try:
-        if not validate_license(key):
-            pause_exit(1)
-    except Exception as e:
-        print(f"[!] Connection error: {e}")
-        pause_exit(1)
-
-    if not saved and input("\nSave license on this device? [y/N] > ").strip().lower() == "y":
-        save_key(key)
-        print("[OK] Key saved to license.dat")
-
-    threading.Thread(target=heartbeat_loop, args=(key,), daemon=True).start()
-    print(f"[*] Protection active - checking every {HEARTBEAT_INTERVAL} seconds")
-    print("[OK] Starting application...")
-    # Start your app below this line.
-`;
-
-export const pythonCliGateSnippet = `import hashlib
-import hmac
-import itertools
 import json
 import os
+import platform
 import secrets
 import socket
 import sys
@@ -130,1107 +28,971 @@ import time
 
 import requests
 
-API_URL = "${API_BASE}/validate"
-HEARTBEAT_URL = "${API_BASE}/heartbeat"
-VERIFY_URL = "https://gxauth.xyz/download"
-HEARTBEAT_INTERVAL = 30
+API_BASE = "${API_BASE}"
+APPLICATION_ID = ""      # optional: lock this build to one application (UUID)
+SIGNING_SECRET = ""      # optional: required only when HMAC signing is enabled
+HEARTBEAT_SECONDS = 30
 LICENSE_FILE = "license.dat"
 
-SIGNING_SECRET = ""  # Paste your app signing secret when HMAC is enabled
-APPLICATION_ID = ""  # Paste your application UUID
 
-APP_NAME = "MY APP"
-APP_TAGLINE = "Premium License Manager by gxauth.xyz"
-
-
-def clear_screen():
-    os.system("cls" if os.name == "nt" else "clear")
-
-
-def pause_exit(code=1):
-    input("\n  Press Enter to close...")
-    sys.exit(code)
+def get_hwid() -> str:
+    raw = ":".join([
+        platform.node(),
+        platform.machine(),
+        os.getenv("USERNAME") or os.getenv("USER") or "",
+        sys.platform,
+    ])
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
-def print_banner():
-    width = max(46, len(APP_NAME) + 8, len(APP_TAGLINE) + 8)
-    print()
-    print("  " + APP_NAME.upper().center(width))
-    print("  " + APP_TAGLINE.center(width))
-    print("  " + ("-" * width))
-    print()
-
-
-class Spinner:
-    def __init__(self, message="Validating license"):
-        self.message = message
-        self._stop_event = threading.Event()
-        self._thread = None
-        self._frames = itertools.cycle("|/-\\")
-
-    def _spin(self):
-        while not self._stop_event.is_set():
-            sys.stdout.write(f"\r  {next(self._frames)} {self.message}...")
-            sys.stdout.flush()
-            time.sleep(0.08)
-
-    def start(self):
-        self._thread = threading.Thread(target=self._spin, daemon=True)
-        self._thread.start()
-
-    def stop(self):
-        self._stop_event.set()
-        if self._thread:
-            self._thread.join()
-        sys.stdout.write("\r" + " " * (len(self.message) + 20) + "\r")
-        sys.stdout.flush()
-
-
-def get_hwid():
-    raw = f"{socket.gethostname()}:{os.getenv('USERNAME') or os.getenv('USER') or ''}:{sys.platform}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-
-def load_saved_key():
-    if os.path.exists(LICENSE_FILE):
-        with open(LICENSE_FILE, "r", encoding="utf-8") as file:
-            return file.read().strip()
-    return None
-
-
-def save_key(key):
-    with open(LICENSE_FILE, "w", encoding="utf-8") as file:
-        file.write(key)
-
-
-def sign_request(body_str, secret):
-    timestamp = str(int(time.time()))
-    nonce = secrets.token_hex(16)
-    signature = hmac.new(secret.encode(), f"{timestamp}.{nonce}.{body_str}".encode(), hashlib.sha256).hexdigest()
-    return signature, timestamp, nonce
-
-
-def build_headers(body_str):
+def build_headers(body: str) -> dict:
     headers = {"Content-Type": "application/json"}
     if SIGNING_SECRET:
-        signature, timestamp, nonce = sign_request(body_str, SIGNING_SECRET)
-        headers["X-Signature"] = signature
+        timestamp = str(int(time.time()))
+        nonce = secrets.token_hex(16)
+        message = timestamp + "." + nonce + "." + body
+        headers["X-Signature"] = hmac.new(
+            SIGNING_SECRET.encode(), message.encode(), hashlib.sha256
+        ).hexdigest()
         headers["X-Timestamp"] = timestamp
         headers["X-Nonce"] = nonce
     return headers
 
 
-def validate_license(key):
-    spinner = Spinner()
-    spinner.start()
+def post(path: str, payload: dict, signed: bool) -> dict:
+    body = json.dumps(payload, separators=(",", ":"))
+    headers = build_headers(body) if signed else {"Content-Type": "application/json"}
+    response = requests.post(API_BASE + path, data=body, headers=headers, timeout=15)
     try:
-        payload = {
-            "license_key": key.strip().upper(),
-            "hwid": get_hwid(),
-            "device_name": socket.gethostname(),
-        }
-        if APPLICATION_ID:
-            payload["application_id"] = APPLICATION_ID
-
-        body_str = json.dumps(payload, separators=(",", ":"))
-        response = requests.post(API_URL, data=body_str, headers=build_headers(body_str), timeout=12)
-        data = response.json()
-        spinner.stop()
-
-        if data.get("valid"):
-            print("  [OK] License verified")
-            print(f"       App     : {data.get('app', 'Unknown')}")
-            print(f"       Expires : {data.get('expires_readable', data.get('expires', 'Unknown'))}")
-            print(f"       HWID    : {data.get('hwid', get_hwid())}")
-            return True
-
-        error = data.get("error", "Invalid license")
-        print(f"  [X]  {error}")
-        if data.get("verify_url") or "download" in error.lower() or "verify" in error.lower():
-            print(f"\n  Verify this key first at: {data.get('verify_url', VERIFY_URL)}")
-        return False
-    except Exception as error:
-        spinner.stop()
-        print(f"  [!] Connection error: {error}")
-        return False
+        return response.json()
+    except ValueError:
+        return {"valid": False, "error": "HTTP " + str(response.status_code)}
 
 
-def heartbeat_loop(key):
+def validate(license_key: str) -> bool:
+    payload = {
+        "license_key": license_key.strip().upper(),
+        "hwid": get_hwid(),
+        "device_name": socket.gethostname()[:100],
+    }
+    if APPLICATION_ID:
+        payload["application_id"] = APPLICATION_ID
+
+    data = post("/validate", payload, signed=True)
+    if data.get("valid"):
+        print("License valid")
+        print("  Application :", data.get("app", "unknown"))
+        print("  Expires     :", data.get("expires_readable") or data.get("expires"))
+        print("  HWID        :", data.get("hwid"))
+        return True
+
+    print("Rejected:", data.get("error", "invalid license"))
+    if data.get("verify_url"):
+        print("Verify this key first at:", data["verify_url"])
+    return False
+
+
+def heartbeat_loop(license_key: str) -> None:
+    payload = {"license_key": license_key.strip().upper()}
+    if APPLICATION_ID:
+        payload["application_id"] = APPLICATION_ID
+
     while True:
-        time.sleep(HEARTBEAT_INTERVAL)
+        time.sleep(HEARTBEAT_SECONDS)
         try:
-            payload = {"license_key": key.strip().upper()}
-            if APPLICATION_ID:
-                payload["application_id"] = APPLICATION_ID
-            response = requests.post(HEARTBEAT_URL, json=payload, timeout=6)
-            data = response.json()
-            if not data.get("active"):
-                clear_screen()
-                print_banner()
-                print(f"  [X] License disabled: {data.get('reason', 'License no longer active')}")
-                pause_exit(1)
-        except Exception:
-            pass
+            data = post("/heartbeat", payload, signed=False)
+        except requests.RequestException:
+            continue
+        if not data.get("active"):
+            print("Session closed:", data.get("reason", "license no longer active"))
+            os._exit(1)
 
 
-def license_gate():
-    clear_screen()
-    print_banner()
-    saved = load_saved_key()
-    key = saved or input("  License key > ").strip()
+def load_key() -> str:
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    return ""
 
-    if not validate_license(key):
-        print("\n  [X] Startup aborted - license is invalid or not verified.")
-        pause_exit(1)
 
-    if not saved and input("\n  Save license on this device? [y/N] > ").strip().lower() == "y":
-        save_key(key)
-        print("  [OK] License saved")
+def save_key(license_key: str) -> None:
+    with open(LICENSE_FILE, "w", encoding="utf-8") as handle:
+        handle.write(license_key)
 
-    threading.Thread(target=heartbeat_loop, args=(key,), daemon=True).start()
-    print(f"  [*] Protection active - checking every {HEARTBEAT_INTERVAL} seconds")
-    print("  [OK] Authorization complete")
-    time.sleep(1.2)
-    clear_screen()
+
+def main() -> None:
+    saved = load_key()
+    license_key = saved or input("License key: ").strip()
+
+    if not validate(license_key):
+        input("Press Enter to exit...")
+        sys.exit(1)
+
+    if not saved:
+        save_key(license_key)
+
+    threading.Thread(target=heartbeat_loop, args=(license_key,), daemon=True).start()
+    print("Protection active - starting application")
+    # Your application code goes here.
 
 
 if __name__ == "__main__":
-    license_gate()
-    # Start your app below this line.
+    main()
 `;
 
-export const csharpSnippet = `using System;
-using System.IO;
+export const pythonMinimalSnippet = `# GX Auth - minimal Python gate (validate only)
+# pip install requests
+
+import hashlib
+import platform
+import socket
+import sys
+
+import requests
+
+API_BASE = "${API_BASE}"
+
+
+def get_hwid() -> str:
+    raw = platform.node() + ":" + platform.machine() + ":" + sys.platform
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def validate(license_key: str) -> bool:
+    response = requests.post(
+        API_BASE + "/validate",
+        json={
+            "license_key": license_key.strip().upper(),
+            "hwid": get_hwid(),
+            "device_name": socket.gethostname()[:100],
+        },
+        timeout=15,
+    )
+    data = response.json()
+    if data.get("valid"):
+        print("Valid until", data.get("expires_readable"))
+        return True
+    print("Rejected:", data.get("error"))
+    return False
+
+
+if not validate(input("License key: ")):
+    sys.exit(1)
+
+print("Starting application")
+`;
+
+export const csharpSnippet = `// GX Auth - C# / .NET integration
+// Target: .NET 6 or newer
+
+using System;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
 
-class LicenseValidator
+public static class GxAuth
 {
-    private static readonly string API_URL = "${API_BASE}/validate";
-    private static readonly HttpClient client = new HttpClient();
-    private static readonly string LICENSE_FILE = "license.dat";
-    private static readonly string SIGNING_SECRET = ""; // Set your app's signing secret here
-    private static readonly string APPLICATION_ID = ""; // Set your application UUID here
+    private const string ApiBase = "${API_BASE}";
+    private const string ApplicationId = "";   // optional application UUID
+    private const string SigningSecret = "";   // optional HMAC secret
+    private const int HeartbeatSeconds = 30;
 
-    static string GetHWID()
+    private static readonly HttpClient Http = new HttpClient
     {
-        var raw = $"{Environment.MachineName}:{Environment.UserName}:{Environment.OSVersion.Platform}";
+        Timeout = TimeSpan.FromSeconds(15)
+    };
+
+    public static string GetHwid()
+    {
+        var raw = Environment.MachineName + ":" + Environment.UserName + ":" + Environment.OSVersion.Platform;
         using var sha = SHA256.Create();
         var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
-        return BitConverter.ToString(hash).Replace("-", "").Substring(0, 16).ToLower();
+        return Convert.ToHexString(hash).ToLowerInvariant().Substring(0, 32);
     }
 
-    static string GetDeviceName() => Environment.MachineName;
-
-    static string? LoadSavedKey()
+    private static async Task<JsonElement> PostAsync(string path, object payload, bool signed)
     {
-        if (File.Exists(LICENSE_FILE))
-            return File.ReadAllText(LICENSE_FILE).Trim();
-        return null;
-    }
-
-    static void SaveKey(string key) => File.WriteAllText(LICENSE_FILE, key);
-
-    static (string signature, string timestamp, string nonce) SignRequest(string body, string secret)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var nonce = Guid.NewGuid().ToString("N");
-        var signingPayload = $"{timestamp}.{nonce}.{body}";
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(signingPayload));
-        var signature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-        return (signature, timestamp, nonce);
-    }
-
-    public static async Task<bool> ValidateLicense(string licenseKey)
-    {
-        try
+        var body = JsonSerializer.Serialize(payload);
+        using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + path)
         {
-            var payloadObj = new
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+
+        if (signed && SigningSecret.Length > 0)
+        {
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+            var nonce = Guid.NewGuid().ToString("N");
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(SigningSecret));
+            var signature = Convert.ToHexString(
+                hmac.ComputeHash(Encoding.UTF8.GetBytes(timestamp + "." + nonce + "." + body))
+            ).ToLowerInvariant();
+
+            request.Headers.Add("X-Signature", signature);
+            request.Headers.Add("X-Timestamp", timestamp);
+            request.Headers.Add("X-Nonce", nonce);
+        }
+
+        var response = await Http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        return JsonDocument.Parse(text).RootElement.Clone();
+    }
+
+    public static async Task<bool> ValidateAsync(string licenseKey)
+    {
+        var payload = ApplicationId.Length > 0
+            ? (object)new
             {
-                license_key = licenseKey,
-                hwid = GetHWID(),
-                device_name = GetDeviceName(),
-                application_id = string.IsNullOrEmpty(APPLICATION_ID) ? null : APPLICATION_ID
+                license_key = licenseKey.Trim().ToUpperInvariant(),
+                hwid = GetHwid(),
+                device_name = Environment.MachineName,
+                application_id = ApplicationId
+            }
+            : new
+            {
+                license_key = licenseKey.Trim().ToUpperInvariant(),
+                hwid = GetHwid(),
+                device_name = Environment.MachineName
             };
-            var payload = JsonSerializer.Serialize(payloadObj);
 
-            var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
-            request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-
-            // Add HMAC signature if signing secret is configured
-            if (!string.IsNullOrEmpty(SIGNING_SECRET))
-            {
-                var (signature, timestamp, nonce) = SignRequest(payload, SIGNING_SECRET);
-                request.Headers.Add("X-Signature", signature);
-                request.Headers.Add("X-Timestamp", timestamp);
-                request.Headers.Add("X-Nonce", nonce);
-            }
-
-            var response = await client.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
-            var result = JsonDocument.Parse(json).RootElement;
-
-            if (result.GetProperty("valid").GetBoolean())
-            {
-                var expires = result.TryGetProperty("expires_readable", out var er) ? er.GetString() : result.GetProperty("expires").GetString();
-                var country = result.TryGetProperty("country", out var c) ? c.GetString() : "Unknown";
-                Console.WriteLine($"✅ License valid");
-                Console.WriteLine($"   Expires: {expires}");
-                Console.WriteLine($"   Country: {country}");
-                Console.WriteLine($"   Device:  {GetDeviceName()}");
-                return true;
-            }
-            else
-            {
-                Console.WriteLine($"❌ {result.GetProperty("error").GetString()}");
-                return false;
-            }
-        }
-        catch (Exception ex)
+        var data = await PostAsync("/validate", payload, signed: true);
+        if (data.TryGetProperty("valid", out var valid) && valid.GetBoolean())
         {
-            Console.WriteLine($"⚠️ Connection error: {ex.Message}");
-            return false;
+            Console.WriteLine("License valid until " + data.GetProperty("expires_readable").GetString());
+            return true;
         }
+
+        Console.WriteLine("Rejected: " + (data.TryGetProperty("error", out var error) ? error.GetString() : "invalid license"));
+        return false;
     }
 
-    static async Task Main(string[] args)
+    public static void StartHeartbeat(string licenseKey)
     {
-        var saved = LoadSavedKey();
-        string key;
-        if (saved != null)
+        _ = Task.Run(async () =>
         {
-            Console.WriteLine($"🔑 Using saved license: {saved.Substring(0, Math.Min(20, saved.Length))}...");
-            key = saved;
-        }
-        else
-        {
-            Console.Write("Enter license key: ");
-            key = Console.ReadLine()?.Trim() ?? "";
-        }
-        
-        if (!await ValidateLicense(key))
-            Environment.Exit(1);
-        
-        if (saved == null)
-        {
-            Console.Write("\\n💾 Save license key for next time? (y/n): ");
-            if (Console.ReadLine()?.Trim().ToLower() == "y")
+            while (true)
             {
-                SaveKey(key);
-                Console.WriteLine("✅ Key saved to license.dat");
+                await Task.Delay(HeartbeatSeconds * 1000);
+                try
+                {
+                    var data = await PostAsync("/heartbeat", new { license_key = licenseKey.Trim().ToUpperInvariant() }, signed: false);
+                    if (!data.GetProperty("active").GetBoolean())
+                    {
+                        Console.WriteLine("Session closed: " + data.GetProperty("reason").GetString());
+                        Environment.Exit(1);
+                    }
+                }
+                catch (Exception)
+                {
+                    // network hiccup - retry on next tick
+                }
             }
+        });
+    }
+}
+
+public static class Program
+{
+    public static async Task Main()
+    {
+        Console.Write("License key: ");
+        var key = Console.ReadLine() ?? string.Empty;
+
+        if (!await GxAuth.ValidateAsync(key))
+        {
+            Console.ReadLine();
+            return;
         }
-        
-        Console.WriteLine("\\n🚀 Application starting...");
-        // Your app code here
+
+        GxAuth.StartHeartbeat(key);
+        Console.WriteLine("Protection active - starting application");
+        // Your application code goes here.
     }
-}`;
+}
+`;
 
-export const nodejsSnippet = `const crypto = require('crypto');
-const readline = require('readline');
-const fs = require('fs');
-const os = require('os');
+export const nodejsSnippet = `// GX Auth - Node.js integration (Node 18+, no dependencies)
 
-const API_URL = "${API_BASE}/validate";
-const HEARTBEAT_URL = "${API_BASE}/heartbeat";
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-const LICENSE_FILE = "license.dat";
-const SIGNING_SECRET = ""; // Set your app's signing secret here
-const APPLICATION_ID = ""; // Set your application UUID here
+const crypto = require("crypto");
+const os = require("os");
+const readline = require("readline");
 
-function getHWID() {
-  const macs = Object.values(os.networkInterfaces())
-    .flat()
-    .filter(Boolean)
-    .map((item) => item.mac)
-    .filter((mac) => mac && mac !== '00:00:00:00:00:00')
-    .join('|');
-  return crypto.createHash('sha256')
-    .update(\`\${os.hostname()}:\${os.userInfo().username}:\${macs}\`)
-    .digest('hex')
-    .slice(0, 16);
+const API_BASE = "${API_BASE}";
+const APPLICATION_ID = "";   // optional application UUID
+const SIGNING_SECRET = "";   // optional HMAC secret
+const HEARTBEAT_SECONDS = 30;
+
+function getHwid() {
+  const raw = [os.hostname(), os.platform(), os.arch(), os.userInfo().username].join(":");
+  return crypto.createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
-function getDeviceName() {
-  return os.hostname();
-}
+async function post(path, payload, signed) {
+  const body = JSON.stringify(payload);
+  const headers = { "Content-Type": "application/json" };
 
-function loadSavedKey() {
-  try {
-    if (fs.existsSync(LICENSE_FILE))
-      return fs.readFileSync(LICENSE_FILE, 'utf-8').trim();
-  } catch {}
-  return null;
-}
-
-function saveKey(key) {
-  fs.writeFileSync(LICENSE_FILE, key);
-}
-
-function signRequest(bodyStr, secret) {
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const nonce = crypto.randomUUID().replace(/-/g, '');
-  const signingPayload = \`\${timestamp}.\${nonce}.\${bodyStr}\`;
-  const signature = crypto.createHmac('sha256', secret)
-    .update(signingPayload).digest('hex');
-  return { signature, timestamp, nonce };
-}
-
-async function validateLicense(licenseKey) {
-  try {
-    const payload = {
-      license_key: licenseKey,
-      hwid: getHWID(),
-      device_name: getDeviceName()
-    };
-    if (APPLICATION_ID) payload.application_id = APPLICATION_ID;
-    const bodyStr = JSON.stringify(payload);
-    
-    const headers = { 'Content-Type': 'application/json' };
-    
-    // Add HMAC signature if signing secret is configured
-    if (SIGNING_SECRET) {
-      const { signature, timestamp, nonce } = signRequest(bodyStr, SIGNING_SECRET);
-      headers['X-Signature'] = signature;
-      headers['X-Timestamp'] = timestamp;
-      headers['X-Nonce'] = nonce;
-    }
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers,
-      body: bodyStr
-    });
-
-    const data = await res.json();
-
-    if (data.valid) {
-      const expires = data.expires_readable || data.expires;
-      console.log(\`✅ License valid\`);
-      console.log(\`   Expires: \${expires}\`);
-      console.log(\`   Country: \${data.country || 'Unknown'}\`);
-      console.log(\`   Device:  \${getDeviceName()}\`);
-      return true;
-    } else {
-      console.log(\`❌ \${data.error || 'Invalid license'}\`);
-      return false;
-    }
-  } catch (err) {
-    console.log(\`⚠️ Connection error: \${err.message}\`);
-    return false;
-  }
-}
-
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise(r => rl.question(q, r));
-
-(async () => {
-  const saved = loadSavedKey();
-  let key;
-  if (saved) {
-    console.log(\`🔑 Using saved license: \${saved.slice(0, 20)}...\`);
-    key = saved;
-  } else {
-    key = (await ask('Enter license key: ')).trim();
+  if (signed && SIGNING_SECRET) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const nonce = crypto.randomBytes(16).toString("hex");
+    headers["X-Signature"] = crypto
+      .createHmac("sha256", SIGNING_SECRET)
+      .update(timestamp + "." + nonce + "." + body)
+      .digest("hex");
+    headers["X-Timestamp"] = timestamp;
+    headers["X-Nonce"] = nonce;
   }
 
-  if (!await validateLicense(key)) { rl.close(); process.exit(1); }
+  const response = await fetch(API_BASE + path, { method: "POST", headers, body });
+  return response.json();
+}
 
-  if (!saved) {
-    const save = (await ask('\\n💾 Save license key for next time? (y/n): ')).trim().toLowerCase();
-    if (save === 'y') {
-      saveKey(key);
-      console.log('✅ Key saved to license.dat');
-    }
+async function validate(licenseKey) {
+  const payload = {
+    license_key: licenseKey.trim().toUpperCase(),
+    hwid: getHwid(),
+    device_name: os.hostname().slice(0, 100),
+  };
+  if (APPLICATION_ID) payload.application_id = APPLICATION_ID;
+
+  const data = await post("/validate", payload, true);
+  if (data.valid) {
+    console.log("License valid");
+    console.log("  Application:", data.app);
+    console.log("  Expires    :", data.expires_readable || data.expires);
+    return true;
   }
 
-  rl.close();
+  console.error("Rejected:", data.error || "invalid license");
+  if (data.verify_url) console.error("Verify this key first at:", data.verify_url);
+  return false;
+}
 
-  // Start heartbeat — kills the app if license is banned/expired/disabled
+function startHeartbeat(licenseKey) {
+  const payload = { license_key: licenseKey.trim().toUpperCase() };
+  if (APPLICATION_ID) payload.application_id = APPLICATION_ID;
+
   setInterval(async () => {
     try {
-      const res = await fetch(HEARTBEAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_key: key, ...(APPLICATION_ID ? { application_id: APPLICATION_ID } : {}) })
-      });
-      const data = await res.json();
+      const data = await post("/heartbeat", payload, false);
       if (!data.active) {
-        console.log(\`\\n🚫 KILLED: \${data.reason || 'License no longer active'}\`);
+        console.error("Session closed:", data.reason || "license no longer active");
         process.exit(1);
       }
-    } catch {} // Network error — retry next cycle
-  }, HEARTBEAT_INTERVAL);
-  console.log(\`💓 Heartbeat active (checking every \${HEARTBEAT_INTERVAL / 1000}s)\`);
+    } catch (error) {
+      // network hiccup - retry on next tick
+    }
+  }, HEARTBEAT_SECONDS * 1000).unref();
+}
 
-  console.log('\\n🚀 Application starting...');
-  // Your app code here
-})();`;
+function ask(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => rl.question(question, (answer) => { rl.close(); resolve(answer); }));
+}
 
-export const cppSnippet = `// Requires: libcurl, nlohmann/json, OpenSSL
-// Compile: g++ -o app main.cpp -lcurl -lssl -lcrypto
+(async () => {
+  const key = process.env.GXAUTH_LICENSE_KEY || (await ask("License key: "));
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <ctime>
+  if (!(await validate(key))) {
+    process.exit(1);
+  }
+
+  startHeartbeat(key);
+  console.log("Protection active - starting application");
+  // Your application code goes here.
+})();
+`;
+
+export const cppSnippet = `// GX Auth - C++ integration
+// Requires: libcurl, OpenSSL, nlohmann/json
+// Build: g++ main.cpp -lcurl -lcrypto -o app
+
+#include <chrono>
 #include <cstdlib>
-#include <random>
+#include <iostream>
+#include <string>
+#include <thread>
+
 #include <curl/curl.h>
-#include <nlohmann/json.hpp>
 #include <openssl/hmac.h>
+#include <openssl/sha.h>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-const std::string API_URL = "${API_BASE}/validate";
-const std::string LICENSE_FILE = "license.dat";
-const std::string SIGNING_SECRET = ""; // Set your app's signing secret here
-const std::string APPLICATION_ID = ""; // Set your application UUID here
+static const std::string API_BASE = "${API_BASE}";
+static const std::string APPLICATION_ID = "";   // optional application UUID
+static const std::string SIGNING_SECRET = "";   // optional HMAC secret
+static const int HEARTBEAT_SECONDS = 30;
 
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* s) {
-    s->append((char*)contents, size * nmemb);
+static std::string to_hex(const unsigned char *data, unsigned int len) {
+    static const char *digits = "0123456789abcdef";
+    std::string out;
+    out.reserve(len * 2);
+    for (unsigned int i = 0; i < len; ++i) {
+        out.push_back(digits[data[i] >> 4]);
+        out.push_back(digits[data[i] & 0x0F]);
+    }
+    return out;
+}
+
+static std::string sha256_hex(const std::string &input) {
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256(reinterpret_cast<const unsigned char *>(input.data()), input.size(), digest);
+    return to_hex(digest, SHA256_DIGEST_LENGTH);
+}
+
+static std::string hmac_hex(const std::string &key, const std::string &message) {
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int len = 0;
+    HMAC(EVP_sha256(), key.data(), static_cast<int>(key.size()),
+         reinterpret_cast<const unsigned char *>(message.data()), message.size(), digest, &len);
+    return to_hex(digest, len);
+}
+
+static std::string get_hwid() {
+    const char *user = std::getenv("USERNAME") ? std::getenv("USERNAME") : std::getenv("USER");
+    char host[256] = {0};
+    gethostname(host, sizeof(host) - 1);
+    std::string raw = std::string(host) + ":" + (user ? user : "");
+    return sha256_hex(raw).substr(0, 32);
+}
+
+static size_t write_cb(void *contents, size_t size, size_t nmemb, void *userp) {
+    static_cast<std::string *>(userp)->append(static_cast<char *>(contents), size * nmemb);
     return size * nmemb;
 }
 
-std::string getHWID() {
-    const char* machine = std::getenv("COMPUTERNAME");
-    if (!machine) machine = std::getenv("HOSTNAME");
-    std::string raw = machine ? machine : "unknown-device";
-    const char* user = std::getenv("USERNAME");
-    if (!user) user = std::getenv("USER");
-    if (user) raw += std::string(":") + user;
-    return raw.substr(0, 16);
-}
-
-std::string getDeviceName() {
-    char hostname[256];
-    #ifdef _WIN32
-    DWORD size = sizeof(hostname);
-    GetComputerNameA(hostname, &size);
-    #else
-    gethostname(hostname, sizeof(hostname));
-    #endif
-    return std::string(hostname);
-}
-
-std::string loadSavedKey() {
-    std::ifstream f(LICENSE_FILE);
-    if (f.good()) {
-        std::string key;
-        std::getline(f, key);
-        return key;
-    }
-    return "";
-}
-
-void saveKey(const std::string& key) {
-    std::ofstream f(LICENSE_FILE);
-    f << key;
-}
-
-std::string hmacSha256(const std::string& secret, const std::string& data) {
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int hashLen;
-    HMAC(EVP_sha256(), secret.c_str(), secret.size(),
-         (unsigned char*)data.c_str(), data.size(), hash, &hashLen);
-    char hex[65];
-    for (unsigned int i = 0; i < hashLen; i++)
-        sprintf(hex + i * 2, "%02x", hash[i]);
-    hex[hashLen * 2] = 0;
-    return std::string(hex);
-}
-
-std::string randomNonce() {
-    static const char* hex = "0123456789abcdef";
-    std::random_device rd;
-    std::string nonce;
-    nonce.reserve(32);
-    for (int i = 0; i < 32; i++) nonce.push_back(hex[rd() % 16]);
-    return nonce;
-}
-
-bool validateLicense(const std::string& licenseKey) {
-    CURL* curl = curl_easy_init();
-    if (!curl) return false;
-
-    json payload = {
-        {"license_key", licenseKey},
-        {"hwid", getHWID()},
-        {"device_name", getDeviceName()}
-    };
-    if (!APPLICATION_ID.empty()) payload["application_id"] = APPLICATION_ID;
-    std::string postData = payload.dump();
+static json post(const std::string &path, const json &payload, bool signed_request) {
+    const std::string body = payload.dump();
     std::string response;
 
-    struct curl_slist* headers = nullptr;
+    CURL *curl = curl_easy_init();
+    if (!curl) return json{{"valid", false}, {"error", "curl init failed"}};
+
+    struct curl_slist *headers = nullptr;
     headers = curl_slist_append(headers, "Content-Type: application/json");
 
-    // Add HMAC signature if signing secret is configured
-    if (!SIGNING_SECRET.empty()) {
-        std::string timestamp = std::to_string(std::time(nullptr));
-        std::string nonce = randomNonce();
-        std::string signingPayload = timestamp + "." + nonce + "." + postData;
-        std::string signature = hmacSha256(SIGNING_SECRET, signingPayload);
+    if (signed_request && !SIGNING_SECRET.empty()) {
+        const std::string timestamp = std::to_string(
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count());
+        const std::string nonce = sha256_hex(timestamp + body).substr(0, 32);
+        const std::string signature = hmac_hex(SIGNING_SECRET, timestamp + "." + nonce + "." + body);
+
         headers = curl_slist_append(headers, ("X-Signature: " + signature).c_str());
         headers = curl_slist_append(headers, ("X-Timestamp: " + timestamp).c_str());
         headers = curl_slist_append(headers, ("X-Nonce: " + nonce).c_str());
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL, API_URL.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+    curl_easy_setopt(curl, CURLOPT_URL, (API_BASE + path).c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
-    CURLcode res = curl_easy_perform(curl);
+    const CURLcode code = curl_easy_perform(curl);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
-    if (res != CURLE_OK) {
-        std::cerr << "Connection error" << std::endl;
+    if (code != CURLE_OK) return json{{"valid", false}, {"error", "connection failed"}};
+    return json::parse(response, nullptr, false);
+}
+
+static bool validate(const std::string &license_key) {
+    json payload = {
+        {"license_key", license_key},
+        {"hwid", get_hwid()},
+        {"device_name", "cpp-client"}
+    };
+    if (!APPLICATION_ID.empty()) payload["application_id"] = APPLICATION_ID;
+
+    const json data = post("/validate", payload, true);
+    if (data.is_discarded()) {
+        std::cout << "Rejected: invalid server response" << std::endl;
         return false;
     }
-
-    auto data = json::parse(response);
-    if (data["valid"].get<bool>()) {
-        std::string expires = data.value("expires_readable", data.value("expires", "N/A"));
-        std::string country = data.value("country", "Unknown");
-        std::cout << "License valid" << std::endl;
-        std::cout << "   Expires: " << expires << std::endl;
-        std::cout << "   Country: " << country << std::endl;
-        std::cout << "   Device:  " << getDeviceName() << std::endl;
+    if (data.value("valid", false)) {
+        std::cout << "License valid until " << data.value("expires_readable", "unknown") << std::endl;
         return true;
-    } else {
-        std::cerr << data["error"].get<std::string>() << std::endl;
-        return false;
+    }
+
+    std::cout << "Rejected: " << data.value("error", "invalid license") << std::endl;
+    return false;
+}
+
+static void heartbeat_loop(const std::string &license_key) {
+    json payload = {{"license_key", license_key}};
+    if (!APPLICATION_ID.empty()) payload["application_id"] = APPLICATION_ID;
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(HEARTBEAT_SECONDS));
+        const json data = post("/heartbeat", payload, false);
+        if (!data.is_discarded() && !data.value("active", true)) {
+            std::cout << "Session closed: " << data.value("reason", "license inactive") << std::endl;
+            std::exit(1);
+        }
     }
 }
 
 int main() {
-    std::string key = loadSavedKey();
-    bool wasSaved = !key.empty();
+    curl_global_init(CURL_GLOBAL_DEFAULT);
 
-    if (wasSaved) {
-        std::cout << "Using saved license: " << key.substr(0, 20) << "..." << std::endl;
-    } else {
-        std::cout << "Enter license key: ";
-        std::getline(std::cin, key);
+    std::string key;
+    std::cout << "License key: ";
+    std::getline(std::cin, key);
+
+    if (!validate(key)) {
+        curl_global_cleanup();
+        return 1;
     }
 
-    if (!validateLicense(key)) return 1;
+    std::thread(heartbeat_loop, key).detach();
+    std::cout << "Protection active - starting application" << std::endl;
+    // Your application code goes here.
 
-    if (!wasSaved) {
-        std::cout << "\\nSave license key for next time? (y/n): ";
-        std::string ans;
-        std::getline(std::cin, ans);
-        if (ans == "y" || ans == "Y") {
-            saveKey(key);
-            std::cout << "Key saved to license.dat" << std::endl;
-        }
-    }
-
-    std::cout << "\\nApplication starting..." << std::endl;
-    // Your app code here
+    curl_global_cleanup();
     return 0;
-}`;
+}
+`;
 
-export const goSnippet = `package main
+export const goSnippet = `// GX Auth - Go integration
+// go mod init yourapp && go build
+
+package main
 
 import (
-	"bufio"
-	"bytes"
-	"crypto/rand"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
+    "bufio"
+    "bytes"
+    "crypto/hmac"
+    "crypto/rand"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "fmt"
+    "net/http"
+    "os"
+    "runtime"
+    "strconv"
+    "strings"
+    "time"
 )
 
-const apiURL = "${API_BASE}/validate"
-const licenseFile = "license.dat"
-const signingSecret = "" // Set your app's signing secret here
-const applicationID = "" // Set your application UUID here
+const (
+    apiBase           = "${API_BASE}"
+    applicationID     = "" // optional application UUID
+    signingSecret     = "" // optional HMAC secret
+    heartbeatSeconds  = 30
+)
+
+var client = &http.Client{Timeout: 15 * time.Second}
 
 func getHWID() string {
-	name, _ := os.Hostname()
-	user := os.Getenv("USERNAME")
-	if user == "" {
-		user = os.Getenv("USER")
-	}
-	hash := sha256.Sum256([]byte(name + ":" + user + ":" + runtime.GOOS))
-	return fmt.Sprintf("%x", hash)[:16]
+    host, _ := os.Hostname()
+    raw := strings.Join([]string{host, runtime.GOOS, runtime.GOARCH, os.Getenv("USER")}, ":")
+    sum := sha256.Sum256([]byte(raw))
+    return hex.EncodeToString(sum[:])[:32]
 }
 
-func getDeviceName() string {
-	name, err := os.Hostname()
-	if err != nil {
-		return "unknown"
-	}
-	return name
+func post(path string, payload map[string]string, signRequest bool) (map[string]interface{}, error) {
+    body, err := json.Marshal(payload)
+    if err != nil {
+        return nil, err
+    }
+
+    request, err := http.NewRequest("POST", apiBase+path, bytes.NewReader(body))
+    if err != nil {
+        return nil, err
+    }
+    request.Header.Set("Content-Type", "application/json")
+
+    if signRequest && signingSecret != "" {
+        timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+        buf := make([]byte, 16)
+        rand.Read(buf)
+        nonce := hex.EncodeToString(buf)
+
+        mac := hmac.New(sha256.New, []byte(signingSecret))
+        mac.Write([]byte(timestamp + "." + nonce + "." + string(body)))
+
+        request.Header.Set("X-Signature", hex.EncodeToString(mac.Sum(nil)))
+        request.Header.Set("X-Timestamp", timestamp)
+        request.Header.Set("X-Nonce", nonce)
+    }
+
+    response, err := client.Do(request)
+    if err != nil {
+        return nil, err
+    }
+    defer response.Body.Close()
+
+    var data map[string]interface{}
+    if err := json.NewDecoder(response.Body).Decode(&data); err != nil {
+        return nil, err
+    }
+    return data, nil
 }
 
-func loadSavedKey() string {
-	data, err := os.ReadFile(licenseFile)
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
+func validate(licenseKey string) bool {
+    host, _ := os.Hostname()
+    payload := map[string]string{
+        "license_key": strings.ToUpper(strings.TrimSpace(licenseKey)),
+        "hwid":        getHWID(),
+        "device_name": host,
+    }
+    if applicationID != "" {
+        payload["application_id"] = applicationID
+    }
+
+    data, err := post("/validate", payload, true)
+    if err != nil {
+        fmt.Println("Connection error:", err)
+        return false
+    }
+    if valid, _ := data["valid"].(bool); valid {
+        fmt.Println("License valid until", data["expires_readable"])
+        return true
+    }
+
+    fmt.Println("Rejected:", data["error"])
+    return false
 }
 
-func saveKey(key string) {
-	os.WriteFile(licenseFile, []byte(key), 0644)
-}
+func heartbeatLoop(licenseKey string) {
+    payload := map[string]string{"license_key": strings.ToUpper(strings.TrimSpace(licenseKey))}
+    if applicationID != "" {
+        payload["application_id"] = applicationID
+    }
 
-func randomNonce() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		return strconv.FormatInt(time.Now().UnixNano(), 10)
-	}
-	return hex.EncodeToString(buf)
-}
-
-func signRequest(bodyStr string, secret string) (string, string, string) {
-	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	nonce := randomNonce()
-	signingPayload := timestamp + "." + nonce + "." + bodyStr
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(signingPayload))
-	signature := hex.EncodeToString(mac.Sum(nil))
-	return signature, timestamp, nonce
-}
-
-type ValidateRequest struct {
-	LicenseKey    string \`json:"license_key"\`
-	HWID          string \`json:"hwid"\`
-	DeviceName    string \`json:"device_name"\`
-	ApplicationID string \`json:"application_id,omitempty"\`
-}
-
-type ValidateResponse struct {
-	Valid           bool   \`json:"valid"\`
-	Expires         string \`json:"expires"\`
-	ExpiresReadable string \`json:"expires_readable"\`
-	HWID            string \`json:"hwid"\`
-	App             string \`json:"app"\`
-	Country         string \`json:"country"\`
-	Error           string \`json:"error"\`
-}
-
-func validateLicense(key string) bool {
-	payload, _ := json.Marshal(ValidateRequest{
-		LicenseKey:    key,
-		HWID:          getHWID(),
-		DeviceName:    getDeviceName(),
-		ApplicationID: applicationID,
-	})
-	bodyStr := string(payload)
-
-	req, err := http.NewRequest("POST", apiURL, bytes.NewBufferString(bodyStr))
-	if err != nil {
-		fmt.Printf("⚠️ Request error: %v\\n", err)
-		return false
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	// Add HMAC signature if signing secret is configured
-	if signingSecret != "" {
-		signature, timestamp, nonce := signRequest(bodyStr, signingSecret)
-		req.Header.Set("X-Signature", signature)
-		req.Header.Set("X-Timestamp", timestamp)
-		req.Header.Set("X-Nonce", nonce)
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("⚠️ Connection error: %v\\n", err)
-		return false
-	}
-	defer resp.Body.Close()
-
-	var result ValidateResponse
-	json.NewDecoder(resp.Body).Decode(&result)
-
-	if result.Valid {
-		expires := result.ExpiresReadable
-		if expires == "" {
-			expires = result.Expires
-		}
-		fmt.Println("✅ License valid")
-		fmt.Printf("   Expires: %s\\n", expires)
-		fmt.Printf("   Country: %s\\n", result.Country)
-		fmt.Printf("   Device:  %s\\n", getDeviceName())
-		return true
-	}
-	fmt.Printf("❌ %s\\n", result.Error)
-	return false
+    for {
+        time.Sleep(heartbeatSeconds * time.Second)
+        data, err := post("/heartbeat", payload, false)
+        if err != nil {
+            continue
+        }
+        if active, _ := data["active"].(bool); !active {
+            fmt.Println("Session closed:", data["reason"])
+            os.Exit(1)
+        }
+    }
 }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	saved := loadSavedKey()
-	var key string
+    fmt.Print("License key: ")
+    reader := bufio.NewReader(os.Stdin)
+    key, _ := reader.ReadString('\\n')
 
-	if saved != "" {
-		fmt.Printf("🔑 Using saved license: %s...\\n", saved[:min(20, len(saved))])
-		key = saved
-	} else {
-		fmt.Print("Enter license key: ")
-		key, _ = reader.ReadString('\\n')
-		key = strings.TrimSpace(key)
-	}
+    if !validate(key) {
+        os.Exit(1)
+    }
 
-	if !validateLicense(key) {
-		os.Exit(1)
-	}
-
-	if saved == "" {
-		fmt.Print("\\n💾 Save license key for next time? (y/n): ")
-		ans, _ := reader.ReadString('\\n')
-		if strings.TrimSpace(strings.ToLower(ans)) == "y" {
-			saveKey(key)
-			fmt.Println("✅ Key saved to license.dat")
-		}
-	}
-
-	fmt.Println("\\n🚀 Application starting...")
-	// Your app code here
+    go heartbeatLoop(key)
+    fmt.Println("Protection active - starting application")
+    // Your application code goes here.
 }
+`;
 
-func min(a, b int) int {
-	if a < b { return a }
-	return b
-}`;
+export const javaSnippet = `// GX Auth - Java integration (Java 11+, no dependencies)
 
-export const javaSnippet = `import java.net.URI;
-import java.net.http.*;
-import java.io.*;
-import java.nio.file.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Scanner;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import com.google.gson.*;
 
-public class LicenseValidator {
-    private static final String API_URL = "${API_BASE}/validate";
-    private static final String LICENSE_FILE = "license.dat";
-    private static final String SIGNING_SECRET = ""; // Set your app's signing secret here
-    private static final String APPLICATION_ID = ""; // Set your application UUID here
+public class GxAuth {
 
-    static String getHWID() {
-        try {
-            String raw = java.net.InetAddress.getLocalHost().getHostName()
-                + ":" + System.getProperty("user.name")
-                + ":" + System.getProperty("os.name");
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(raw.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString().substring(0, 16);
-        } catch (Exception e) {
-            return "unknown";
+    private static final String API_BASE = "${API_BASE}";
+    private static final String APPLICATION_ID = "";   // optional application UUID
+    private static final String SIGNING_SECRET = "";   // optional HMAC secret
+    private static final int HEARTBEAT_SECONDS = 30;
+
+    private static final HttpClient CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(15))
+            .build();
+
+    private static String hex(byte[] bytes) {
+        StringBuilder builder = new StringBuilder();
+        for (byte b : bytes) {
+            builder.append(String.format("%02x", b));
         }
+        return builder.toString();
     }
 
-    static String getDeviceName() {
-        try { return java.net.InetAddress.getLocalHost().getHostName(); }
-        catch (Exception e) { return "unknown"; }
+    private static String getHwid() throws Exception {
+        String raw = InetAddress.getLocalHost().getHostName()
+                + ":" + System.getProperty("os.name")
+                + ":" + System.getProperty("user.name");
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return hex(digest.digest(raw.getBytes(StandardCharsets.UTF_8))).substring(0, 32);
     }
 
-    static String loadSavedKey() {
-        try { return Files.readString(Path.of(LICENSE_FILE)).trim(); }
-        catch (Exception e) { return null; }
+    private static String jsonValue(String source, String field) {
+        String needle = "\\"" + field + "\\":";
+        int index = source.indexOf(needle);
+        if (index < 0) {
+            return null;
+        }
+        int start = index + needle.length();
+        int end = start;
+        while (end < source.length() && source.charAt(end) != ',' && source.charAt(end) != '}') {
+            end++;
+        }
+        return source.substring(start, end).replace("\\"", "").trim();
     }
 
-    static void saveKey(String key) {
-        try { Files.writeString(Path.of(LICENSE_FILE), key); }
-        catch (Exception e) { /* ignore */ }
-    }
-
-    static String[] signRequest(String body, String secret) throws Exception {
-        String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
-        String nonce = UUID.randomUUID().toString().replace("-", "");
-        String signingPayload = timestamp + "." + nonce + "." + body;
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(secret.getBytes(), "HmacSHA256"));
-        byte[] hash = mac.doFinal(signingPayload.getBytes());
-        StringBuilder sb = new StringBuilder();
-        for (byte b : hash) sb.append(String.format("%02x", b));
-        return new String[]{ sb.toString(), timestamp, nonce };
-    }
-
-    public static boolean validateLicense(String licenseKey) {
-        try {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("license_key", licenseKey);
-            payload.addProperty("hwid", getHWID());
-            payload.addProperty("device_name", getDeviceName());
-            if (!APPLICATION_ID.isEmpty()) payload.addProperty("application_id", APPLICATION_ID);
-            String bodyStr = payload.toString();
-
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))
+    private static String post(String path, String body, boolean signRequest) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(API_BASE + path))
+                .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(bodyStr));
+                .POST(HttpRequest.BodyPublishers.ofString(body));
 
-            // Add HMAC signature if signing secret is configured
-            if (!SIGNING_SECRET.isEmpty()) {
-                String[] sig = signRequest(bodyStr, SIGNING_SECRET);
-                requestBuilder.header("X-Signature", sig[0]);
-                requestBuilder.header("X-Timestamp", sig[1]);
-                requestBuilder.header("X-Nonce", sig[2]);
-            }
+        if (signRequest && !SIGNING_SECRET.isEmpty()) {
+            String timestamp = String.valueOf(Instant.now().getEpochSecond());
+            String nonce = UUID.randomUUID().toString().replace("-", "");
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(SIGNING_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String signature = hex(mac.doFinal((timestamp + "." + nonce + "." + body).getBytes(StandardCharsets.UTF_8)));
 
-            HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(java.time.Duration.ofSeconds(10))
-                .build();
-
-            HttpResponse<String> response = client.send(requestBuilder.build(),
-                HttpResponse.BodyHandlers.ofString());
-
-            JsonObject result = JsonParser.parseString(response.body())
-                .getAsJsonObject();
-
-            if (result.get("valid").getAsBoolean()) {
-                String expires = result.has("expires_readable")
-                    ? result.get("expires_readable").getAsString()
-                    : result.get("expires").getAsString();
-                String country = result.has("country")
-                    ? result.get("country").getAsString() : "Unknown";
-                System.out.println("✅ License valid");
-                System.out.println("   Expires: " + expires);
-                System.out.println("   Country: " + country);
-                System.out.println("   Device:  " + getDeviceName());
-                return true;
-            } else {
-                System.out.println("❌ " + result.get("error").getAsString());
-                return false;
-            }
-        } catch (Exception e) {
-            System.out.println("⚠️ Connection error: " + e.getMessage());
-            return false;
+            builder.header("X-Signature", signature)
+                   .header("X-Timestamp", timestamp)
+                   .header("X-Nonce", nonce);
         }
+
+        HttpResponse<String> response = CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        return response.body();
+    }
+
+    public static boolean validate(String licenseKey) throws Exception {
+        String key = licenseKey.trim().toUpperCase();
+        StringBuilder body = new StringBuilder();
+        body.append("{\\"license_key\\":\\"").append(key).append("\\"")
+            .append(",\\"hwid\\":\\"").append(getHwid()).append("\\"")
+            .append(",\\"device_name\\":\\"").append(InetAddress.getLocalHost().getHostName()).append("\\"");
+        if (!APPLICATION_ID.isEmpty()) {
+            body.append(",\\"application_id\\":\\"").append(APPLICATION_ID).append("\\"");
+        }
+        body.append("}");
+
+        String response = post("/validate", body.toString(), true);
+        if ("true".equals(jsonValue(response, "valid"))) {
+            System.out.println("License valid until " + jsonValue(response, "expires_readable"));
+            return true;
+        }
+
+        System.out.println("Rejected: " + jsonValue(response, "error"));
+        return false;
+    }
+
+    public static void startHeartbeat(String licenseKey) {
+        Thread thread = new Thread(() -> {
+            String body = "{\\"license_key\\":\\"" + licenseKey.trim().toUpperCase() + "\\"}";
+            while (true) {
+                try {
+                    Thread.sleep(HEARTBEAT_SECONDS * 1000L);
+                    String response = post("/heartbeat", body, false);
+                    if (!"true".equals(jsonValue(response, "active"))) {
+                        System.out.println("Session closed: " + jsonValue(response, "reason"));
+                        System.exit(1);
+                    }
+                } catch (Exception ignored) {
+                    // network hiccup - retry on next tick
+                }
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public static void main(String[] args) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        String saved = loadSavedKey();
-        String key;
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("License key: ");
+        String key = scanner.nextLine();
 
-        if (saved != null && !saved.isEmpty()) {
-            System.out.println("🔑 Using saved license: " +
-                saved.substring(0, Math.min(20, saved.length())) + "...");
-            key = saved;
-        } else {
-            System.out.print("Enter license key: ");
-            key = reader.readLine().trim();
+        if (!validate(key)) {
+            System.exit(1);
         }
 
-        if (!validateLicense(key)) System.exit(1);
-
-        if (saved == null || saved.isEmpty()) {
-            System.out.print("\\n💾 Save license key for next time? (y/n): ");
-            if (reader.readLine().trim().equalsIgnoreCase("y")) {
-                saveKey(key);
-                System.out.println("✅ Key saved to license.dat");
-            }
-        }
-
-        System.out.println("\\n🚀 Application starting...");
-        // Your app code here
+        startHeartbeat(key);
+        System.out.println("Protection active - starting application");
+        // Your application code goes here.
     }
-}`;
+}
+`;
 
-export const rustSnippet = `// Cargo.toml dependencies:
-// reqwest = { version = "0.11", features = ["json", "blocking"] }
-// serde = { version = "1", features = ["derive"] }
-// serde_json = "1"
-// md5 = "0.7"
-// hmac = "0.12"
-// sha2 = "0.10"
-// hex = "0.4"
-// uuid = { version = "1", features = ["v4"] }
+export const rustSnippet = `// GX Auth - Rust integration
+// Cargo.toml:
+//   reqwest = { version = "0.11", features = ["blocking", "json"] }
+//   serde_json = "1"
+//   sha2 = "0.10"
+//   hmac = "0.12"
+//   hex = "0.4"
+
+use std::io::{self, Write};
+use std::thread;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io::{self, Write};
-use std::time::{SystemTime, UNIX_EPOCH};
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+
+const API_BASE: &str = "${API_BASE}";
+const APPLICATION_ID: &str = "";  // optional application UUID
+const SIGNING_SECRET: &str = "";  // optional HMAC secret
+const HEARTBEAT_SECONDS: u64 = 30;
 
 type HmacSha256 = Hmac<Sha256>;
 
-const API_URL: &str = "${API_BASE}/validate";
-const LICENSE_FILE: &str = "license.dat";
-const SIGNING_SECRET: &str = ""; // Set your app's signing secret here
-const APPLICATION_ID: &str = ""; // Set your application UUID here
-
 fn get_hwid() -> String {
-    let host = get_device_name();
-    let user = std::env::var("USERNAME")
-        .or_else(|_| std::env::var("USER"))
-        .unwrap_or_default();
+    let host = hostname();
+    let user = std::env::var("USERNAME").or_else(|_| std::env::var("USER")).unwrap_or_default();
     let raw = format!("{}:{}:{}", host, user, std::env::consts::OS);
-    let hash = md5::compute(raw.as_bytes());
-    format!("{:x}", hash)[..16].to_string()
+    let digest = Sha256::digest(raw.as_bytes());
+    hex::encode(digest)[..32].to_string()
 }
 
-fn get_device_name() -> String {
-    hostname::get()
-        .map(|h| h.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "unknown".to_string())
+fn hostname() -> String {
+    std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "rust-client".to_string())
 }
 
-fn load_saved_key() -> Option<String> {
-    fs::read_to_string(LICENSE_FILE).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
-}
-
-fn save_key(key: &str) {
-    let _ = fs::write(LICENSE_FILE, key);
-}
-
-fn sign_request(body: &str, secret: &str) -> (String, String, String) {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        .to_string();
-    let nonce = uuid::Uuid::new_v4().simple().to_string();
-    let signing_payload = format!("{}.{}.{}", timestamp, nonce, body);
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
-    mac.update(signing_payload.as_bytes());
-    let signature = hex::encode(mac.finalize().into_bytes());
-    (signature, timestamp, nonce)
-}
-
-#[derive(Serialize)]
-struct ValidateRequest {
-    license_key: String,
-    hwid: String,
-    device_name: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    application_id: String,
-}
-
-#[derive(Deserialize)]
-struct ValidateResponse {
-    valid: bool,
-    expires: Option<String>,
-    expires_readable: Option<String>,
-    country: Option<String>,
-    error: Option<String>,
-}
-
-fn validate_license(key: &str) -> bool {
-    let payload = ValidateRequest {
-        license_key: key.to_string(),
-        hwid: get_hwid(),
-        device_name: get_device_name(),
-        application_id: APPLICATION_ID.to_string(),
-    };
-    let body_str = serde_json::to_string(&payload).unwrap();
-
+fn post(path: &str, payload: &Value, sign_request: bool) -> Result<Value, Box<dyn std::error::Error>> {
+    let body = serde_json::to_string(payload)?;
     let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .unwrap();
+        .timeout(Duration::from_secs(15))
+        .build()?;
 
-    let mut request = client.post(API_URL)
+    let mut request = client
+        .post(format!("{}{}", API_BASE, path))
         .header("Content-Type", "application/json");
 
-    // Add HMAC signature if signing secret is configured
-    if !SIGNING_SECRET.is_empty() {
-        let (signature, timestamp, nonce) = sign_request(&body_str, SIGNING_SECRET);
+    if sign_request && !SIGNING_SECRET.is_empty() {
+        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().to_string();
+        let nonce = hex::encode(Sha256::digest(format!("{}{}", timestamp, body).as_bytes()))[..32].to_string();
+
+        let mut mac = HmacSha256::new_from_slice(SIGNING_SECRET.as_bytes())?;
+        mac.update(format!("{}.{}.{}", timestamp, nonce, body).as_bytes());
+
         request = request
-            .header("X-Signature", signature)
+            .header("X-Signature", hex::encode(mac.finalize().into_bytes()))
             .header("X-Timestamp", timestamp)
             .header("X-Nonce", nonce);
     }
 
-    match request.body(body_str).send() {
-        Ok(resp) => {
-            match resp.json::<ValidateResponse>() {
-                Ok(data) => {
-                    if data.valid {
-                        let expires = data.expires_readable.or(data.expires).unwrap_or_default();
-                        let country = data.country.unwrap_or_else(|| "Unknown".to_string());
-                        println!("✅ License valid");
-                        println!("   Expires: {}", expires);
-                        println!("   Country: {}", country);
-                        println!("   Device:  {}", get_device_name());
-                        true
-                    } else {
-                        println!("❌ {}",
-                            data.error.unwrap_or("Invalid license".into()));
-                        false
-                    }
-                }
-                Err(e) => {
-                    println!("⚠️ Parse error: {}", e);
-                    false
-                }
+    let response = request.body(body).send()?;
+    Ok(response.json::<Value>()?)
+}
+
+fn validate(license_key: &str) -> bool {
+    let mut payload = json!({
+        "license_key": license_key.trim().to_uppercase(),
+        "hwid": get_hwid(),
+        "device_name": hostname(),
+    });
+    if !APPLICATION_ID.is_empty() {
+        payload["application_id"] = json!(APPLICATION_ID);
+    }
+
+    match post("/validate", &payload, true) {
+        Ok(data) => {
+            if data["valid"].as_bool().unwrap_or(false) {
+                println!("License valid until {}", data["expires_readable"].as_str().unwrap_or("unknown"));
+                true
+            } else {
+                println!("Rejected: {}", data["error"].as_str().unwrap_or("invalid license"));
+                false
             }
         }
-        Err(e) => {
-            println!("⚠️ Connection error: {}", e);
+        Err(error) => {
+            println!("Connection error: {}", error);
             false
         }
     }
 }
 
-fn main() {
-    let saved = load_saved_key();
-    let key;
-
-    if let Some(ref s) = saved {
-        println!("🔑 Using saved license: {}...", &s[..s.len().min(20)]);
-        key = s.clone();
-    } else {
-        print!("Enter license key: ");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        key = input.trim().to_string();
+fn heartbeat_loop(license_key: String) {
+    let mut payload = json!({ "license_key": license_key.trim().to_uppercase() });
+    if !APPLICATION_ID.is_empty() {
+        payload["application_id"] = json!(APPLICATION_ID);
     }
 
-    if !validate_license(&key) {
+    loop {
+        thread::sleep(Duration::from_secs(HEARTBEAT_SECONDS));
+        if let Ok(data) = post("/heartbeat", &payload, false) {
+            if !data["active"].as_bool().unwrap_or(true) {
+                println!("Session closed: {}", data["reason"].as_str().unwrap_or("license inactive"));
+                std::process::exit(1);
+            }
+        }
+    }
+}
+
+fn main() {
+    print!("License key: ");
+    io::stdout().flush().ok();
+    let mut key = String::new();
+    io::stdin().read_line(&mut key).ok();
+    let key = key.trim().to_string();
+
+    if !validate(&key) {
         std::process::exit(1);
     }
 
-    if saved.is_none() {
-        print!("\\n💾 Save license key for next time? (y/n): ");
-        io::stdout().flush().unwrap();
-        let mut ans = String::new();
-        io::stdin().read_line(&mut ans).unwrap();
-        if ans.trim().eq_ignore_ascii_case("y") {
-            save_key(&key);
-            println!("✅ Key saved to license.dat");
-        }
-    }
+    let cloned = key.clone();
+    thread::spawn(move || heartbeat_loop(cloned));
 
-    println!("\\n🚀 Application starting...");
-    // Your app code here
-}`;
+    println!("Protection active - starting application");
+    // Your application code goes here.
+}
+`;
+
+export const curlSnippet = `# GX Auth - raw HTTP reference (curl)
+
+# 1. Validate a license (binds HWID on first success)
+curl -sS -X POST "${API_BASE}/validate" \\
+  -H "Content-Type: application/json" \\
+  -d '{"license_key":"GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX","hwid":"abc123","device_name":"My-PC"}'
+
+# 2. Heartbeat while the tool is running (every 30-60s)
+curl -sS -X POST "${API_BASE}/heartbeat" \\
+  -H "Content-Type: application/json" \\
+  -d '{"license_key":"GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"}'
+
+# 3. Read-only lookup for web portals (no HWID binding, no logs)
+curl -sS -X POST "${API_BASE}/check-license" \\
+  -H "Content-Type: application/json" \\
+  -d '{"license_key":"GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"}'
+
+# 4. Reset HWID with a Bot API Key from Settings
+curl -sS -X POST "${API_BASE}/reset-hwid" \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: gk_your_bot_api_key" \\
+  -d '{"license_key":"GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"}'
+`;
+
+/** Kept for backwards compatibility with older imports. */
+export const pythonCliGateSnippet = pythonSnippet;
 
 export const languages = [
-  { id: "python", label: "Python", code: pythonCliGateSnippet },
-  { id: "python-minimal", label: "Python Minimal", code: pythonSnippet },
+  { id: "python", label: "Python", code: pythonSnippet },
+  { id: "python-minimal", label: "Python Minimal", code: pythonMinimalSnippet },
   { id: "csharp", label: "C# (.NET)", code: csharpSnippet },
   { id: "nodejs", label: "Node.js", code: nodejsSnippet },
   { id: "cpp", label: "C++", code: cppSnippet },
   { id: "go", label: "Go", code: goSnippet },
   { id: "java", label: "Java", code: javaSnippet },
   { id: "rust", label: "Rust", code: rustSnippet },
+  { id: "curl", label: "cURL / HTTP", code: curlSnippet },
 ];
