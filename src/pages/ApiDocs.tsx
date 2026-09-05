@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
 
-const API_BASE = "https://gxauth.xyz/api";
+const API_BASE = "https://www.gxauth.xyz/api";
 
 const gxAuthAioBot = `# GX Auth AIO Discord Bot
 # pip install -U discord.py aiohttp python-dotenv
@@ -13,7 +13,7 @@ const gxAuthAioBot = `# GX Auth AIO Discord Bot
 # .env
 # DISCORD_BOT_TOKEN=your_discord_bot_token
 # GXAUTH_BOT_API_KEY=gk_your_key_from_gxauth_settings
-# GXAUTH_API_BASE=https://gxauth.xyz/api
+# GXAUTH_API_BASE=https://www.gxauth.xyz/api
 
 import os
 import re
@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
-GXAUTH_API_BASE = os.getenv("GXAUTH_API_BASE", "https://gxauth.xyz/api").rstrip("/")
+GXAUTH_API_BASE = os.getenv("GXAUTH_API_BASE", "https://www.gxauth.xyz/api").rstrip("/")
 GXAUTH_BOT_API_KEY = os.getenv("GXAUTH_BOT_API_KEY", "")
 LICENSE_RE = re.compile(r"^GALACTIC-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}-[A-HJ-NP-Z0-9]{5}$")
 

@@ -208,7 +208,7 @@ export default function Applications() {
     toast.success(`${label} copied`);
   };
 
-  const validateEndpoint = "https://gxauth.xyz/api/validate";
+  const validateEndpoint = "https://www.gxauth.xyz/api/validate";
 
   return (
     <RoleLayout>
