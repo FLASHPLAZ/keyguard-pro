@@ -3,11 +3,11 @@
   "info": {
     "title": "GX Auth License API",
     "version": "1.0.0",
-    "description": "Public license-management API used by client tools, Discord bots, and web portals. Base URL: https://gxauth.xyz/api",
+    "description": "Public license-management API used by client tools, Discord bots, and web portals. Base URL: https://www.gxauth.xyz/api",
     "contact": { "name": "GX Auth", "url": "https://gxauth.xyz" }
   },
   "servers": [
-    { "url": "https://gxauth.xyz/api", "description": "Production" }
+    { "url": "https://www.gxauth.xyz/api", "description": "Production" }
   ],
   "tags": [
     { "name": "Licenses", "description": "License validation & lifecycle" },

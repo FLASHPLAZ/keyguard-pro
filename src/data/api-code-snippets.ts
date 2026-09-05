@@ -10,7 +10,7 @@
  * Formatting rules: spaces only (no tabs), no trailing whitespace, no emoji.
  */
 
-export const API_BASE = "https://gxauth.xyz/api";
+export const API_BASE = "https://www.gxauth.xyz/api";
 
 export const pythonSnippet = `# GX Auth - Python integration
 # pip install requests

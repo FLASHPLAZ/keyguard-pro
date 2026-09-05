@@ -4,7 +4,7 @@ import { toast } from "@/components/ui/sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const API_BASE = "https://gxauth.xyz/api";
+const API_BASE = "https://www.gxauth.xyz/api";
 
 const pythonBot = `import discord
 from discord import app_commands
