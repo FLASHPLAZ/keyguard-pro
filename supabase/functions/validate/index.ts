@@ -48,6 +48,7 @@ interface AdminSettings {
   discordWebhookUrl: string;
   ipChangeThreshold: number;
   autoBanEnabled: boolean;
+  requireDownloadVerification: boolean;
 }
 
 async function getAdminSettings(supabase: any): Promise<AdminSettings> {
@@ -59,6 +60,7 @@ async function getAdminSettings(supabase: any): Promise<AdminSettings> {
   let discordWebhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
   let ipChangeThreshold = DEFAULT_IP_THRESHOLD;
   let autoBanEnabled = true;
+  let requireDownloadVerification = false;
   if (data) {
     for (const row of data) {
       if (row.key === "rate_limit_max") rateLimitMax = parseInt(row.value) || DEFAULT_RATE_LIMIT_MAX;
@@ -66,9 +68,10 @@ async function getAdminSettings(supabase: any): Promise<AdminSettings> {
       if (row.key === "discord_webhook_url" && row.value) discordWebhookUrl = row.value;
       if (row.key === "ip_change_threshold") ipChangeThreshold = parseInt(row.value) || DEFAULT_IP_THRESHOLD;
       if (row.key === "auto_ban_enabled") autoBanEnabled = row.value !== "false";
+      if (row.key === "require_download_verification") requireDownloadVerification = row.value === "true";
     }
   }
-  const result = { rateLimitMax, rateLimitWindow, discordWebhookUrl, ipChangeThreshold, autoBanEnabled };
+  const result = { rateLimitMax, rateLimitWindow, discordWebhookUrl, ipChangeThreshold, autoBanEnabled, requireDownloadVerification };
   settingsCache = { data: result, expiry: Date.now() + SETTINGS_CACHE_TTL_MS };
   return result;
 }
