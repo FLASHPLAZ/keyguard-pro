@@ -465,7 +465,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ valid: false, error: "Application is disabled" }, 403);
     }
 
-    if (!license.download_verified_at) {
+    // Optional gate: only enforced when the seller turns it on in settings.
+    if (settings.requireDownloadVerification && !license.download_verified_at) {
       logAndNotify(supabase, settings.discordWebhookUrl,
         { ...logBase, action: "Download Verification Required", hwid: hwid || license.hwid },
         "Download Verification Required",
@@ -477,6 +478,7 @@ Deno.serve(async (req) => {
         verify_url: "https://gxauth.xyz/download",
       }, 403);
     }
+
 
     // ── Expired check ──
     if (new Date(license.expires_at) < new Date()) {
