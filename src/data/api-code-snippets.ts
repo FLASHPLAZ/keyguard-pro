@@ -986,13 +986,13 @@ curl -sS -X POST "${API_BASE}/reset-hwid" \\
 export const pythonCliGateSnippet = pythonSnippet;
 
 export const languages = [
-  { id: "python", label: "Python", code: pythonSnippet },
-  { id: "python-minimal", label: "Python Minimal", code: pythonMinimalSnippet },
-  { id: "csharp", label: "C# (.NET)", code: csharpSnippet },
-  { id: "nodejs", label: "Node.js", code: nodejsSnippet },
-  { id: "cpp", label: "C++", code: cppSnippet },
-  { id: "go", label: "Go", code: goSnippet },
-  { id: "java", label: "Java", code: javaSnippet },
-  { id: "rust", label: "Rust", code: rustSnippet },
-  { id: "curl", label: "cURL / HTTP", code: curlSnippet },
+  { id: "python", label: "Python", code: pythonSnippet, filename: "license_client.py", syntax: "python" },
+  { id: "python-minimal", label: "Python Minimal", code: pythonMinimalSnippet, filename: "license_minimal.py", syntax: "python" },
+  { id: "csharp", label: "C# (.NET)", code: csharpSnippet, filename: "LicenseClient.cs", syntax: "clike" },
+  { id: "nodejs", label: "Node.js", code: nodejsSnippet, filename: "licenseClient.js", syntax: "js" },
+  { id: "cpp", label: "C++", code: cppSnippet, filename: "license_client.cpp", syntax: "clike" },
+  { id: "go", label: "Go", code: goSnippet, filename: "license_client.go", syntax: "clike" },
+  { id: "java", label: "Java", code: javaSnippet, filename: "LicenseClient.java", syntax: "clike" },
+  { id: "rust", label: "Rust", code: rustSnippet, filename: "license_client.rs", syntax: "clike" },
+  { id: "curl", label: "cURL / HTTP", code: curlSnippet, filename: "requests.sh", syntax: "shell" },
 ];
