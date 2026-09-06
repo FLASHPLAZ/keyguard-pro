@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveClientIp } from "../_shared/client-ip.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -324,7 +325,7 @@ Deno.serve(async (req) => {
       ? device_name.slice(0, 100).trim() : null;
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
+    const clientIp = resolveClientIp(req);
     const providedSignature = req.headers.get("x-signature");
     const providedTimestamp = req.headers.get("x-timestamp");
     const providedNonce = req.headers.get("x-nonce");
