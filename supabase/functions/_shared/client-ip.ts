@@ -26,7 +26,13 @@ function normalize(value: string | null): string[] {
   if (!value) return [];
   return value
     .split(",")
-    .map((part) => part.trim().replace(/^\[|\]$/g, "").replace(/:\d+$/, (m) => (part.includes("::") ? m : "")))
+    .map((part) => {
+      let ip = part.trim().replace(/^\[/, "").replace(/\]$/, "");
+      // strip a trailing port on IPv4 (1.2.3.4:5678) only
+      const ipv4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(ip);
+      if (ipv4WithPort) ip = ipv4WithPort[1];
+      return ip;
+    })
     .filter(Boolean);
 }
 
