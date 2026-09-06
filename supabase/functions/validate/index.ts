@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveClientIp } from "../_shared/client-ip.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,6 +49,7 @@ interface AdminSettings {
   discordWebhookUrl: string;
   ipChangeThreshold: number;
   autoBanEnabled: boolean;
+  requireDownloadVerification: boolean;
 }
 
 async function getAdminSettings(supabase: any): Promise<AdminSettings> {
@@ -59,6 +61,7 @@ async function getAdminSettings(supabase: any): Promise<AdminSettings> {
   let discordWebhookUrl = Deno.env.get("DISCORD_WEBHOOK_URL") || "";
   let ipChangeThreshold = DEFAULT_IP_THRESHOLD;
   let autoBanEnabled = true;
+  let requireDownloadVerification = false;
   if (data) {
     for (const row of data) {
       if (row.key === "rate_limit_max") rateLimitMax = parseInt(row.value) || DEFAULT_RATE_LIMIT_MAX;
@@ -66,9 +69,10 @@ async function getAdminSettings(supabase: any): Promise<AdminSettings> {
       if (row.key === "discord_webhook_url" && row.value) discordWebhookUrl = row.value;
       if (row.key === "ip_change_threshold") ipChangeThreshold = parseInt(row.value) || DEFAULT_IP_THRESHOLD;
       if (row.key === "auto_ban_enabled") autoBanEnabled = row.value !== "false";
+      if (row.key === "require_download_verification") requireDownloadVerification = row.value === "true";
     }
   }
-  const result = { rateLimitMax, rateLimitWindow, discordWebhookUrl, ipChangeThreshold, autoBanEnabled };
+  const result = { rateLimitMax, rateLimitWindow, discordWebhookUrl, ipChangeThreshold, autoBanEnabled, requireDownloadVerification };
   settingsCache = { data: result, expiry: Date.now() + SETTINGS_CACHE_TTL_MS };
   return result;
 }
@@ -321,7 +325,7 @@ Deno.serve(async (req) => {
       ? device_name.slice(0, 100).trim() : null;
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
+    const clientIp = resolveClientIp(req);
     const providedSignature = req.headers.get("x-signature");
     const providedTimestamp = req.headers.get("x-timestamp");
     const providedNonce = req.headers.get("x-nonce");
@@ -465,7 +469,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ valid: false, error: "Application is disabled" }, 403);
     }
 
-    if (!license.download_verified_at) {
+    // Optional gate: only enforced when the seller turns it on in settings.
+    if (settings.requireDownloadVerification && !license.download_verified_at) {
       logAndNotify(supabase, settings.discordWebhookUrl,
         { ...logBase, action: "Download Verification Required", hwid: hwid || license.hwid },
         "Download Verification Required",
@@ -477,6 +482,7 @@ Deno.serve(async (req) => {
         verify_url: "https://gxauth.xyz/download",
       }, 403);
     }
+
 
     // ── Expired check ──
     if (new Date(license.expires_at) < new Date()) {

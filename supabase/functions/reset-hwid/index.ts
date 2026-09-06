@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveClientIp } from "../_shared/client-ip.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     const settings = await getResetHwidSettings(supabase);
 
     // Rate limit check
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || "unknown";
+    const clientIp = resolveClientIp(req);
     const isRateLimited = await checkRateLimit(supabase, clientIp, settings.rateLimitMax, settings.rateLimitWindow);
     if (isRateLimited) {
       return new Response(JSON.stringify({ success: false, error: "Too many requests. Try again later." }), {
