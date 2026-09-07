@@ -4,6 +4,8 @@ import { toast } from "@/components/ui/sonner";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { languages } from "@/data/api-code-snippets";
+import { CodeViewer } from "@/components/CodeViewer";
+
 
 const API_BASE = "https://www.gxauth.xyz/api";
 
