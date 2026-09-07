@@ -731,23 +731,13 @@ export default function ApiDocs() {
                 <TabsTrigger key={lang.id} value={lang.id}>{lang.label}</TabsTrigger>
               ))}
             </TabsList>
-            <button
-              onClick={() => {
-                const lang = languages.find((l) => l.id === activeLang);
-                if (lang) copyCode(lang.code, `lang-${lang.id}`);
-              }}
-              className="flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-secondary-foreground hover:bg-secondary/80 transition-colors"
-            >
-              {copiedText === `lang-${activeLang}` ? <><CheckCircle className="h-3 w-3 text-emerald-400" /> Copied</> : <><Copy className="h-3 w-3" /> Copy</>}
-            </button>
           </div>
           {languages.map((lang) => (
             <TabsContent key={lang.id} value={lang.id}>
-              <pre className="rounded-lg border border-border bg-card p-4 font-mono text-xs text-foreground overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
-                {lang.code}
-              </pre>
+              <CodeViewer code={lang.code} filename={lang.filename} syntax={lang.syntax} maxHeightClass="max-h-[500px]" />
             </TabsContent>
           ))}
+
         </Tabs>
       </div>
 
