@@ -545,6 +545,84 @@ export type Database = {
         }
         Relationships: []
       }
+      security_events: {
+        Row: {
+          action_taken: string
+          application_id: string | null
+          application_name: string | null
+          country: string | null
+          created_at: string
+          details: Json
+          device_name: string | null
+          event_type: string
+          evidence_path: string | null
+          evidence_scope: string | null
+          hwid: string | null
+          id: string
+          ip: string | null
+          license_id: string | null
+          license_key: string | null
+          reviewed: boolean
+          severity: string
+          tenant_id: string
+        }
+        Insert: {
+          action_taken?: string
+          application_id?: string | null
+          application_name?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          device_name?: string | null
+          event_type: string
+          evidence_path?: string | null
+          evidence_scope?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          license_id?: string | null
+          license_key?: string | null
+          reviewed?: boolean
+          severity?: string
+          tenant_id: string
+        }
+        Update: {
+          action_taken?: string
+          application_id?: string | null
+          application_name?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          device_name?: string | null
+          event_type?: string
+          evidence_path?: string | null
+          evidence_scope?: string | null
+          hwid?: string | null
+          id?: string
+          ip?: string | null
+          license_id?: string | null
+          license_key?: string | null
+          reviewed?: boolean
+          severity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_events_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           created_at: string
