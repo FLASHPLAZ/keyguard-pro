@@ -985,6 +985,120 @@ curl -sS -X POST "${API_BASE}/reset-hwid" \\
 /** Kept for backwards compatibility with older imports. */
 export const pythonCliGateSnippet = pythonSnippet;
 
+
+export const antiTamperSnippet = `# GX Auth - Anti-tamper reporting (Python)
+# pip install requests mss pillow
+#
+# Detects debugging / injection / clock tampering, captures evidence,
+# reports it to GX Auth (which permanently bans the key) and exits.
+#
+# IMPORTANT: disclose this in your Terms of Service. Using screen capture
+# without disclosed consent may get your tool flagged as malware.
+
+import base64
+import ctypes
+import io
+import os
+import platform
+import socket
+import sys
+import time
+
+import requests
+
+API_BASE = "https://www.gxauth.xyz/api"
+LICENSE_KEY = "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX"
+CAPTURE_SCOPE = "fullscreen"  # "none" | "window" | "fullscreen"
+
+
+def is_debugger_present() -> bool:
+    if sys.gettrace() is not None:
+        return True
+    if platform.system() == "Windows":
+        try:
+            return bool(ctypes.windll.kernel32.IsDebuggerPresent())
+        except Exception:
+            return False
+    return False
+
+
+def is_clock_tampered() -> bool:
+    try:
+        res = requests.get(API_BASE + "/public-settings", timeout=10)
+        server_date = res.headers.get("date")
+        if not server_date:
+            return False
+        server_ts = time.mktime(time.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z"))
+        return abs(server_ts - time.time()) > 300
+    except Exception:
+        return False
+
+
+def is_injected() -> bool:
+    suspicious = ("cheatengine", "x64dbg", "ollydbg", "ida64", "httpdebugger", "fiddler")
+    try:
+        import psutil  # optional dependency
+    except ImportError:
+        return False
+    for proc in psutil.process_iter(["name"]):
+        name = (proc.info.get("name") or "").lower()
+        if any(flag in name for flag in suspicious):
+            return True
+    return False
+
+
+def capture_evidence() -> str:
+    if CAPTURE_SCOPE == "none":
+        return ""
+    try:
+        import mss
+        import mss.tools
+        with mss.mss() as sct:
+            target = sct.monitors[0] if CAPTURE_SCOPE == "fullscreen" else sct.monitors[1]
+            shot = sct.grab(target)
+            png = mss.tools.to_png(shot.rgb, shot.size)
+        return base64.b64encode(png).decode("ascii")
+    except Exception:
+        return ""
+
+
+def report_tamper(event_type: str, details: str) -> None:
+    payload = {
+        "license_key": LICENSE_KEY,
+        "event_type": event_type,          # debugger_detected | injection_detected | clock_tamper | ...
+        "severity": "critical",
+        "details": details,
+        "hwid": os.environ.get("GX_HWID", ""),
+        "device_name": socket.gethostname(),
+        "screenshot_scope": CAPTURE_SCOPE,
+        "screenshot_base64": capture_evidence(),
+    }
+    try:
+        requests.post(API_BASE + "/report-tamper", json=payload, timeout=30)
+    except Exception:
+        pass
+
+
+def enforce_integrity() -> None:
+    checks = [
+        ("debugger_detected", is_debugger_present, "Debugger attached to the process"),
+        ("injection_detected", is_injected, "Known tampering tool running"),
+        ("clock_tamper", is_clock_tampered, "System clock differs from server by over 5 minutes"),
+    ]
+    for event_type, check, details in checks:
+        try:
+            if check():
+                report_tamper(event_type, details)
+                os._exit(1)
+        except Exception:
+            continue
+
+
+if __name__ == "__main__":
+    enforce_integrity()
+    print("Integrity checks passed")
+`;
+
 export const languages = [
   { id: "python", label: "Python", code: pythonSnippet, filename: "license_client.py", syntax: "python" },
   { id: "python-minimal", label: "Python Minimal", code: pythonMinimalSnippet, filename: "license_minimal.py", syntax: "python" },
@@ -995,4 +1109,5 @@ export const languages = [
   { id: "java", label: "Java", code: javaSnippet, filename: "LicenseClient.java", syntax: "clike" },
   { id: "rust", label: "Rust", code: rustSnippet, filename: "license_client.rs", syntax: "clike" },
   { id: "curl", label: "cURL / HTTP", code: curlSnippet, filename: "requests.sh", syntax: "shell" },
+  { id: "anti-tamper", label: "Anti-Tamper", code: antiTamperSnippet, filename: "anti_tamper.py", syntax: "python" },
 ];
