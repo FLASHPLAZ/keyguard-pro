@@ -15,6 +15,7 @@ import {
   Sparkles,
   Crown,
   Mail,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -32,6 +33,7 @@ const navItems = [
   { icon: Users, label: "Resellers", path: "/resellers" },
   { icon: ShieldCheck, label: "Managers", path: "/managers" },
   { icon: ScrollText, label: "Logs", path: "/logs" },
+  { icon: ShieldAlert, label: "Security", path: "/security" },
   { icon: Shield, label: "API Docs", path: "/api-docs" },
   { icon: Bot, label: "Bot Guide", path: "/bot-guide" },
   { icon: Crown, label: "My Plan", path: "/admin/billing" },

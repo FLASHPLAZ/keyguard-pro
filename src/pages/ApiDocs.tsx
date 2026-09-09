@@ -226,6 +226,45 @@ const endpoints = [
   },
   {
     method: "POST",
+    path: "/report-tamper",
+    auth: "None (public)",
+    description: "Called by your own tool when it detects tampering (debugger, injection, clock manipulation). Stores optional screenshot evidence, permanently bans the license instantly, logs the event and pushes a Discord alert. Disclose this capture in your Terms of Service.",
+    request: `{
+  "license_key": "GALACTIC-XXXXX-XXXXX-XXXXX-XXXXX",
+  "event_type": "debugger_detected",
+  "severity": "critical",
+  "details": "Debugger attached to the process",
+  "hwid": "machine-hardware-id",
+  "device_name": "DESKTOP-ABC123",
+  "screenshot_scope": "fullscreen",
+  "screenshot_base64": "iVBORw0KGgoAAA..."
+}`,
+    response: `{
+  "success": true,
+  "event_id": "b1e0...",
+  "action_taken": "permanent_ban",
+  "evidence_stored": true
+}`,
+    fields: [
+      { name: "license_key", type: "string", required: true, desc: "The offending license key" },
+      { name: "event_type", type: "string", required: false, desc: "debugger_detected | injection_detected | memory_tamper | clock_tamper | file_tamper | vm_detected | unknown_module | manual_report" },
+      { name: "severity", type: "string", required: false, desc: "low | medium | high | critical (default critical)" },
+      { name: "details", type: "string", required: false, desc: "Free-text description of the detection (max 1000 chars)" },
+      { name: "hwid", type: "string", required: false, desc: "Hardware ID of the offending machine" },
+      { name: "device_name", type: "string", required: false, desc: "Hostname of the offending machine" },
+      { name: "screenshot_scope", type: "string", required: false, desc: "none | window | fullscreen — describes what the image shows" },
+      { name: "screenshot_base64", type: "string", required: false, desc: "PNG evidence image, base64 encoded. Max 10MB decoded." },
+    ],
+    headers: [],
+    errors: [
+      { code: 400, message: "Invalid license key", desc: "Missing or malformed license_key" },
+      { code: 400, message: "Invalid JSON body", desc: "Body could not be parsed" },
+      { code: 404, message: "Unknown license key", desc: "No license matches the provided key" },
+      { code: 413, message: "Payload too large", desc: "Body exceeded the size limit (evidence image too big)" },
+    ],
+  },
+  {
+    method: "POST",
     path: "/check-license",
     auth: "None (public)",
     description: "Lightweight read-only license lookup for client portal websites. Returns license validity, application name, expiry, and owner — without HWID binding, IP tracking, or activity logging.",

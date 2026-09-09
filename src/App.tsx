@@ -18,6 +18,7 @@ import Licenses from "./pages/Licenses";
 import Resellers from "./pages/Resellers";
 import Managers from "./pages/Managers";
 import Logs from "./pages/Logs";
+import Security from "./pages/Security";
 import ApiDocs from "./pages/ApiDocs";
 import BotGuide from "./pages/BotGuide";
 import SettingsPage from "./pages/Settings";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/resellers" element={<ProtectedRoute requiredRole="admin"><Resellers /></ProtectedRoute>} />
             <Route path="/managers" element={<ProtectedRoute requiredRole="admin"><Managers /></ProtectedRoute>} />
             <Route path="/logs" element={<ProtectedRoute requiredRole="admin"><Logs /></ProtectedRoute>} />
+            <Route path="/security" element={<ProtectedRoute requiredRole="admin"><Security /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ProtectedRoute requiredRole="admin"><ApiDocs /></ProtectedRoute>} />
             <Route path="/bot-guide" element={<ProtectedRoute requiredRole="admin"><BotGuide /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><SettingsPage /></ProtectedRoute>} />
@@ -70,6 +72,7 @@ const App = () => (
             <Route path="/dashboard/licenses" element={<ProtectedRoute requiredRole="seller"><Licenses /></ProtectedRoute>} />
             <Route path="/dashboard/clients" element={<ProtectedRoute requiredRole="seller"><ClientEmails /></ProtectedRoute>} />
             <Route path="/dashboard/logs" element={<ProtectedRoute requiredRole="seller"><Logs /></ProtectedRoute>} />
+            <Route path="/dashboard/security" element={<ProtectedRoute requiredRole="seller"><Security /></ProtectedRoute>} />
             <Route path="/dashboard/api-docs" element={<ProtectedRoute requiredRole="seller"><ApiDocs /></ProtectedRoute>} />
             <Route path="/dashboard/bot-guide" element={<ProtectedRoute requiredRole="seller"><BotGuide /></ProtectedRoute>} />
             <Route path="/dashboard/settings" element={<ProtectedRoute requiredRole="seller"><SettingsPage /></ProtectedRoute>} />
