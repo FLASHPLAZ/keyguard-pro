@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.app-download]
 verify_jwt = false
+
+[functions.report-tamper]
+verify_jwt = false
