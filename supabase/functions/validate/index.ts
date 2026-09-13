@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
 
     const { hwid, device_name, application_id } = parsed;
     const license_key = typeof parsed.license_key === "string" ? parsed.license_key.trim().toUpperCase() : parsed.license_key;
-    const allowedFields = new Set(["license_key", "hwid", "device_name", "application_id"]);
+    const allowedFields = new Set(["license_key", "hwid", "device_name", "application_id", "app", "app_name", "version"]);
     const unexpectedFields = Object.keys(parsed).filter((key) => !allowedFields.has(key));
     if (unexpectedFields.length > 0) {
       return jsonResponse({ valid: false, error: "Unexpected request fields" }, 400);
