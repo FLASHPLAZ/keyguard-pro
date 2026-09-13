@@ -1099,9 +1099,290 @@ if __name__ == "__main__":
     print("Integrity checks passed")
 `;
 
+export const fullClientSnippet = `# GX Auth - Full protected client (validate + heartbeat + anti-tamper)
+# pip install requests psutil mss
+#
+# This is a drop-in template for your actual tool:
+#   1. Prompts / loads a saved license key
+#   2. Validates against /validate with HWID + device name (+ optional HMAC)
+#   3. Starts a 30s /heartbeat loop (exits instantly if the key is banned)
+#   4. Runs a background integrity monitor every 15s that:
+#        - detects debugger / injection / clock tamper / VM
+#        - captures a screenshot of the tampering session
+#        - POSTs to /report-tamper (server permanently bans + Discord alert)
+#        - kills the process
+#
+# IMPORTANT: disclose anti-tamper + screen capture in your Terms of Service.
+
+import base64
+import ctypes
+import hashlib
+import hmac
+import json
+import os
+import platform
+import secrets
+import socket
+import sys
+import threading
+import time
+import uuid
+
+import requests
+
+API_BASE = "${API_BASE}"
+APPLICATION_ID = ""          # optional: lock to one application (UUID)
+SIGNING_SECRET = ""          # optional: only if HMAC signing enabled for app
+LICENSE_FILE = "license.dat"
+HEARTBEAT_SECONDS = 30
+INTEGRITY_SECONDS = 15
+CAPTURE_SCOPE = "fullscreen" # "none" | "window" | "fullscreen"
+
+SUSPICIOUS_PROCESSES = (
+    "cheatengine", "x64dbg", "x32dbg", "ollydbg", "ida64", "ida",
+    "ghidra", "windbg", "immunity", "httpdebugger", "fiddler",
+    "wireshark", "charles", "burpsuite", "mitmproxy", "processhacker",
+    "scylla", "hxd", "resourcehacker", "extremeinjector", "megadumper",
+)
+
+VM_HINTS = ("vmware", "virtualbox", "vbox", "qemu", "kvm", "hyper-v", "xen", "parallels")
+
+
+# ---------- device fingerprint --------------------------------------------
+
+def get_hwid() -> str:
+    raw = ":".join([
+        platform.node(),
+        platform.machine(),
+        os.getenv("USERNAME") or os.getenv("USER") or "",
+        hex(uuid.getnode()),
+        sys.platform,
+    ])
+    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+HWID = get_hwid()
+DEVICE_NAME = socket.gethostname()[:100]
+STOP = threading.Event()
+
+
+# ---------- signed transport ----------------------------------------------
+
+def build_headers(body: str) -> dict:
+    headers = {"Content-Type": "application/json"}
+    if SIGNING_SECRET:
+        ts = str(int(time.time()))
+        nonce = secrets.token_hex(16)
+        message = ts + "." + nonce + "." + body
+        headers["X-Signature"] = hmac.new(SIGNING_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
+        headers["X-Timestamp"] = ts
+        headers["X-Nonce"] = nonce
+    return headers
+
+
+def post(path: str, payload: dict, signed: bool = False, timeout: int = 15) -> dict:
+    body = json.dumps(payload, separators=(",", ":"))
+    headers = build_headers(body) if signed else {"Content-Type": "application/json"}
+    try:
+        r = requests.post(API_BASE + path, data=body, headers=headers, timeout=timeout)
+        try:
+            return r.json()
+        except ValueError:
+            return {"ok": False, "error": "HTTP " + str(r.status_code)}
+    except requests.RequestException as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+# ---------- license lifecycle ---------------------------------------------
+
+def validate(license_key: str) -> bool:
+    payload = {"license_key": license_key, "hwid": HWID, "device_name": DEVICE_NAME}
+    if APPLICATION_ID:
+        payload["application_id"] = APPLICATION_ID
+    data = post("/validate", payload, signed=True)
+    if data.get("valid"):
+        print("[GXAuth] Licensed to app:", data.get("app", "unknown"))
+        print("[GXAuth] Expires:", data.get("expires_readable") or data.get("expires"))
+        print("[GXAuth] Country:", data.get("country", "unknown"))
+        return True
+    print("[GXAuth] Rejected:", data.get("error", "invalid license"))
+    if data.get("verify_url"):
+        print("[GXAuth] Verify this key first at:", data["verify_url"])
+    return False
+
+
+def heartbeat_loop(license_key: str) -> None:
+    payload = {"license_key": license_key}
+    if APPLICATION_ID:
+        payload["application_id"] = APPLICATION_ID
+    while not STOP.is_set():
+        if STOP.wait(HEARTBEAT_SECONDS):
+            return
+        data = post("/heartbeat", payload)
+        if not data.get("active"):
+            print("[GXAuth] Session closed:", data.get("reason", "no longer active"))
+            hard_exit(2)
+
+
+# ---------- integrity monitor ---------------------------------------------
+
+def is_debugger_present() -> bool:
+    if sys.gettrace() is not None:
+        return True
+    if platform.system() == "Windows":
+        try:
+            return bool(ctypes.windll.kernel32.IsDebuggerPresent())
+        except Exception:
+            return False
+    if sys.platform.startswith("linux"):
+        try:
+            with open("/proc/self/status", "r", encoding="utf-8") as fh:
+                for line in fh:
+                    if line.startswith("TracerPid:"):
+                        return int(line.split()[1]) != 0
+        except Exception:
+            return False
+    return False
+
+
+def suspicious_process() -> str:
+    try:
+        import psutil
+    except ImportError:
+        return ""
+    for proc in psutil.process_iter(["name"]):
+        name = (proc.info.get("name") or "").lower()
+        if any(flag in name for flag in SUSPICIOUS_PROCESSES):
+            return name
+    return ""
+
+
+def is_vm() -> bool:
+    fingerprint = (platform.node() + " " + platform.platform() + " " + platform.processor()).lower()
+    return any(hint in fingerprint for hint in VM_HINTS)
+
+
+def is_clock_tampered() -> bool:
+    try:
+        r = requests.get(API_BASE + "/public-settings", timeout=8)
+        server_date = r.headers.get("date")
+        if not server_date:
+            return False
+        server_ts = time.mktime(time.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z"))
+        return abs(server_ts - time.time()) > 300
+    except Exception:
+        return False
+
+
+def capture_evidence() -> str:
+    if CAPTURE_SCOPE == "none":
+        return ""
+    try:
+        import mss
+        import mss.tools
+        with mss.mss() as sct:
+            target = sct.monitors[0] if CAPTURE_SCOPE == "fullscreen" else sct.monitors[1]
+            shot = sct.grab(target)
+            png = mss.tools.to_png(shot.rgb, shot.size)
+        return base64.b64encode(png).decode("ascii")
+    except Exception:
+        return ""
+
+
+def report_tamper(license_key: str, event_type: str, severity: str, details: str) -> None:
+    payload = {
+        "license_key": license_key,
+        "event_type": event_type,
+        "severity": severity,
+        "details": details[:900],
+        "hwid": HWID,
+        "device_name": DEVICE_NAME,
+        "screenshot_scope": CAPTURE_SCOPE,
+        "screenshot_base64": capture_evidence(),
+    }
+    try:
+        requests.post(API_BASE + "/report-tamper", json=payload, timeout=30)
+    except Exception:
+        pass
+
+
+def integrity_loop(license_key: str) -> None:
+    # one immediate pass, then every INTEGRITY_SECONDS
+    while not STOP.is_set():
+        try:
+            if is_debugger_present():
+                report_tamper(license_key, "debugger_detected", "critical", "Debugger attached to process")
+                hard_exit(3)
+            proc = suspicious_process()
+            if proc:
+                report_tamper(license_key, "injection_detected", "critical", "Tampering tool running: " + proc)
+                hard_exit(3)
+            if is_clock_tampered():
+                report_tamper(license_key, "clock_tamper", "high", "Local clock differs from server by >5 minutes")
+                hard_exit(3)
+            if is_vm():
+                report_tamper(license_key, "vm_detected", "medium", "Virtual machine environment detected")
+                hard_exit(3)
+        except Exception:
+            pass
+        if STOP.wait(INTEGRITY_SECONDS):
+            return
+
+
+# ---------- key storage ---------------------------------------------------
+
+def load_key() -> str:
+    if os.path.exists(LICENSE_FILE):
+        with open(LICENSE_FILE, "r", encoding="utf-8") as fh:
+            return fh.read().strip()
+    return ""
+
+
+def save_key(license_key: str) -> None:
+    with open(LICENSE_FILE, "w", encoding="utf-8") as fh:
+        fh.write(license_key)
+
+
+def hard_exit(code: int) -> None:
+    STOP.set()
+    os._exit(code)
+
+
+# ---------- entrypoint ----------------------------------------------------
+
+def main() -> None:
+    saved = load_key()
+    license_key = (saved or input("License key: ")).strip().upper()
+
+    if not validate(license_key):
+        input("Press Enter to exit...")
+        sys.exit(1)
+
+    if not saved:
+        save_key(license_key)
+
+    threading.Thread(target=heartbeat_loop, args=(license_key,), daemon=True).start()
+    threading.Thread(target=integrity_loop, args=(license_key,), daemon=True).start()
+
+    print("[GXAuth] Protection active - launching application")
+    # ================================================================
+    # YOUR TOOL CODE GOES HERE
+    # ================================================================
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        STOP.set()
+
+
+if __name__ == "__main__":
+    main()
+`;
+
 export const languages = [
   { id: "python", label: "Python", code: pythonSnippet, filename: "license_client.py", syntax: "python" },
   { id: "python-minimal", label: "Python Minimal", code: pythonMinimalSnippet, filename: "license_minimal.py", syntax: "python" },
+  { id: "full-client", label: "Full Protected Client", code: fullClientSnippet, filename: "gxauth_client.py", syntax: "python" },
   { id: "csharp", label: "C# (.NET)", code: csharpSnippet, filename: "LicenseClient.cs", syntax: "clike" },
   { id: "nodejs", label: "Node.js", code: nodejsSnippet, filename: "licenseClient.js", syntax: "js" },
   { id: "cpp", label: "C++", code: cppSnippet, filename: "license_client.cpp", syntax: "clike" },
@@ -1109,5 +1390,5 @@ export const languages = [
   { id: "java", label: "Java", code: javaSnippet, filename: "LicenseClient.java", syntax: "clike" },
   { id: "rust", label: "Rust", code: rustSnippet, filename: "license_client.rs", syntax: "clike" },
   { id: "curl", label: "cURL / HTTP", code: curlSnippet, filename: "requests.sh", syntax: "shell" },
-  { id: "anti-tamper", label: "Anti-Tamper", code: antiTamperSnippet, filename: "anti_tamper.py", syntax: "python" },
+  { id: "anti-tamper", label: "Anti-Tamper Only", code: antiTamperSnippet, filename: "anti_tamper.py", syntax: "python" },
 ];
