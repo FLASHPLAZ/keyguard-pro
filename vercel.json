@@ -29,6 +29,7 @@
     { "source": "/api/check-plan-limits", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/check-plan-limits" },
     { "source": "/api/public-settings", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/public-settings" },
     { "source": "/api/app-download", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/app-download" },
+    { "source": "/api/report-tamper", "destination": "https://mcpbzkekllhsmtelfvbe.supabase.co/functions/v1/report-tamper" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
